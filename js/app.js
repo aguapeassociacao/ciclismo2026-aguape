@@ -3,7 +3,7 @@
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
-// V2.2 — Botão "Tentar pagar novamente" na consulta
+// V3.0 — PIX direto + Cartão (sem boleto) · Modal de escolha
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -347,39 +347,263 @@ async function enviarInscricao() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// PAGAMENTO — REDIRECIONAR PARA O MERCADO PAGO
+// PAGAMENTO — MODAL DE ESCOLHA (PIX ou Cartão)
 // ══════════════════════════════════════════════════════════════
-async function irParaPagamento(inscricaoId, ficha, nome, email, btnEl) {
-  const btn = btnEl || document.getElementById('btn-pagar-agora');
-  if (btn) {
-    btn.textContent   = '⏳ Preparando pagamento...';
-    btn.disabled      = true;
-    btn.style.opacity = '0.7';
-  }
+
+/**
+ * Ponto de entrada: exibe o modal de escolha do método de pagamento.
+ * Chamado pelo botão "Pagar agora" tanto na tela de sucesso quanto na consulta.
+ */
+function irParaPagamento(inscricaoId, ficha, nome, email, btnEl) {
+  // Restaura o botão de origem caso o usuário feche o modal
+  const btnOrigem = btnEl || document.getElementById('btn-pagar-agora');
+  abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem);
+}
+
+/**
+ * Cria e exibe o modal overlay com as opções PIX e Cartão.
+ */
+function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
+  // Remove modal anterior se existir
+  const antigo = document.getElementById('modal-pagamento');
+  if (antigo) antigo.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-pagamento';
+  modal.innerHTML = `
+    <div id="modal-overlay" onclick="fecharModalPagamento()"></div>
+    <div id="modal-box" role="dialog" aria-modal="true" aria-label="Escolha o método de pagamento">
+
+      <button class="modal-fechar" onclick="fecharModalPagamento()" aria-label="Fechar">✕</button>
+
+      <div class="modal-topo">
+        <div class="modal-icone">💳</div>
+        <h2 class="modal-titulo">Como deseja pagar?</h2>
+        <p class="modal-sub">Inscrição · Ciclismo Individual 2026 · <strong>R$ 160,00</strong></p>
+      </div>
+
+      <div class="modal-opcoes">
+
+        <!-- PIX -->
+        <button class="modal-opcao" id="btn-modal-pix" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','pix')">
+          <div class="opcao-icone opcao-icone-pix">⚡</div>
+          <div class="opcao-info">
+            <div class="opcao-nome">PIX</div>
+            <div class="opcao-desc">QR Code · aprovação imediata</div>
+          </div>
+          <div class="opcao-seta">→</div>
+        </button>
+
+        <!-- Cartão -->
+        <button class="modal-opcao" id="btn-modal-cartao" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','cartao')">
+          <div class="opcao-icone opcao-icone-cartao">💳</div>
+          <div class="opcao-info">
+            <div class="opcao-nome">Cartão de Crédito</div>
+            <div class="opcao-desc">Parcelamento disponível</div>
+          </div>
+          <div class="opcao-seta">→</div>
+        </button>
+
+      </div>
+
+      <div id="modal-processando" style="display:none">
+        <div class="modal-spinner"></div>
+        <p class="modal-processando-txt">Preparando pagamento…</p>
+      </div>
+
+      <p class="modal-seguranca">🔒 Pagamento processado com segurança pelo Mercado Pago</p>
+    </div>
+  `;
+
+  // Estilos inline do modal (autônomo, não depende de styles.css)
+  const style = document.createElement('style');
+  style.id = 'modal-pagamento-css';
+  style.textContent = `
+    #modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(4px);
+      z-index: 9998;
+      animation: fadeIn .2s ease;
+    }
+    #modal-box {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      background: #0d2810;
+      border: 1px solid rgba(45,122,58,.45);
+      border-radius: 22px;
+      padding: 32px 28px 24px;
+      width: min(420px, calc(100vw - 32px));
+      z-index: 9999;
+      box-shadow: 0 24px 64px rgba(0,0,0,.6);
+      animation: slideUp .22s ease;
+    }
+    @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{opacity:0;transform:translate(-50%,-44%)} to{opacity:1;transform:translate(-50%,-50%)} }
+
+    .modal-fechar {
+      position: absolute; top: 14px; right: 16px;
+      background: rgba(255,255,255,.08); border: none;
+      color: rgba(245,234,208,.5); font-size: 16px;
+      width: 30px; height: 30px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+    }
+    .modal-fechar:hover { background: rgba(255,255,255,.15); color: #f5ead0; }
+
+    .modal-topo { text-align: center; margin-bottom: 24px; }
+    .modal-icone { font-size: 36px; margin-bottom: 10px; }
+    .modal-titulo {
+      font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700;
+      color: #f5ead0; margin-bottom: 6px;
+    }
+    .modal-sub { font-size: 13px; color: rgba(245,234,208,.55); }
+    .modal-sub strong { color: #f0b429; }
+
+    .modal-opcoes { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+
+    .modal-opcao {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px;
+      background: rgba(45,122,58,.1);
+      border: 1px solid rgba(45,122,58,.28);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+      text-align: left; width: 100%;
+      color: #f5ead0;
+    }
+    .modal-opcao:hover {
+      background: rgba(45,122,58,.22);
+      border-color: rgba(45,122,58,.5);
+      transform: translateY(-1px);
+    }
+    .modal-opcao:active { transform: translateY(0); }
+    .modal-opcao:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .opcao-icone {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .opcao-icone-pix    { background: linear-gradient(135deg,#00b4d8,#0077b6); }
+    .opcao-icone-cartao { background: linear-gradient(135deg,#7c3aed,#4c1d95); }
+
+    .opcao-info { flex: 1; }
+    .opcao-nome { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .opcao-desc { font-size: 12px; color: rgba(245,234,208,.5); }
+    .opcao-seta { font-size: 18px; color: rgba(245,234,208,.3); flex-shrink: 0; }
+
+    .modal-processando {
+      text-align: center; padding: 12px 0;
+    }
+    .modal-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(125,207,138,.2);
+      border-top-color: #7dcf8a;
+      border-radius: 50%; animation: girar .8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    .modal-processando-txt { font-size: 13px; color: rgba(245,234,208,.6); }
+
+    .modal-seguranca {
+      text-align: center; font-size: 11px;
+      color: rgba(245,234,208,.25); margin-top: 4px;
+    }
+  `;
+
+  document.head.appendChild(style);
+  document.body.appendChild(modal);
+
+  // Fecha com ESC
+  document.addEventListener('keydown', _fecharComEsc);
+}
+
+function _fecharComEsc(e) {
+  if (e.key === 'Escape') fecharModalPagamento();
+}
+
+function fecharModalPagamento() {
+  const modal = document.getElementById('modal-pagamento');
+  const style = document.getElementById('modal-pagamento-css');
+  if (modal) modal.remove();
+  if (style) style.remove();
+  document.removeEventListener('keydown', _fecharComEsc);
+}
+
+/**
+ * Processa o pagamento após o usuário escolher o método.
+ * metodo: 'pix' | 'cartao'
+ */
+async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
+  // Mostra spinner, desabilita botões
+  const btnPix    = document.getElementById('btn-modal-pix');
+  const btnCartao = document.getElementById('btn-modal-cartao');
+  const processd  = document.getElementById('modal-processando');
+  const opcoes    = document.querySelector('.modal-opcoes');
+
+  if (btnPix)    btnPix.disabled    = true;
+  if (btnCartao) btnCartao.disabled = true;
+  if (opcoes)    opcoes.style.display    = 'none';
+  if (processd)  processd.style.display  = 'block';
 
   try {
     const r = await fetch('/api/criar-pagamento', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ inscricao_id: inscricaoId, numero_ficha: ficha, nome, email })
+      body:    JSON.stringify({ inscricao_id: inscricaoId, numero_ficha: ficha, nome, email, metodo })
     });
 
     const dados = await r.json();
 
-    if (!dados.ok || !dados.url) {
-      throw new Error(dados.erro || 'URL de pagamento não recebida');
+    if (!dados.ok) {
+      throw new Error(dados.erro || 'Erro ao criar pagamento');
     }
 
-    window.location.href = dados.url;
+    if (metodo === 'pix') {
+      // Grava dados do PIX no sessionStorage e redireciona para pix.html
+      if (!dados.qr_code) {
+        throw new Error('QR Code PIX não recebido do servidor');
+      }
+      sessionStorage.setItem('pix_data', JSON.stringify({
+        payment_id:     dados.payment_id,
+        qr_code:        dados.qr_code,
+        qr_code_base64: dados.qr_code_base64,
+        expiracao:      dados.expiracao,
+        ficha,
+        nome
+      }));
+      fecharModalPagamento();
+      window.location.href = '/pix.html';
+
+    } else {
+      // Cartão: redireciona para checkout do Mercado Pago
+      if (!dados.url) {
+        throw new Error('URL de checkout não recebida do servidor');
+      }
+      fecharModalPagamento();
+      window.location.href = dados.url;
+    }
 
   } catch (err) {
-    console.error('Erro ao criar pagamento:', err);
-    if (btn) {
-      btn.textContent   = '⚡ Pagar agora — R$ 160,00';
-      btn.disabled      = false;
-      btn.style.opacity = '1';
+    console.error('processarPagamento:', err);
+
+    // Restaura o modal para o estado inicial
+    if (opcoes)   opcoes.style.display   = '';
+    if (processd) processd.style.display  = 'none';
+    if (btnPix)   btnPix.disabled    = false;
+    if (btnCartao) btnCartao.disabled = false;
+
+    // Exibe erro dentro do modal
+    let msgErro = document.getElementById('modal-erro-txt');
+    if (!msgErro) {
+      msgErro = document.createElement('p');
+      msgErro.id = 'modal-erro-txt';
+      msgErro.style.cssText = 'text-align:center;font-size:12px;color:#ef4444;margin-top:8px;padding:0 4px;';
+      document.getElementById('modal-box')?.appendChild(msgErro);
     }
-    alert('Erro ao conectar com o sistema de pagamento. Tente novamente em alguns segundos.');
+    msgErro.textContent = `⚠️ ${err.message || 'Erro de conexão. Tente novamente.'}`;
   }
 }
 
@@ -480,13 +704,13 @@ function renderizarConsulta() {
 
   const statusLabel = {
     pendente_pagamento: '⏳ Aguardando pagamento',
-    aguardando_boleto:  '📄 Boleto gerado — aguardando compensação',
+    aguardando_boleto:  '⏳ Aguardando pagamento',
     pago:               '✅ Pagamento confirmado',
     cancelado:          '⚠️ Tentativa anterior não concluída — tente novamente',
   };
   const statusCor = {
     pendente_pagamento: '#b45309',
-    aguardando_boleto:  '#1d4ed8',
+    aguardando_boleto:  '#b45309',
     pago:               '#15803d',
     cancelado:          '#b45309',
   };
