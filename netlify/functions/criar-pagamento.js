@@ -53,7 +53,7 @@ exports.handler = async function (event) {
         title:       'Ciclismo Individual 2026 — Inscrição',
         description: `Participante: ${nome} · Ficha: ${numero_ficha}`,
         quantity:    1,
-        unit_price:  160.00,
+        unit_price:  2.00,   // ⚠️ TESTE — alterar para 160.00 antes de abrir ao público
         currency_id: 'BRL'
       }
     ],
