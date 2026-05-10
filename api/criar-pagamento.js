@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     const payload = {
       payment_method_id:  'pix',
-      transaction_amount:  1.00,  // ⚠️ TESTE — alterar para 160.00 antes de abrir ao público
+      transaction_amount:  1.00,  // TESTE — trocar para 160.00 após validar
       description:        `Ciclismo 2026 - Ficha ${numero_ficha} - ${nome}`,
       external_reference:  String(inscricao_id),
       date_of_expiration:  expiraPix,
@@ -154,7 +154,7 @@ export default async function handler(req, res) {
       title:       'Ciclismo Individual 2026 — Inscricao',
       description: `Participante: ${nome} - Ficha: ${numero_ficha}`,
       quantity:    1,
-      unit_price:  1.00,   // ⚠️ TESTE — alterar para 160.00 antes de abrir ao público
+      unit_price:  1.00,   // TESTE — trocar para 160.00 após validar
       currency_id: 'BRL'
     }],
     payment_methods: {
