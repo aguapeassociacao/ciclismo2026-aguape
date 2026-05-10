@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <!--
-  pagamento.html — Página de retorno após o pagamento no Mercado Pago
+  pagamento.html — Confirmação de pagamento
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira
+  V2.1 — Suporte a PIX direto (ficha via param) + cartão MP (via external_reference)
+         Valor pago lido do banco · Método detectado automaticamente
+         "Tentar novamente" redireciona para consulta com ficha preenchida
 -->
 <html lang="pt-BR">
 <head>
@@ -239,7 +242,7 @@
     <div class="ficha-num" id="ficha-erro">CIC-0000</div>
   </div>
 
-  <a href="index.html#inscricao" class="btn-pagar" style="margin-top:16px">
+  <a id="btn-tentar-novamente" href="index.html" class="btn-pagar" style="margin-top:16px">
     🔄 Tentar novamente
   </a>
 </div>
@@ -379,8 +382,13 @@ async function inicializar() {
   else {
     document.getElementById('tela-erro').style.display = 'block';
     let dados = fichaDir ? await buscarPorFicha(fichaDir) : await buscarPorId(fichaRef);
-    document.getElementById('ficha-erro').textContent =
-      dados?.numero_ficha || fichaDir || 'CIC-????';
+    const fichaErro = dados?.numero_ficha || fichaDir || '';
+    document.getElementById('ficha-erro').textContent = fichaErro || 'CIC-????';
+    // Redireciona para a aba "Já inscrito?" com a ficha preenchida → botão Pagar agora aparece direto
+    const btnTentar = document.getElementById('btn-tentar-novamente');
+    if (btnTentar && fichaErro) {
+      btnTentar.href = `index.html?ficha=${encodeURIComponent(fichaErro)}`;
+    }
   }
 }
 
