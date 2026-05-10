@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<!--
+  pix.html  —  V1.0
+  Tela PIX própria do site — QR Code + Copia-e-Cola + Polling + Contador
+  Sem redirecionar para o Mercado Pago. Detecta pagamento automaticamente.
+  Ciclismo Individual 2026 — Turismo de Base Comunitária
+  © 2026 Ewerson Luiz de Oliveira
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagar via PIX — Ciclismo 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde-escuro: #0d2810;
+    --verde:        #1a5c2a;
+    --verde-medio:  #2d7a3a;
+    --verde-claro:  #7dcf8a;
+    --dourado:      #c8920a;
+    --dourado-claro:#f0b429;
+    --creme:        #f5ead0;
+    --marrom:       #3d1a0a;
+    --azul-pix:     #00b4d8;
+    --azul-pix-esc: #0077b6;
+    --erro:         #ef4444;
+    --aviso:        #f59e0b;
+    --sucesso:      #22c55e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--verde-escuro);
+    color: var(--creme);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 48px;
+  }
+
+  /* ── Cabeçalho ─────────────────────────────────────── */
+  .cabecalho {
+    text-align: center;
+    padding: 12px 0 20px;
+    width: 100%;
+    max-width: 440px;
+  }
+  .cab-evento {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    color: var(--dourado);
+    text-transform: uppercase;
+    opacity: .85;
+    margin-bottom: 4px;
+  }
+  .cab-titulo {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--creme);
+  }
+
+  /* ── Card principal ────────────────────────────────── */
+  .card {
+    background: rgba(13,40,16,.88);
+    border: 1px solid rgba(45,122,58,.4);
+    border-radius: 22px;
+    padding: 28px 24px 24px;
+    max-width: 440px;
+    width: 100%;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 48px rgba(0,0,0,.45);
+  }
+
+  /* ── Título do card ────────────────────────────────── */
+  .card-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .pix-badge {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--azul-pix), var(--azul-pix-esc));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .card-topo-txt h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .card-topo-txt p {
+    font-size: 11px;
+    color: rgba(245,234,208,.5);
+    margin-top: 1px;
+  }
+
+  /* ── Participante ──────────────────────────────────── */
+  .participante {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(45,122,58,.1);
+    border: 1px solid rgba(45,122,58,.22);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  .participante-nome { font-weight: 600; font-size: 13px; }
+  .participante-ficha {
+    font-size: 11px;
+    color: var(--dourado-claro);
+    background: rgba(200,146,10,.12);
+    border: 1px solid rgba(200,146,10,.25);
+    border-radius: 6px;
+    padding: 3px 9px;
+    white-space: nowrap;
+    font-family: 'Cinzel', serif;
+    flex-shrink: 0;
+  }
+
+  /* ── Valor ─────────────────────────────────────────── */
+  .valor-bloco {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .valor-label { font-size: 11px; color: rgba(245,234,208,.45); margin-bottom: 2px; }
+  .valor {
+    font-family: 'Cinzel', serif;
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--dourado-claro);
+    letter-spacing: -1px;
+  }
+
+  /* ── QR Code ───────────────────────────────────────── */
+  .qr-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .qr-moldura {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    width: 204px; height: 204px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    flex-shrink: 0;
+  }
+  .qr-moldura img {
+    width: 176px; height: 176px;
+    display: block; border-radius: 4px;
+  }
+  .qr-carregando {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 10px;
+    color: #aaa; font-size: 12px; text-align: center;
+  }
+  .spin {
+    width: 30px; height: 30px;
+    border: 3px solid rgba(45,122,58,.3);
+    border-top-color: var(--verde-claro);
+    border-radius: 50%;
+    animation: girar .8s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  .qr-dica {
+    font-size: 12px;
+    color: rgba(245,234,208,.5);
+    text-align: center;
+    max-width: 230px;
+    line-height: 1.5;
+  }
+
+  /* ── Copia e Cola ──────────────────────────────────── */
+  .copia-area { margin-bottom: 18px; }
+  .copia-label {
+    font-size: 10px;
+    color: rgba(245,234,208,.4);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 7px;
+  }
+  .copia-linha {
+    display: flex; gap: 8px; align-items: stretch;
+  }
+  .copia-codigo {
+    flex: 1;
+    background: rgba(0,0,0,.35);
+    border: 1px solid rgba(45,122,58,.25);
+    border-radius: 9px;
+    color: rgba(245,234,208,.75);
+    font-size: 11px;
+    padding: 10px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+    user-select: all;
+    min-width: 0;
+    font-family: monospace;
+  }
+  .btn-copiar {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--azul-pix), var(--azul-pix-esc));
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    white-space: nowrap;
+  }
+  .btn-copiar:hover  { opacity: .88; }
+  .btn-copiar:active { transform: scale(.96); }
+  .btn-copiar.ok { background: linear-gradient(135deg,#16a34a,#15803d); }
+
+  /* ── Contador regressivo ───────────────────────────── */
+  .contador-bloco {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; margin-bottom: 16px;
+    padding: 11px 16px;
+    background: rgba(0,0,0,.2);
+    border: 1px solid rgba(245,234,208,.07);
+    border-radius: 10px;
+  }
+  .contador-icone { font-size: 18px; animation: piscar 2s ease-in-out infinite; }
+  @keyframes piscar { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .contador-label { font-size: 12px; color: rgba(245,234,208,.5); }
+  .contador-tempo {
+    font-family: 'Cinzel', serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--verde-claro);
+    letter-spacing: 1px;
+    min-width: 68px; text-align: center;
+    transition: color .5s;
+  }
+  .contador-tempo.urgente  { color: var(--aviso); }
+  .contador-tempo.expirado { color: var(--erro); }
+
+  /* ── Status polling ────────────────────────────────── */
+  .status-linha {
+    display: flex; align-items: center; justify-content: center;
+    gap: 7px; font-size: 11px;
+    color: rgba(245,234,208,.4);
+    margin-bottom: 18px;
+  }
+  .status-ponto {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--verde-claro);
+    animation: piscar 1.6s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .status-ponto.off  { background: rgba(245,234,208,.2); animation: none; }
+  .status-ponto.erro { background: var(--erro); animation: none; }
+
+  /* ── Separador ─────────────────────────────────────── */
+  .sep { border: none; border-top: 1px solid rgba(45,122,58,.2); margin: 4px 0 16px; }
+
+  /* ── Passos ────────────────────────────────────────── */
+  .passos-titulo {
+    font-size: 10px; color: rgba(245,234,208,.35);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 10px;
+  }
+  .passo {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 9px; font-size: 12px;
+    color: rgba(245,234,208,.55); line-height: 1.5;
+  }
+  .passo-n {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(45,122,58,.35); border: 1px solid rgba(45,122,58,.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--verde-claro);
+  }
+  .passo strong { color: rgba(245,234,208,.9); }
+
+  /* ── Cancelar ──────────────────────────────────────── */
+  .btn-cancelar {
+    display: block; width: 100%; text-align: center;
+    font-size: 12px; color: rgba(245,234,208,.3);
+    background: none; border: none; cursor: pointer;
+    padding: 8px; margin-top: 10px;
+    transition: color .2s;
+  }
+  .btn-cancelar:hover { color: rgba(245,234,208,.65); }
+
+  /* ══════════════════════════════════════════════════
+     TELA DE CONFIRMAÇÃO (aparece após aprovação)
+  ══════════════════════════════════════════════════ */
+  #tela-confirmado { display: none; text-align: center; }
+  .conf-icone { font-size: 72px; margin-bottom: 14px; line-height: 1; }
+  .conf-titulo {
+    font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700;
+    color: var(--verde-claro); margin-bottom: 8px;
+  }
+  .conf-sub {
+    font-size: 14px; color: rgba(245,234,208,.65);
+    line-height: 1.6; margin-bottom: 22px;
+  }
+  .conf-ficha-box {
+    background: rgba(21,128,61,.1);
+    border: 1px solid rgba(21,128,61,.3);
+    border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 22px;
+    font-size: 14px; line-height: 1.7;
+  }
+  .conf-ficha-box .ficha-num {
+    font-family: 'Cinzel', serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--dourado-claro); display: block; margin-top: 2px;
+  }
+  .conf-redirect {
+    font-size: 12px; color: rgba(245,234,208,.4); margin-bottom: 16px;
+  }
+  .btn-conf {
+    display: block; width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg,#c8920a,#ffd700,#c8920a);
+    color: var(--marrom); border: none; border-radius: 50px;
+    font-size: 16px; font-weight: 700; font-family: 'Cinzel', serif;
+    letter-spacing: 1px; cursor: pointer; text-decoration: none;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(200,146,10,.35);
+    transition: opacity .2s;
+  }
+  .btn-conf:hover { opacity: .9; }
+
+  /* ══════════════════════════════════════════════════
+     TELA DE EXPIRADO
+  ══════════════════════════════════════════════════ */
+  #tela-expirado { display: none; text-align: center; }
+  .exp-icone { font-size: 56px; margin-bottom: 12px; }
+  .exp-titulo {
+    font-family: 'Cinzel', serif; font-size: 19px;
+    color: var(--aviso); margin-bottom: 8px;
+  }
+  .exp-sub {
+    font-size: 13px; color: rgba(245,234,208,.5);
+    line-height: 1.6; margin-bottom: 22px;
+  }
+
+  /* ── Rodapé ────────────────────────────────────────── */
+  .rodape {
+    margin-top: 28px; text-align: center;
+    font-size: 10px; color: rgba(245,234,208,.18);
+    line-height: 1.7;
+  }
+
+  /* ── Responsivo ────────────────────────────────────── */
+  @media (max-width: 380px) {
+    .card { padding: 22px 16px 20px; }
+    .valor { font-size: 28px; }
+    .contador-tempo { font-size: 19px; }
+    .qr-moldura { width: 178px; height: 178px; }
+    .qr-moldura img { width: 150px; height: 150px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cabeçalho -->
+<div class="cabecalho">
+  <div class="cab-evento">🚴 Ciclismo Individual 2026</div>
+  <div class="cab-titulo">Turismo de Base Comunitária · Aguapé</div>
+</div>
+
+<!-- Card principal -->
+<div class="card" id="card-principal">
+
+  <!-- Título -->
+  <div class="card-topo">
+    <div class="pix-badge">⚡</div>
+    <div class="card-topo-txt">
+      <h2>Pagamento via PIX</h2>
+      <p>QR Code válido por 30 minutos</p>
+    </div>
+  </div>
+
+  <!-- Participante -->
+  <div class="participante" id="bloco-participante">
+    <span class="participante-nome" id="pix-nome">Carregando…</span>
+    <span class="participante-ficha" id="pix-ficha"></span>
+  </div>
+
+  <!-- Valor -->
+  <div class="valor-bloco" id="bloco-valor">
+    <div class="valor-label">Valor a pagar</div>
+    <div class="valor">R$ 160,00</div>
+  </div>
+
+  <!-- QR Code -->
+  <div class="qr-area" id="bloco-qr">
+    <div class="qr-moldura" id="qr-moldura">
+      <div class="qr-carregando">
+        <div class="spin"></div>
+        <span>Gerando QR…</span>
+      </div>
+    </div>
+    <p class="qr-dica">Escaneie com o app do seu banco ou use o código abaixo</p>
+  </div>
+
+  <!-- Copia e Cola -->
+  <div class="copia-area" id="bloco-copia">
+    <div class="copia-label">PIX Copia e Cola</div>
+    <div class="copia-linha">
+      <div class="copia-codigo" id="pix-code">Aguardando código…</div>
+      <button class="btn-copiar" id="btn-copiar" onclick="copiarCodigo()" disabled>Copiar</button>
+    </div>
+  </div>
+
+  <!-- Contador -->
+  <div class="contador-bloco" id="bloco-contador">
+    <span class="contador-icone">⏱</span>
+    <span class="contador-label">Expira em</span>
+    <span class="contador-tempo" id="contador">30:00</span>
+  </div>
+
+  <!-- Status polling -->
+  <div class="status-linha">
+    <div class="status-ponto" id="status-ponto"></div>
+    <span id="status-txt">Verificando pagamento automaticamente…</span>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Passos -->
+  <div id="bloco-passos">
+    <div class="passos-titulo">Como pagar</div>
+    <div class="passo">
+      <div class="passo-n">1</div>
+      <span>Abra o app do seu banco (Nubank, Inter, C6, BB, Caixa, Sicoob…)</span>
+    </div>
+    <div class="passo">
+      <div class="passo-n">2</div>
+      <span>Escolha <strong>PIX</strong> e toque em <strong>Ler QR Code</strong> ou <strong>PIX Copia e Cola</strong></span>
+    </div>
+    <div class="passo">
+      <div class="passo-n">3</div>
+      <span>Confirme os dados e autorize o pagamento de <strong>R$ 160,00</strong></span>
+    </div>
+    <div class="passo">
+      <div class="passo-n">4</div>
+      <span>Esta página detecta o pagamento <strong>automaticamente</strong> — não precisa fazer nada</span>
+    </div>
+  </div>
+
+  <!-- Cancelar -->
+  <button class="btn-cancelar" id="btn-cancelar" onclick="cancelar()">← Cancelar e voltar</button>
+
+  <!-- ══ Tela de confirmado ══════════════════════════════ -->
+  <div id="tela-confirmado">
+    <div class="conf-icone">✅</div>
+    <div class="conf-titulo">Pagamento Confirmado!</div>
+    <div class="conf-sub">
+      Seu PIX foi recebido com sucesso.<br>
+      Sua vaga no Ciclismo 2026 está garantida! 🚴
+    </div>
+    <div class="conf-ficha-box">
+      🎽 Ficha de inscrição
+      <span class="ficha-num" id="conf-ficha">—</span>
+    </div>
+    <p class="conf-redirect" id="conf-redirect-txt">Redirecionando em 3 segundos…</p>
+    <a href="/" class="btn-conf" id="btn-minha-inscricao">Ver minha inscrição</a>
+  </div>
+
+  <!-- ══ Tela de expirado ════════════════════════════════ -->
+  <div id="tela-expirado">
+    <div class="exp-icone">⏰</div>
+    <div class="exp-titulo">QR Code Expirado</div>
+    <div class="exp-sub">
+      O tempo de 30 minutos se esgotou.<br>
+      Clique abaixo para gerar um novo QR Code.
+    </div>
+    <button class="btn-conf" onclick="cancelar()">🔄 Gerar novo PIX</button>
+  </div>
+
+</div><!-- /.card -->
+
+<div class="rodape">
+  Pagamento processado com segurança pelo Mercado Pago<br>
+  Ciclismo Individual 2026 · Associação dos Seringueiros do Vale do Guaporé · Aguapé
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// Estado
+// ══════════════════════════════════════════════════════════════
+let pixData           = null;
+let segundos          = 30 * 60;
+let timerCd           = null;
+let timerPoll         = null;
+let pollingAtivo      = false;
+let errosConsecutivos = 0;
+const MAX_ERROS       = 6;
+
+// ══════════════════════════════════════════════════════════════
+// Boot — lê sessionStorage gravado pelo app.js
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+
+  const raw = sessionStorage.getItem('pix_data');
+  if (!raw) {
+    alert('Sessão expirada. Inicie o pagamento novamente.');
+    window.location.href = '/';
+    return;
+  }
+
+  try { pixData = JSON.parse(raw); }
+  catch { window.location.href = '/'; return; }
+
+  // ── Preenche nome e ficha
+  document.getElementById('pix-nome').textContent  = pixData.nome  || '—';
+  document.getElementById('pix-ficha').textContent = pixData.ficha ? `Ficha ${pixData.ficha}` : '';
+  document.getElementById('conf-ficha').textContent = pixData.ficha || '—';
+
+  // ── Exibe QR Code
+  const moldura = document.getElementById('qr-moldura');
+  if (pixData.qr_code_base64) {
+    moldura.innerHTML = `<img src="data:image/png;base64,${pixData.qr_code_base64}" alt="QR Code PIX">`;
+  } else {
+    moldura.innerHTML = `<div class="qr-carregando" style="color:#ef4444">⚠️<br>QR indisponível</div>`;
+  }
+
+  // ── Copia-e-cola
+  if (pixData.qr_code) {
+    document.getElementById('pix-code').textContent     = pixData.qr_code;
+    document.getElementById('btn-copiar').disabled       = false;
+  }
+
+  // ── Calcula segundos restantes pela expiração da API
+  if (pixData.expiracao) {
+    const diff = Math.floor((new Date(pixData.expiracao) - Date.now()) / 1000);
+    segundos = Math.max(0, diff);
+  }
+
+  iniciarContador();
+  iniciarPolling();
+});
+
+// ══════════════════════════════════════════════════════════════
+// Contador regressivo
+// ══════════════════════════════════════════════════════════════
+function iniciarContador() {
+  renderContador();
+  timerCd = setInterval(() => {
+    segundos = Math.max(0, segundos - 1);
+    renderContador();
+    if (segundos === 0) {
+      clearInterval(timerCd);
+      pararPolling();
+      mostrarExpirado();
+    }
+  }, 1000);
+}
+
+function renderContador() {
+  const el  = document.getElementById('contador');
+  const min = Math.floor(segundos / 60);
+  const seg = segundos % 60;
+  el.textContent = `${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+  el.className = 'contador-tempo' +
+    (segundos === 0 ? ' expirado' : segundos <= 300 ? ' urgente' : '');
+}
+
+// ══════════════════════════════════════════════════════════════
+// Polling automático — verifica a cada 5 segundos
+// ══════════════════════════════════════════════════════════════
+function iniciarPolling() {
+  if (!pixData?.payment_id) return;
+  pollingAtivo = true;
+  timerPoll = setInterval(checarStatus, 5000);
+}
+
+function pararPolling() {
+  pollingAtivo = false;
+  clearInterval(timerPoll);
+  timerPoll = null;
+}
+
+async function checarStatus() {
+  if (!pollingAtivo || !pixData?.payment_id) return;
+
+  try {
+    const r = await fetch(`/api/status-pagamento?payment_id=${pixData.payment_id}`);
+    const d = await r.json();
+
+    if (!r.ok || !d.ok) {
+      errosConsecutivos++;
+      if (errosConsecutivos >= MAX_ERROS) {
+        setStatus('erro', `Sem resposta (${errosConsecutivos}x) — verifique sua conexão`);
+      }
+      return;
+    }
+
+    errosConsecutivos = 0;
+
+    switch (d.status) {
+
+      case 'approved':
+        pararPolling();
+        clearInterval(timerCd);
+        sessionStorage.removeItem('pix_data');
+        mostrarConfirmado();
+        // Redireciona automaticamente em 3 segundos
+        setTimeout(() => {
+          window.location.href =
+            `/pagamento.html?status=approved` +
+            `&payment_id=${pixData.payment_id}` +
+            `&ficha=${encodeURIComponent(pixData.ficha || '')}` +
+            `&nome=${encodeURIComponent(pixData.nome || '')}`;
+        }, 3000);
+        break;
+
+      case 'cancelled':
+      case 'rejected':
+        pararPolling();
+        setStatus('erro', 'Pagamento recusado ou cancelado — volte e tente novamente.');
+        break;
+
+      case 'pending':
+      default:
+        setStatus('ativo', 'Aguardando confirmação do banco…');
+        break;
+    }
+
+  } catch {
+    errosConsecutivos++;
+    setStatus('erro', 'Sem conexão — tentando novamente…');
+  }
+}
+
+function setStatus(tipo, texto) {
+  const pt = document.getElementById('status-ponto');
+  const tx = document.getElementById('status-txt');
+  pt.className = 'status-ponto' + (tipo === 'ativo' ? '' : ` ${tipo}`);
+  if (tx) tx.textContent = texto;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Copiar código PIX
+// ══════════════════════════════════════════════════════════════
+async function copiarCodigo() {
+  const codigo = pixData?.qr_code;
+  if (!codigo) return;
+  const btn = document.getElementById('btn-copiar');
+  try {
+    await navigator.clipboard.writeText(codigo);
+  } catch {
+    // fallback para navegadores mais antigos
+    const ta = document.createElement('textarea');
+    ta.value = codigo;
+    ta.style.position = 'fixed';
+    ta.style.opacity  = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  btn.textContent = '✓ Copiado!';
+  btn.classList.add('ok');
+  setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('ok'); }, 2500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Telas de resultado
+// ══════════════════════════════════════════════════════════════
+const BLOCOS_PIX = [
+  'bloco-participante','bloco-valor','bloco-qr','bloco-copia',
+  'bloco-contador','bloco-passos','btn-cancelar'
+];
+
+function ocultarBlocosPix() {
+  BLOCOS_PIX.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Oculta o cabeçalho do card e o separador
+  const topo = document.querySelector('.card-topo');
+  const sep  = document.querySelector('.sep');
+  const st   = document.querySelector('.status-linha');
+  if (topo) topo.style.display = 'none';
+  if (sep)  sep.style.display  = 'none';
+  if (st)   st.style.display   = 'none';
+}
+
+function mostrarConfirmado() {
+  ocultarBlocosPix();
+  document.getElementById('tela-confirmado').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function mostrarExpirado() {
+  // Mantém participante e valor visíveis, oculta o restante
+  ['bloco-qr','bloco-copia','bloco-contador','bloco-passos','btn-cancelar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const st = document.querySelector('.status-linha');
+  const sep = document.querySelector('.sep');
+  if (st)  st.style.display  = 'none';
+  if (sep) sep.style.display = 'none';
+  document.getElementById('tela-expirado').style.display = 'block';
+}
+
+function cancelar() {
+  pararPolling();
+  clearInterval(timerCd);
+  sessionStorage.removeItem('pix_data');
+  window.location.href = '/';
+}
+</script>
+</body>
+</html>
