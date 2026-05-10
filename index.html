@@ -345,9 +345,11 @@
           <div id="qrcode-sucesso"></div>
           <p>Escaneie para consultar sua inscrição</p>
         </div>
-        <div class="aviso-pgto">
-          <strong>⚡ Próximo passo: realize o pagamento</strong><br>
-          Sua inscrição está <strong>aguardando pagamento</strong> de R$ 160,00. Entre em contato via WhatsApp com a organização para concluir via PIX, cartão ou boleto.
+        <button id="btn-pagar-agora" style="display:none;width:100%;padding:18px;background:linear-gradient(135deg,var(--dourado) 0%,var(--dourado-brilho) 50%,var(--dourado) 100%);color:var(--marrom);border:none;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;box-shadow:0 4px 24px rgba(200,146,10,.5);margin-bottom:16px;transition:all .3s">
+          ⚡ Pagar agora — R$ 160,00
+        </button>
+        <div class="aviso-pgto" style="font-size:12px;">
+          Você será redirecionado para o Mercado Pago onde poderá pagar via <strong>PIX</strong>, <strong>Cartão</strong> ou <strong>Boleto</strong>. Sua ficha já está salva — mesmo que saia agora, pode consultar depois.
         </div>
         <a class="share-btn" id="share-link" href="#" target="_blank">📲 Compartilhar no WhatsApp</a><br>
         <button class="btn-nova-inscricao" onclick="location.reload()">← Nova inscrição</button>

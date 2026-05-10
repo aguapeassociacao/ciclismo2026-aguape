@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<!--
+  pagamento.html — Página de retorno após o pagamento no Mercado Pago
+  Ciclismo Individual 2026 — Turismo de Base Comunitária
+  © 2026 Ewerson Luiz de Oliveira
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagamento — Ciclismo Individual 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --verde-escuro:#0d2810;--verde:#1a5c2a;--verde-medio:#2d7a3a;
+    --verde-claro:#7dcf8a;--verde-neon:#a8e6b4;
+    --dourado:#c8920a;--dourado-claro:#f0b429;
+    --creme:#f5ead0;--branco:#ffffff;--marrom:#3d1a0a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--verde-escuro);
+    color:var(--creme);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+
+  /* SPINNER */
+  .spinner{width:48px;height:48px;border:4px solid rgba(125,207,138,.2);border-top-color:var(--verde-claro);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* CARD PRINCIPAL */
+  .card{
+    background:rgba(13,40,16,.8);
+    border:1px solid rgba(45,122,58,.4);
+    border-radius:20px;
+    padding:40px 32px;
+    text-align:center;
+    max-width:480px;
+    width:100%;
+    backdrop-filter:blur(12px);
+  }
+  .icone{font-size:64px;margin-bottom:16px;line-height:1}
+  .titulo{font-family:'Cinzel',serif;font-size:22px;font-weight:700;margin-bottom:8px}
+  .subtitulo{font-size:14px;color:rgba(245,234,208,.65);margin-bottom:28px;line-height:1.6}
+
+  /* FICHA */
+  .ficha-box{
+    background:var(--verde-escuro);
+    border:1px solid rgba(45,122,58,.5);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:24px;
+  }
+  .ficha-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--verde-claro);margin-bottom:8px}
+  .ficha-num{font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:var(--dourado-claro);letter-spacing:2px}
+
+  /* DETALHES */
+  .detalhe{font-size:13px;color:rgba(245,234,208,.6);margin:6px 0}
+  .detalhe strong{color:var(--creme)}
+
+  /* STATUS BADGE */
+  .status-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:13px;font-weight:700;
+    padding:8px 18px;border-radius:50px;
+    margin:16px 0;
+  }
+  .badge-pago{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+  .badge-pendente{background:rgba(234,179,8,.1);color:#fbbf24;border:1px solid rgba(234,179,8,.3)}
+  .badge-erro{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+
+  /* INFO BOX */
+  .info-box{
+    background:rgba(45,122,58,.1);
+    border:1px solid rgba(45,122,58,.25);
+    border-radius:12px;
+    padding:16px;
+    font-size:13px;
+    color:rgba(245,234,208,.7);
+    text-align:left;
+    line-height:1.6;
+    margin:16px 0;
+  }
+  .info-box.amarelo{
+    background:rgba(200,146,10,.1);
+    border-color:rgba(200,146,10,.3);
+    color:var(--dourado-claro);
+  }
+  .info-box.vermelho{
+    background:rgba(239,68,68,.1);
+    border-color:rgba(239,68,68,.3);
+    color:#f87171;
+  }
+
+  /* BOLETO BOX */
+  .boleto-box{
+    background:rgba(5,15,7,.5);
+    border:1px solid rgba(45,122,58,.3);
+    border-radius:10px;
+    padding:14px;
+    margin:12px 0;
+    word-break:break-all;
+    font-size:12px;
+    color:var(--verde-neon);
+    font-family:monospace;
+    letter-spacing:0.5px;
+  }
+
+  /* BOTÕES */
+  .btn-pagar{
+    width:100%;
+    padding:17px;
+    background:linear-gradient(135deg,var(--dourado) 0%,#ffd700 50%,var(--dourado) 100%);
+    color:var(--marrom);
+    border:none;border-radius:50px;
+    font-size:16px;font-weight:700;
+    cursor:pointer;transition:all .3s;
+    font-family:'Cinzel',serif;letter-spacing:1px;
+    margin:10px 0;
+    text-decoration:none;display:block;
+  }
+  .btn-pagar:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(200,146,10,.5)}
+  .btn-consultar{
+    display:inline-block;margin-top:12px;padding:11px 24px;
+    background:transparent;border:1px solid rgba(45,122,58,.4);border-radius:50px;
+    font-size:13px;font-weight:600;color:rgba(245,234,208,.6);
+    cursor:pointer;transition:all .2s;text-decoration:none;
+  }
+  .btn-consultar:hover{border-color:var(--verde-claro);color:var(--verde-neon)}
+
+  /* LOGO */
+  .logo-mini{
+    font-family:'Cinzel',serif;font-size:16px;font-weight:700;
+    color:var(--dourado-claro);margin-bottom:24px;
+  }
+
+  /* LOADING */
+  #tela-carregando{display:block}
+  #tela-aprovado,#tela-pendente,#tela-erro{display:none}
+</style>
+</head>
+<body>
+
+<div class="logo-mini">🚴 CICLISMO 2026</div>
+
+<!-- TELA: CARREGANDO -->
+<div class="card" id="tela-carregando">
+  <div class="spinner"></div>
+  <div class="titulo">Verificando pagamento...</div>
+  <div class="subtitulo">Aguarde um momento enquanto confirmamos seu pagamento.</div>
+</div>
+
+<!-- TELA: PAGAMENTO APROVADO -->
+<div class="card" id="tela-aprovado">
+  <div class="icone">✅</div>
+  <div class="titulo" style="color:var(--dourado-claro)">Pagamento confirmado!</div>
+  <div class="subtitulo">Sua inscrição está completa. Você está inscrito no Ciclismo Individual 2026!</div>
+
+  <div class="ficha-box">
+    <div class="ficha-label">Número da ficha</div>
+    <div class="ficha-num" id="ficha-aprovado">CIC-0000</div>
+  </div>
+
+  <div class="detalhe" id="detalhe-metodo"></div>
+  <div class="detalhe" id="detalhe-valor"></div>
+
+  <div class="info-box" style="margin-top:16px">
+    📅 <strong>Data do evento:</strong> 09 de agosto de 2026<br>
+    📍 <strong>Local:</strong> Costa Marques, Rondônia<br>
+    👕 Apresente esta ficha no dia do evento para retirar sua camiseta.
+  </div>
+
+  <a id="btn-whatsapp-aprovado" href="#" target="_blank" class="btn-pagar" style="background:linear-gradient(135deg,#25d366,#1ebe5d);color:white">
+    📲 Compartilhar no WhatsApp
+  </a>
+  <a href="index.html" class="btn-consultar">← Voltar ao início</a>
+</div>
+
+<!-- TELA: AGUARDANDO (boleto ou em análise) -->
+<div class="card" id="tela-pendente">
+  <div class="icone">⏳</div>
+  <div class="titulo" style="color:var(--dourado-claro)">Aguardando pagamento</div>
+  <div class="subtitulo">Sua inscrição foi registrada. O pagamento ainda não foi confirmado.</div>
+
+  <div class="ficha-box">
+    <div class="ficha-label">Número da ficha</div>
+    <div class="ficha-num" id="ficha-pendente">CIC-0000</div>
+  </div>
+
+  <div class="status-badge badge-pendente">⏳ Pagamento pendente</div>
+
+  <div class="info-box amarelo" id="info-boleto">
+    <strong>📄 Boleto bancário gerado</strong><br>
+    Pague o boleto em qualquer banco, lotérica ou pelo app do seu banco.
+    A compensação pode levar até <strong>3 dias úteis</strong>.
+    Após compensar, seu status será atualizado automaticamente.
+  </div>
+
+  <div id="boleto-codigo-wrap" style="display:none">
+    <div style="font-size:12px;color:rgba(245,234,208,.5);margin-bottom:4px">Código de barras:</div>
+    <div class="boleto-box" id="boleto-codigo"></div>
+    <button onclick="copiarBoleto()" style="width:100%;padding:10px;background:rgba(45,122,58,.2);border:1px solid rgba(45,122,58,.3);border-radius:8px;color:var(--verde-neon);font-weight:600;font-size:13px;cursor:pointer;margin-top:4px">📋 Copiar código</button>
+  </div>
+
+  <div class="info-box" style="margin-top:12px;font-size:12px">
+    💡 Use a aba <strong>"Já inscrito?"</strong> no site para verificar o status do seu pagamento a qualquer momento.
+  </div>
+
+  <a href="index.html#inscricao" class="btn-consultar" style="display:block;text-align:center">🔍 Consultar minha inscrição</a>
+</div>
+
+<!-- TELA: ERRO / REJEITADO -->
+<div class="card" id="tela-erro">
+  <div class="icone">❌</div>
+  <div class="titulo" style="color:#f87171">Pagamento não realizado</div>
+  <div class="subtitulo">O pagamento foi cancelado ou recusado. Sua inscrição ainda está salva — tente pagar novamente.</div>
+
+  <div class="info-box vermelho">
+    <strong>O que pode ter acontecido:</strong><br>
+    · Saldo insuficiente no cartão<br>
+    · Dados do cartão incorretos<br>
+    · Pagamento cancelado pelo participante<br>
+    · Limite de crédito atingido
+  </div>
+
+  <div class="info-box" style="margin-top:12px">
+    💡 Sua inscrição está salva com o número de ficha abaixo. Use a aba <strong>"Já inscrito?"</strong> no site para tentar pagar novamente com outro método.
+  </div>
+
+  <div class="ficha-box" style="margin-top:16px">
+    <div class="ficha-label">Sua ficha (inscrição salva)</div>
+    <div class="ficha-num" id="ficha-erro">CIC-0000</div>
+  </div>
+
+  <a href="index.html#inscricao" class="btn-pagar" style="margin-top:16px">
+    🔄 Tentar novamente
+  </a>
+</div>
+
+<script>
+// Lê os parâmetros que o Mercado Pago coloca na URL ao redirecionar
+function lerParams() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    status:      p.get('collection_status') || p.get('status') || '',
+    paymentId:   p.get('collection_id')     || p.get('payment_id') || '',
+    ficha:       p.get('external_reference') || '',
+    tipo:        p.get('payment_type') || ''
+  };
+}
+
+// Copia o código do boleto
+function copiarBoleto() {
+  const cod = document.getElementById('boleto-codigo').textContent;
+  navigator.clipboard.writeText(cod).then(() => alert('Código copiado!')).catch(() => {});
+}
+
+// Inicializa a tela correta com base no status
+async function inicializar() {
+  const { status, paymentId, ficha, tipo } = lerParams();
+
+  // Se não veio nenhum parâmetro, mostra carregando e redireciona
+  if (!status) {
+    document.getElementById('tela-carregando').style.display = 'block';
+    setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+    return;
+  }
+
+  document.getElementById('tela-carregando').style.display = 'none';
+
+  // APROVADO
+  if (status === 'approved') {
+    document.getElementById('tela-aprovado').style.display = 'block';
+
+    // Tenta buscar a ficha real pelo external_reference (que é o inscricao_id)
+    const fichaExibir = await buscarFicha(ficha) || 'CIC-????';
+    document.getElementById('ficha-aprovado').textContent = fichaExibir;
+
+    const metodoLabel = tipo.includes('pix') ? '⚡ PIX'
+      : tipo.includes('credit') ? '💳 Cartão de crédito'
+      : tipo.includes('debit')  ? '💳 Cartão de débito'
+      : tipo.includes('ticket') ? '📄 Boleto bancário'
+      : tipo;
+    document.getElementById('detalhe-metodo').innerHTML = `Método: <strong>${metodoLabel}</strong>`;
+    document.getElementById('detalhe-valor').innerHTML  = `Valor pago: <strong>R$ 160,00</strong>`;
+
+    const msg = encodeURIComponent(
+      `✅ Pagamento confirmado! Estou inscrito no *Ciclismo Individual 2026*!\n` +
+      `📋 Ficha: *${fichaExibir}*\n` +
+      `📅 09 de agosto de 2026 · Costa Marques, RO\n` +
+      `🚴 Turismo de Base Comunitária · Aguapé\n`
+    );
+    document.getElementById('btn-whatsapp-aprovado').href = 'https://wa.me/?text=' + msg;
+  }
+
+  // PENDENTE (boleto gerado ou em análise)
+  else if (status === 'pending' || status === 'in_process') {
+    document.getElementById('tela-pendente').style.display = 'block';
+
+    const fichaExibir = await buscarFicha(ficha) || 'CIC-????';
+    document.getElementById('ficha-pendente').textContent = fichaExibir;
+
+    if (tipo.includes('ticket') || tipo === 'ticket') {
+      document.getElementById('info-boleto').style.display = 'block';
+    } else {
+      document.getElementById('info-boleto').innerHTML =
+        '⏳ <strong>Pagamento em análise.</strong><br>Seu pagamento está sendo processado. Você será notificado assim que for confirmado.';
+    }
+  }
+
+  // FALHA / CANCELADO / REJEITADO
+  else {
+    document.getElementById('tela-erro').style.display = 'block';
+    const fichaExibir = await buscarFicha(ficha) || 'CIC-????';
+    document.getElementById('ficha-erro').textContent = fichaExibir;
+  }
+}
+
+// Busca o número de ficha pelo inscricao_id (external_reference)
+async function buscarFicha(inscricaoId) {
+  if (!inscricaoId) return null;
+  try {
+    const r = await fetch('/netlify/functions/supabase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        acao: 'buscar',
+        tabela: 'inscricoes',
+        query: `id=eq.${inscricaoId}&select=numero_ficha`
+      })
+    });
+    const dados = await r.json();
+    return Array.isArray(dados) && dados.length > 0 ? dados[0].numero_ficha : null;
+  } catch {
+    return null;
+  }
+}
+
+inicializar();
+</script>
+</body>
+</html>
