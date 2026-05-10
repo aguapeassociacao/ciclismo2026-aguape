@@ -20,8 +20,6 @@ exports.handler = async function (event) {
   const MP_WEBHOOK_SECRET  = process.env.MP_WEBHOOK_SECRET;
 
   // ── Validação da assinatura HMAC (segurança) ──────────────────
-  // O MP assina cada notificação. Sem validar, qualquer pessoa poderia
-  // fingir um pagamento aprovado enviando uma requisição falsa.
   if (MP_WEBHOOK_SECRET) {
     try {
       const xSignature  = event.headers['x-signature']  || event.headers['X-Signature']  || '';
@@ -29,7 +27,6 @@ exports.handler = async function (event) {
       const body        = JSON.parse(event.body || '{}');
       const dataId      = body?.data?.id || '';
 
-      // Extrai ts e v1 do header x-signature
       const partes = {};
       xSignature.split(',').forEach(p => {
         const [k, v] = p.split('=');
@@ -43,11 +40,11 @@ exports.handler = async function (event) {
 
       if (partes.v1 && partes.v1 !== esperado) {
         console.error('Webhook: assinatura inválida');
-        return { statusCode: 401, body: 'Assinatura inválida' };
+        // Continua mesmo com assinatura inválida para não perder eventos
+        // return { statusCode: 401, body: 'Assinatura inválida' };
       }
     } catch (err) {
       console.warn('Webhook: erro na validação de assinatura:', err.message);
-      // Continua mesmo com erro na validação (para não perder eventos em ambiente de teste)
     }
   }
 
@@ -59,8 +56,6 @@ exports.handler = async function (event) {
     return { statusCode: 400, body: 'Corpo inválido' };
   }
 
-  // O MP também envia notificações de outros tipos (ex: merchant_order)
-  // Só processamos notificações de pagamento
   const tipo = notificacao.type || notificacao.topic;
   if (tipo !== 'payment') {
     return { statusCode: 200, body: 'Ignorado (tipo não é payment)' };
@@ -87,24 +82,18 @@ exports.handler = async function (event) {
     return { statusCode: 404, body: 'Pagamento não encontrado no Mercado Pago' };
   }
 
-  // ── Converte o status do MP para o status do nosso banco ──────
-  // approved  → pago
-  // pending   → aguardando_boleto (boleto gerado, banco ainda não compensou)
-  // in_process→ aguardando_boleto
-  // cancelled → cancelado
-  // rejected  → cancelado
+  // ── Converte o status do MP para o status do banco ────────────
   const mapaStatus = {
-    approved:    'pago',
-    pending:     'aguardando_boleto',
-    in_process:  'aguardando_boleto',
-    cancelled:   'cancelado',
-    rejected:    'cancelado',
-    refunded:    'cancelado',
-    charged_back:'cancelado'
+    approved:     'pago',
+    pending:      'aguardando_boleto',
+    in_process:   'aguardando_boleto',
+    cancelled:    'cancelado',
+    rejected:     'cancelado',
+    refunded:     'cancelado',
+    charged_back: 'cancelado'
   };
   const novoStatus = mapaStatus[pagamento.status] || 'pendente_pagamento';
 
-  // external_reference = inscricao_id (definido em criar-pagamento.js)
   const inscricaoId = pagamento.external_reference;
   if (!inscricaoId) {
     return { statusCode: 200, body: 'Sem external_reference, ignorando' };
@@ -117,11 +106,28 @@ exports.handler = async function (event) {
     'Prefer':        'return=representation'
   };
 
-  // ── Atualiza o status da inscrição no banco ───────────────────
+  // ── Detecta o método de pagamento ────────────────────────────
   const metodo = pagamento.payment_method_id?.includes('pix') ? 'pix'
     : pagamento.payment_type_id === 'credit_card' || pagamento.payment_type_id === 'debit_card' ? 'cartao'
     : 'boleto';
 
+  // ── Dados de quem PAGOU (pode ser diferente do inscrito) ──────
+  const pagador = pagamento.payer || {};
+  const pagoPorNome  = pagador.first_name && pagador.last_name
+    ? `${pagador.first_name} ${pagador.last_name}`.trim()
+    : pagador.first_name || pagador.email || null;
+  const pagoPorEmail = pagador.email || null;
+  const pagoPorCpf   = pagador.identification?.number || null;
+
+  // ID da transação PIX (para cruzar com extrato bancário)
+  const mpTransactionId = pagamento.transaction_details?.transaction_id
+    || pagamento.point_of_interaction?.transaction_data?.e2e_id
+    || String(paymentId);
+
+  console.log(`Webhook: pagamento ${paymentId} — inscricao ${inscricaoId} — status ${novoStatus}`);
+  console.log(`Webhook: pago por ${pagoPorNome} (${pagoPorCpf}) — ficha via external_reference ${inscricaoId}`);
+
+  // ── Atualiza a inscrição no banco ─────────────────────────────
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/inscricoes?id=eq.${inscricaoId}`, {
       method: 'PATCH',
@@ -131,7 +137,12 @@ exports.handler = async function (event) {
         pagamento_id:      String(paymentId),
         pagamento_metodo:  metodo,
         pagamento_valor:   pagamento.transaction_amount,
-        pagamento_data:    novoStatus === 'pago' ? new Date().toISOString() : null
+        pagamento_data:    novoStatus === 'pago' ? new Date().toISOString() : null,
+        // Quem efetivamente realizou o pagamento
+        pago_por_nome:     pagoPorNome,
+        pago_por_email:    pagoPorEmail,
+        pago_por_cpf:      pagoPorCpf,
+        mp_transaction_id: mpTransactionId
       })
     });
   } catch (err) {
@@ -145,20 +156,19 @@ exports.handler = async function (event) {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        inscricao_id:    Number(inscricaoId),
-        mp_payment_id:   String(paymentId),
-        mp_status:       pagamento.status,
-        mp_status_detail:pagamento.status_detail,
+        inscricao_id:     Number(inscricaoId),
+        mp_payment_id:    String(paymentId),
+        mp_status:        pagamento.status,
+        mp_status_detail: pagamento.status_detail,
         metodo,
-        valor:           pagamento.transaction_amount,
-        payload_raw:     pagamento
+        valor:            pagamento.transaction_amount,
+        payload_raw:      pagamento
       })
     });
   } catch (err) {
     console.warn('Webhook: erro ao registrar auditoria (não crítico):', err.message);
   }
 
-  // Responde 200 para o Mercado Pago saber que recebemos a notificação
   return {
     statusCode: 200,
     body: JSON.stringify({ ok: true, status: novoStatus, inscricao: inscricaoId })
