@@ -4,9 +4,12 @@
 // © 2026 Ewerson Luiz de Oliveira
 // ================================================================
 
+// ── URL base das funções no Render ─────────────────────────────
+const API_BASE = 'https://ciclismo2026-funcoes.onrender.com';
+
 // ── Comunicação segura com o servidor (/api/supabase) ──────────
 async function get(tabela, query = '') {
-  const r = await fetch('/api/supabase', {
+  const r = await fetch(`${API_BASE}/api/supabase`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ acao: 'buscar', tabela, query })
@@ -15,7 +18,7 @@ async function get(tabela, query = '') {
 }
 
 async function post(tabela, dados) {
-  const r = await fetch('/api/supabase', {
+  const r = await fetch(`${API_BASE}/api/supabase`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ acao: 'inserir', tabela, dados })
@@ -24,7 +27,7 @@ async function post(tabela, dados) {
 }
 
 async function patch(tabela, id, dados) {
-  const r = await fetch('/api/supabase', {
+  const r = await fetch(`${API_BASE}/api/supabase`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ acao: 'atualizar', tabela, id, dados })
@@ -33,7 +36,7 @@ async function patch(tabela, id, dados) {
 }
 
 async function deletar(tabela, id) {
-  const r = await fetch('/api/supabase', {
+  const r = await fetch(`${API_BASE}/api/supabase`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ acao: 'deletar', tabela, id })
@@ -42,7 +45,7 @@ async function deletar(tabela, id) {
 }
 
 async function deletarPorCampo(tabela, campo, valor) {
-  const r = await fetch('/api/supabase', {
+  const r = await fetch(`${API_BASE}/api/supabase`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ acao: 'deletarPorCampo', tabela, campo, valor })
