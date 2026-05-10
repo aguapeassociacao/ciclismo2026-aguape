@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<!--
+  Sistema de Inscrições — Ciclismo Individual 2026
+  Turismo de Base Comunitária · Associação dos Seringueiros do Vale do Guaporé
+  © 2026 Ewerson Luiz de Oliveira
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ciclismo Individual 2026 · Inscrições</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <img src="aguape.png" alt="Aguapé — Associação dos Seringueiros do Vale do Guaporé">
+  </div>
+  <div class="header-badge">🚴 Turismo de Base Comunitária · 2026</div>
+  <h1>Ciclismo <span>Individual</span> 2026</h1>
+  <p>Costa Marques, Rondônia · Vale do Guaporé</p>
+  <div class="header-info">
+    <div class="header-info-item">
+      <strong>09 ago 2026</strong>
+      Data do evento
+    </div>
+    <div class="header-info-item">
+      <strong>01 ago 2026</strong>
+      Inscrições até
+    </div>
+    <div class="header-info-item">
+      <strong>R$ 160,00</strong>
+      Inclui camiseta
+    </div>
+  </div>
+</div>
+
+<!-- AVISO ENCERRADO -->
+<div id="aviso-encerrado">
+  ⚠️ As inscrições foram encerradas em 01/08/2026. Obrigado pela participação!
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab ativo" id="tab-inscricao" onclick="mudarTab('inscricao')">📋 Nova inscrição</button>
+  <button class="nav-tab" id="tab-consulta" onclick="mudarTab('consulta')">🔍 Já inscrito?</button>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════════════
+       ABA 1 — FORMULÁRIO DE INSCRIÇÃO
+       ═══════════════════════════════════════════════════════ -->
+  <div id="aba-inscricao">
+    <div id="formulario">
+
+      <!-- ERRO GENÉRICO -->
+      <div class="erro" id="erro"></div>
+
+      <!-- ERRO: CPF JÁ CADASTRADO -->
+      <div class="erro-dup" id="erro-ja-inscrito">
+        ⚠️ Este CPF já possui uma inscrição.
+        <a onclick="irParaConsultaComCPF()"> Clique aqui para consultar sua ficha.</a>
+      </div>
+
+      <!-- ── CARD 1: DADOS PESSOAIS ── -->
+      <div class="card">
+        <h2>👤 Dados pessoais</h2>
+
+        <label class="campo">Nome completo <span class="obrigatorio">*</span></label>
+        <input type="text" id="nome" placeholder="Seu nome completo" autocomplete="name">
+
+        <label class="campo">CPF <span class="obrigatorio">*</span></label>
+        <input type="text" id="cpf" placeholder="000.000.000-00" maxlength="14"
+          oninput="mascararCPF(this)" onblur="validarCampoCPF(this)">
+
+        <label class="campo">Categoria <span class="obrigatorio">*</span></label>
+        <div class="sexo-toggle">
+          <button type="button" id="sexo-btn-m" class="sexo-btn" onclick="selecionarSexo('M')">
+            <span class="sexo-icone">♂</span> Masculino
+          </button>
+          <button type="button" id="sexo-btn-f" class="sexo-btn" onclick="selecionarSexo('F')">
+            <span class="sexo-icone">♀</span> Feminino
+          </button>
+        </div>
+        <input type="hidden" id="sexo" value="">
+        <div id="categoria-badge" class="categoria-badge"></div>
+
+        <div class="row">
+          <div>
+            <label class="campo">Data de nascimento</label>
+            <input type="date" id="nascimento" oninput="verificarMenor()">
+          </div>
+          <div>
+            <label class="campo">Telefone / WhatsApp <span class="obrigatorio">*</span></label>
+            <input type="tel" id="telefone" placeholder="(69) 9 0000-0000"
+              oninput="mascararTelefone(this)">
+          </div>
+        </div>
+
+        <label class="campo">E-mail</label>
+        <input type="email" id="email" placeholder="seu@email.com" autocomplete="email">
+
+        <div class="row">
+          <div>
+            <label class="campo">Cidade <span class="obrigatorio">*</span></label>
+            <div class="cidade-wrap" id="cidade-wrap">
+              <input type="text" id="cidade" placeholder="Digite o nome da cidade..."
+                autocomplete="off"
+                oninput="filtrarCidades()"
+                onkeydown="navegarCidades(event)"
+                onfocus="filtrarCidades()"
+                onblur="validarCidadeBlur()">
+              <div class="cidade-lista" id="cidade-lista"></div>
+            </div>
+            <input type="hidden" id="cidade-valor">
+          </div>
+          <div>
+            <label class="campo">UF</label>
+            <input type="text" id="uf" value="RO" readonly>
+          </div>
+        </div>
+
+        <!-- MENOR DE IDADE -->
+        <div class="menor-aviso" id="menor-aviso">
+          ⚠️ <strong>Participante menor de idade.</strong> É necessária a autorização de um responsável legal.
+          <div class="responsavel-wrap">
+            <label>
+              <input type="checkbox" id="cb-responsavel" onclick="toggleResponsavel()">
+              Declaro que sou responsável legal por este participante
+            </label>
+            <input type="text" id="nome-responsavel" placeholder="Nome completo do responsável" style="margin-top:8px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CARD 2: TAMANHO DA CAMISETA ── -->
+      <div class="card" id="camiseta-wrap">
+        <h2>👕 Tamanho da camiseta <span class="obrigatorio">*</span></h2>
+        <p style="font-size:13px;color:var(--cinza-medio);margin-bottom:14px;">
+          A camiseta está incluída no valor da inscrição. Selecione o tamanho desejado.
+        </p>
+        <div class="tamanho-grid">
+          <button type="button" class="tamanho-btn" data-tam="P"  onclick="selecionarCamiseta('P')">P</button>
+          <button type="button" class="tamanho-btn" data-tam="M"  onclick="selecionarCamiseta('M')">M</button>
+          <button type="button" class="tamanho-btn" data-tam="G"  onclick="selecionarCamiseta('G')">G</button>
+          <button type="button" class="tamanho-btn" data-tam="GG" onclick="selecionarCamiseta('GG')">GG</button>
+          <button type="button" class="tamanho-btn" data-tam="XG" onclick="selecionarCamiseta('XG')">XG</button>
+        </div>
+        <input type="hidden" id="tamanho-camiseta" value="">
+      </div>
+
+      <!-- ── CARD 3: AUTORIZAÇÃO E REGULAMENTO ── -->
+      <div class="card">
+        <h2>📄 Autorização e regulamento</h2>
+
+        <!-- AUTORIZAÇÃO DE IMAGEM -->
+        <label class="campo">Autorização de uso de imagem <span class="obrigatorio">*</span></label>
+        <div class="autorizacao-wrap">
+          <div class="autorizacao-label" id="label-autorizo" onclick="toggleAutorizacao()">
+            <input type="checkbox" id="cb-autorizo" onclick="event.stopPropagation(); sincronizarAutorizacao()">
+            <span>
+              Autorizo o uso da minha imagem, voz e nome em fotos, vídeos e materiais de divulgação
+              relacionados ao evento <strong>Ciclismo Individual 2026</strong>, sem direito a remuneração.
+            </span>
+          </div>
+        </div>
+
+        <!-- REGULAMENTO -->
+        <div style="margin-top:18px;">
+          <label class="campo">Regulamento do evento</label>
+          <a href="regulamento.pdf" target="_blank" class="reg-link">
+            📄 Baixar Regulamento em PDF
+          </a>
+
+          <div class="reg-cabecalho" onclick="toggleRegulamento()">
+            <span>▼ Ver resumo do regulamento</span>
+            <span class="reg-seta" id="reg-seta">▲</span>
+          </div>
+          <div class="reg-conteudo" id="reg-conteudo">
+            <p><strong>Ciclismo Individual 2026 — Turismo de Base Comunitária</strong></p>
+            <p>· O evento é aberto a ciclistas amadores e profissionais nas categorias Masculino e Feminino.</p>
+            <p>· A inscrição inclui camiseta oficial do evento.</p>
+            <p>· O participante é responsável pelo seu equipamento (bicicleta, capacete obrigatório, etc.).</p>
+            <p>· A organização não se responsabiliza por acidentes durante o percurso.</p>
+            <p>· Menores de 18 anos precisam de autorização do responsável legal.</p>
+            <p>· O cancelamento não garante reembolso. Consulte o regulamento completo para detalhes.</p>
+          </div>
+
+          <div class="aceite-wrap">
+            <input type="checkbox" id="aceite-regulamento" onchange="verificarAceite()">
+            <label for="aceite-regulamento">
+              Li e aceito o <strong>Regulamento do Ciclismo Individual 2026</strong>.
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTÃO ENVIAR -->
+      <div class="btn-enviar-wrap">
+        <button id="btn-enviar" onclick="enviarInscricao()">
+          🚴 Enviar inscrição — R$ 160,00
+        </button>
+        <p style="text-align:center;font-size:11px;color:var(--cinza-medio);margin-top:10px;">
+          Após o envio, você receberá sua ficha e seguirá para o pagamento.
+          Inscrições encerram em <strong>01/08/2026</strong>.
+        </p>
+      </div>
+
+    </div><!-- /formulario -->
+
+    <!-- TELA DE SUCESSO -->
+    <div id="sucesso">
+      <div class="sucesso-card">
+        <div class="sucesso-icone">🎉</div>
+        <h2>Inscrição realizada!</h2>
+        <p>Sua inscrição foi registrada com sucesso. Guarde sua ficha abaixo.</p>
+
+        <div class="ficha-box">
+          <div class="ficha-label">Número da ficha</div>
+          <div class="numero-ficha" id="numero-ficha">CIC-0000</div>
+          <div class="ficha-detalhe">
+            <span id="sucesso-categoria"></span>
+            <span>👕 Camiseta: <strong id="sucesso-camiseta"></strong></span>
+            <span id="sucesso-nome" style="font-size:12px;color:rgba(255,255,255,0.6);"></span>
+          </div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="qrcode-wrap">
+          <div id="qrcode-sucesso"></div>
+          <p>Escaneie para consultar sua inscrição</p>
+        </div>
+
+        <!-- Próximo passo: pagamento -->
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;color:#78350f;text-align:left;">
+          <strong>⚡ Próximo passo: realize o pagamento</strong><br>
+          Sua inscrição está <strong>aguardando pagamento</strong> de R$ 160,00.
+          Entre em contato com a organização via WhatsApp para concluir o pagamento via PIX, cartão ou boleto.
+        </div>
+
+        <a class="share-btn" id="share-link" href="#" target="_blank">
+          📲 Compartilhar no WhatsApp
+        </a>
+
+        <br>
+        <button class="btn-nova-inscricao" onclick="location.reload()">
+          ← Nova inscrição
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /aba-inscricao -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       ABA 2 — CONSULTA
+       ═══════════════════════════════════════════════════════ -->
+  <div id="aba-consulta" style="display:none;">
+    <div class="card">
+      <h2>🔍 Consultar inscrição</h2>
+      <p class="consulta-intro">
+        Informe seu CPF ou número de ficha (ex: CIC-1234) para consultar sua inscrição.
+      </p>
+      <div class="consulta-busca-wrap">
+        <input type="text" id="consulta-input"
+          placeholder="000.000.000-00  ou  CIC-0000"
+          maxlength="18"
+          onkeydown="if(event.key==='Enter') buscarInscricao()"
+          oninput="mascararConsultaInput(this)">
+        <button class="btn-buscar" id="btn-buscar" onclick="buscarInscricao()">Buscar</button>
+      </div>
+      <div class="consulta-erro" id="consulta-erro"></div>
+    </div>
+
+    <!-- Resultado da busca -->
+    <div class="consulta-resultado" id="consulta-resultado">
+      <div class="card">
+        <div id="consulta-perfil"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-logo">AGUAPÉ</div>
+  <div class="footer-sub">
+    Associação dos Seringueiros do Vale do Guaporé<br>
+    Turismo de Base Comunitária · Ciclismo Individual 2026<br>
+    Costa Marques, Rondônia
+  </div>
+  <a href="admin.html" class="admin-link" title="Área administrativa">🔒</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
