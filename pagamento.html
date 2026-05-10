@@ -311,7 +311,45 @@ async function inicializar() {
       document.getElementById('info-boleto').style.display = 'block';
     } else {
       document.getElementById('info-boleto').innerHTML =
-        '⏳ <strong>Pagamento em análise.</strong><br>Seu pagamento está sendo processado. Você será notificado assim que for confirmado.';
+        '⏳ <strong>Verificando pagamento automaticamente...</strong><br>Esta tela vai atualizar sozinha assim que o PIX for confirmado.';
+
+      // ── Polling: verifica o status no banco a cada 5 segundos ──
+      let tentativas = 0;
+      const maxTentativas = 36; // 3 minutos no total
+      const intervalo = setInterval(async () => {
+        tentativas++;
+        try {
+          const r = await fetch('https://ciclismo2026-funcoes.onrender.com/api/supabase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              acao: 'buscar',
+              tabela: 'inscricoes',
+              query: `id=eq.${ficha}&select=status,numero_ficha`
+            })
+          });
+          const dados = await r.json();
+          if (Array.isArray(dados) && dados.length > 0) {
+            const inscricao = dados[0];
+            if (inscricao.status === 'pago') {
+              clearInterval(intervalo);
+              // Redireciona para tela de sucesso
+              const params = new URLSearchParams({
+                status: 'approved',
+                external_reference: ficha,
+                payment_type: 'pix'
+              });
+              window.location.href = `pagamento.html?${params.toString()}`;
+            }
+          }
+        } catch (e) { /* ignora erros de rede, tenta de novo */ }
+
+        if (tentativas >= maxTentativas) {
+          clearInterval(intervalo);
+          document.getElementById('info-boleto').innerHTML =
+            '⏳ <strong>Pagamento em processamento.</strong><br>Use "Já inscrito?" no site para verificar o status quando quiser.';
+        }
+      }, 5000); // verifica a cada 5 segundos
     }
   }
 
