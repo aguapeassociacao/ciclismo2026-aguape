@@ -5,7 +5,7 @@
 // ================================================================
 
 // ── URL base das funções no Render ─────────────────────────────
-const API_BASE = 'https://ciclismo2026-funcoes.onrender.com';
+const API_BASE = '';
 
 // ── Comunicação segura com o servidor (/api/supabase) ──────────
 async function get(tabela, query = '') {
