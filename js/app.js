@@ -3,6 +3,7 @@
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
+// V2.2 — Botão "Tentar pagar novamente" na consulta
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -76,7 +77,6 @@ function selecionarSexo(s) {
   document.getElementById('sexo-btn-m').className = 'sexo-btn' + (s === 'M' ? ' ativo-m' : '');
   document.getElementById('sexo-btn-f').className = 'sexo-btn' + (s === 'F' ? ' ativo-f' : '');
 
-  // Mostra o badge da categoria selecionada
   const badge = document.getElementById('categoria-badge');
   if (badge) {
     badge.textContent = s === 'M' ? '🚴 Categoria Masculino' : '🚴 Categoria Feminino';
@@ -197,7 +197,6 @@ async function enviarInscricao() {
   erro.style.display    = 'none';
   erroDup.style.display = 'none';
 
-  // ── Validações ────────────────────────────────────────────
   if (!nome || !cpf || !tel || !cidade) {
     erro.textContent = 'Preencha todos os campos obrigatórios.';
     erro.style.display = 'block';
@@ -244,7 +243,6 @@ async function enviarInscricao() {
     return;
   }
 
-  // ── Verificar menor de idade ───────────────────────────────
   let nResp = null;
   if (eMenor()) {
     const cr = document.getElementById('cb-responsavel').checked;
@@ -261,8 +259,7 @@ async function enviarInscricao() {
   btn.disabled    = true;
   btn.textContent = 'Enviando...';
 
-  // ── Salvar participante ────────────────────────────────────
-  const ficha = gerarFicha();
+  const ficha   = gerarFicha();
   const telNorm = normalizarTelefone(tel);
 
   const resPart = await post('participantes', {
@@ -295,10 +292,9 @@ async function enviarInscricao() {
 
   const pid = resPart[0].id;
 
-  // ── Salvar inscrição ───────────────────────────────────────
   const resInsc = await post('inscricoes', {
     participante_id:  pid,
-    modalidade_id:    sexo === 'M' ? 1 : 2,   // 1 = Masc · 2 = Fem
+    modalidade_id:    sexo === 'M' ? 1 : 2,
     numero_ficha:     ficha,
     status:           'pendente_pagamento',
   });
@@ -314,7 +310,6 @@ async function enviarInscricao() {
     return;
   }
 
-  // Guarda o id da inscrição para usar no pagamento
   const inscricaoId = Array.isArray(resInsc) && resInsc.length > 0 ? resInsc[0].id : null;
 
   // ── Tela de sucesso ────────────────────────────────────────
@@ -336,33 +331,29 @@ async function enviarInscricao() {
   );
   document.getElementById('share-link').href = 'https://wa.me/?text=' + msg;
 
-  // Configura o botão de pagamento
   const btnPagar = document.getElementById('btn-pagar-agora');
   if (btnPagar && inscricaoId) {
     btnPagar.style.display = 'block';
     btnPagar.onclick = () => irParaPagamento(inscricaoId, ficha, nome, email);
   }
 
-  // Mostra a referência que aparecerá no extrato do MP
   const avisoRef = document.getElementById('aviso-ficha-ref');
   if (avisoRef) {
     avisoRef.textContent = `Referência no extrato: "${ficha} · ${nome}"`;
   }
 
-  // Gerar QR Code
   setTimeout(() => gerarQRCode(ficha, nome), 100);
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ══════════════════════════════════════════════════════════════
 // PAGAMENTO — REDIRECIONAR PARA O MERCADO PAGO
 // ══════════════════════════════════════════════════════════════
-async function irParaPagamento(inscricaoId, ficha, nome, email) {
-  const btn = document.getElementById('btn-pagar-agora');
+async function irParaPagamento(inscricaoId, ficha, nome, email, btnEl) {
+  const btn = btnEl || document.getElementById('btn-pagar-agora');
   if (btn) {
-    btn.textContent = '⏳ Preparando pagamento...';
-    btn.disabled    = true;
+    btn.textContent   = '⏳ Preparando pagamento...';
+    btn.disabled      = true;
     btn.style.opacity = '0.7';
   }
 
@@ -379,20 +370,18 @@ async function irParaPagamento(inscricaoId, ficha, nome, email) {
       throw new Error(dados.erro || 'URL de pagamento não recebida');
     }
 
-    // Redireciona para a página de pagamento do Mercado Pago
     window.location.href = dados.url;
 
   } catch (err) {
     console.error('Erro ao criar pagamento:', err);
     if (btn) {
-      btn.textContent = '⚡ Pagar agora — R$ 160,00';
-      btn.disabled    = false;
+      btn.textContent   = '⚡ Pagar agora — R$ 160,00';
+      btn.disabled      = false;
       btn.style.opacity = '1';
     }
     alert('Erro ao conectar com o sistema de pagamento. Tente novamente em alguns segundos.');
   }
 }
-
 
 function gerarQRCode(ficha, nome) {
   const el = document.getElementById('qrcode-sucesso');
@@ -400,12 +389,12 @@ function gerarQRCode(ficha, nome) {
   el.innerHTML = '';
   const url = `${URL_SITE}/consulta.html?ficha=${ficha}`;
   new QRCode(el, {
-    text:           url,
-    width:          140,
-    height:         140,
-    colorDark:      '#0d2810',
-    colorLight:     '#ffffff',
-    correctLevel:   QRCode.CorrectLevel.M
+    text:         url,
+    width:        140,
+    height:       140,
+    colorDark:    '#0d2810',
+    colorLight:   '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
   });
 }
 
@@ -448,7 +437,6 @@ async function buscarInscricao() {
   let enc = null;
   const dig = inp.replace(/\D/g, '');
 
-  // Buscar por CPF
   if (dig.length === 11) {
     const fmt = dig.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     let r = await get('participantes', 'cpf=eq.' + encodeURIComponent(fmt) + '&select=*');
@@ -459,7 +447,6 @@ async function buscarInscricao() {
     }
   }
 
-  // Buscar por número de ficha
   if (!enc) {
     const fi = inp.toUpperCase().replace(/\s/g, '').replace(/^CIC-?(\d+)$/, 'CIC-$1');
     if (/^CIC-\d+$/.test(fi)) {
@@ -492,10 +479,10 @@ function renderizarConsulta() {
   const el = document.getElementById('consulta-perfil');
 
   const statusLabel = {
-    pendente_pagamento:  '⏳ Aguardando pagamento',
-    aguardando_boleto:   '📄 Boleto gerado — aguardando compensação',
-    pago:                '✅ Pagamento confirmado',
-    cancelado:           '❌ Inscrição cancelada',
+    pendente_pagamento: '⏳ Aguardando pagamento',
+    aguardando_boleto:  '📄 Boleto gerado — aguardando compensação',
+    pago:               '✅ Pagamento confirmado',
+    cancelado:          '❌ Inscrição cancelada',
   };
   const statusCor = {
     pendente_pagamento: '#b45309',
@@ -504,10 +491,12 @@ function renderizarConsulta() {
     cancelado:          '#dc2626',
   };
 
-  const catLabel = p.sexo === 'M' ? '🚴 Ciclismo Masculino' : '🚴 Ciclismo Feminino';
-  const status   = i?.status || 'pendente_pagamento';
-  const cor      = statusCor[status] || '#374151';
-  const label    = statusLabel[status] || status;
+  const catLabel  = p.sexo === 'M' ? '🚴 Ciclismo Masculino' : '🚴 Ciclismo Feminino';
+  const status    = i?.status || 'pendente_pagamento';
+  const cor       = statusCor[status] || '#374151';
+  const label     = statusLabel[status] || status;
+  const podePagar = status === 'pendente_pagamento' || status === 'aguardando_boleto';
+  const btnId     = `btn-pagar-consulta-${i?.id || 0}`;
 
   el.innerHTML = `
     <div class="perfil-nome">${p.nome_completo}</div>
@@ -516,36 +505,60 @@ function renderizarConsulta() {
     <div class="perfil-info">👕 Camiseta: <strong>${p.tamanho_camiseta || '—'}</strong></div>
     <div class="perfil-info">📍 ${p.cidade} / ${p.uf}</div>
     <div class="perfil-status" style="color:${cor};font-weight:700;margin-top:10px;font-size:15px;">${label}</div>
+
+    ${podePagar ? `
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(45,122,58,.2);">
+        <p style="font-size:12px;color:rgba(245,234,208,.5);margin-bottom:12px;line-height:1.5;">
+          Sua inscrição está salva. Clique abaixo para realizar o pagamento agora.
+        </p>
+        <button id="${btnId}"
+          style="width:100%;padding:16px;background:linear-gradient(135deg,#c8920a 0%,#ffd700 50%,#c8920a 100%);color:#3d1a0a;border:none;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;box-shadow:0 4px 20px rgba(200,146,10,.4);">
+          ⚡ Pagar agora — R$ 160,00
+        </button>
+      </div>
+    ` : ''}
+
+    ${status === 'pago' ? `
+      <div style="margin-top:14px;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.3);border-radius:10px;padding:12px 14px;font-size:12px;color:#86efac;line-height:1.6;">
+        ✅ Pagamento confirmado. Sua vaga está garantida!
+      </div>
+    ` : ''}
   `;
 
   document.getElementById('consulta-resultado').style.display = 'block';
+
+  // Liga o botão após renderizar o HTML
+  if (podePagar && i?.id) {
+    const btnPagar = document.getElementById(btnId);
+    if (btnPagar) {
+      btnPagar.addEventListener('click', () => {
+        irParaPagamento(i.id, i.numero_ficha, p.nome_completo, p.email || '', btnPagar);
+      });
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
 // INICIALIZAÇÃO
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
-  // Mostrar data de acesso no rodapé
   const el = document.getElementById('data-acesso');
   if (el) el.textContent = new Date().toLocaleDateString('pt-BR');
 
-  // Desabilitar botão de envio até aceitar regulamento
   document.getElementById('btn-enviar').disabled = true;
 
-  // Verificar se inscrições estão abertas
   if (!inscricaoAberta()) {
     const btn = document.getElementById('btn-enviar');
     if (btn) {
-      btn.disabled    = true;
-      btn.textContent = '⚠️ Inscrições encerradas';
+      btn.disabled         = true;
+      btn.textContent      = '⚠️ Inscrições encerradas';
       btn.style.background = '#6b7280';
     }
     const aviso = document.getElementById('aviso-encerrado');
     if (aviso) aviso.style.display = 'block';
   }
 
-  // Detectar ficha na URL (ex: consulta.html?ficha=CIC-1234)
-  const params = new URLSearchParams(window.location.search);
+  const params   = new URLSearchParams(window.location.search);
   const fichaUrl = params.get('ficha');
   if (fichaUrl) {
     mudarTab('consulta');
