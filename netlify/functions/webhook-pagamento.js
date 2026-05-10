@@ -142,14 +142,7 @@ exports.handler = async function (event) {
         pagamento_id:      String(paymentId),
         pagamento_metodo:  metodo,
         pagamento_valor:   pagamento.transaction_amount,
-        pagamento_data:    novoStatus === 'pago' ? new Date().toISOString() : null,
-        // Quem efetivamente realizou o pagamento
-        pago_por_nome:     pagoPorNome,
-        pago_por_email:    pagoPorEmail,
-        pago_por_cpf:      pagoPorCpf,
-        pago_por_banco:    pagoPorBanco,
-        pago_por_conta:    pagoPorConta,
-        mp_transaction_id: mpTransactionId
+        pagamento_data:    novoStatus === 'pago' ? new Date().toISOString() : null
       })
     });
   } catch (err) {
