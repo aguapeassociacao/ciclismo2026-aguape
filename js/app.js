@@ -314,6 +314,9 @@ async function enviarInscricao() {
     return;
   }
 
+  // Guarda o id da inscrição para usar no pagamento
+  const inscricaoId = Array.isArray(resInsc) && resInsc.length > 0 ? resInsc[0].id : null;
+
   // ── Tela de sucesso ────────────────────────────────────────
   document.getElementById('formulario').style.display = 'none';
   document.getElementById('sucesso').style.display    = 'block';
@@ -333,6 +336,13 @@ async function enviarInscricao() {
   );
   document.getElementById('share-link').href = 'https://wa.me/?text=' + msg;
 
+  // Configura o botão de pagamento
+  const btnPagar = document.getElementById('btn-pagar-agora');
+  if (btnPagar && inscricaoId) {
+    btnPagar.style.display = 'block';
+    btnPagar.onclick = () => irParaPagamento(inscricaoId, ficha, nome, email);
+  }
+
   // Gerar QR Code
   setTimeout(() => gerarQRCode(ficha, nome), 100);
 
@@ -340,8 +350,44 @@ async function enviarInscricao() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// QR CODE NA TELA DE SUCESSO
+// PAGAMENTO — REDIRECIONAR PARA O MERCADO PAGO
 // ══════════════════════════════════════════════════════════════
+async function irParaPagamento(inscricaoId, ficha, nome, email) {
+  const btn = document.getElementById('btn-pagar-agora');
+  if (btn) {
+    btn.textContent = '⏳ Preparando pagamento...';
+    btn.disabled    = true;
+    btn.style.opacity = '0.7';
+  }
+
+  try {
+    const r = await fetch('/.netlify/functions/criar-pagamento', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ inscricao_id: inscricaoId, numero_ficha: ficha, nome, email })
+    });
+
+    const dados = await r.json();
+
+    if (!dados.ok || !dados.url) {
+      throw new Error(dados.erro || 'URL de pagamento não recebida');
+    }
+
+    // Redireciona para a página de pagamento do Mercado Pago
+    window.location.href = dados.url;
+
+  } catch (err) {
+    console.error('Erro ao criar pagamento:', err);
+    if (btn) {
+      btn.textContent = '⚡ Pagar agora — R$ 160,00';
+      btn.disabled    = false;
+      btn.style.opacity = '1';
+    }
+    alert('Erro ao conectar com o sistema de pagamento. Tente novamente em alguns segundos.');
+  }
+}
+
+
 function gerarQRCode(ficha, nome) {
   const el = document.getElementById('qrcode-sucesso');
   if (!el || typeof QRCode === 'undefined') return;
