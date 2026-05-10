@@ -358,7 +358,7 @@ async function irParaPagamento(inscricaoId, ficha, nome, email, btnEl) {
   }
 
   try {
-    const r = await fetch('https://ciclismo2026-funcoes.onrender.com/criar-pagamento', {
+    const r = await fetch('/api/criar-pagamento', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ inscricao_id: inscricaoId, numero_ficha: ficha, nome, email })
