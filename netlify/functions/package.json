@@ -1,0 +1,14 @@
+{
+  "name": "ciclismo2026-funcoes",
+  "version": "1.0.0",
+  "description": "Funções de pagamento Mercado Pago",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mercadopago": "^2.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  }
+}
