@@ -327,7 +327,7 @@ async function inicializar() {
 async function buscarFicha(inscricaoId) {
   if (!inscricaoId) return null;
   try {
-    const r = await fetch('https://ciclismo2026-aguape.onrender.com/api/supabase', {
+    const r = await fetch('https://ciclismo2026-funcoes.onrender.com/api/supabase', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
