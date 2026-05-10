@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<!--
+  admin.html — Painel Administrativo
+  Ciclismo Individual 2026 — Turismo de Base Comunitária
+  © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
+  V1.0 — Dashboard · Inscritos · Camisetas · Financeiro · Check-in · Config
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Ciclismo 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --verde-escuro:#0d2810; --verde:#1a5c2a; --verde-medio:#2d7a3a;
+  --verde-claro:#7dcf8a;  --verde-neon:#a8e6b4;
+  --dourado:#c8920a;      --dourado-claro:#f0b429;
+  --creme:#f5ead0;        --marrom:#3d1a0a;
+  --bg:#f0f4f1;           --sidebar-w:230px;
+  --azul-pix:#00b4d8;
+  --err:#ef4444; --warn:#f59e0b; --ok:#22c55e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:var(--bg);color:#1f2937}
+
+/* ══ LOGIN ══════════════════════════════════════════════════════ */
+#tela-login{
+  position:fixed;inset:0;background:var(--verde-escuro);
+  display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;
+}
+.login-card{
+  background:rgba(13,40,16,.9);border:1px solid rgba(45,122,58,.4);
+  border-radius:20px;padding:40px 32px;width:100%;max-width:380px;
+  backdrop-filter:blur(12px);text-align:center;
+}
+.login-logo{font-size:40px;margin-bottom:12px}
+.login-titulo{font-size:20px;font-weight:700;color:var(--dourado-claro);margin-bottom:4px}
+.login-sub{font-size:12px;color:rgba(245,234,208,.45);margin-bottom:28px}
+.login-field{
+  width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(45,122,58,.3);
+  background:rgba(0,0,0,.3);color:var(--creme);font-size:14px;margin-bottom:12px;
+  outline:none;transition:border .2s;
+}
+.login-field:focus{border-color:var(--verde-claro)}
+.login-field::placeholder{color:rgba(245,234,208,.35)}
+.btn-login{
+  width:100%;padding:14px;border:none;border-radius:50px;cursor:pointer;
+  background:linear-gradient(135deg,var(--dourado),var(--dourado-claro),var(--dourado));
+  color:var(--marrom);font-size:15px;font-weight:700;letter-spacing:.5px;
+  margin-top:4px;transition:opacity .2s;
+}
+.btn-login:hover{opacity:.9}
+.login-erro{font-size:12px;color:#f87171;margin-top:10px;min-height:18px}
+
+/* ══ LAYOUT PRINCIPAL ═══════════════════════════════════════════ */
+#app{display:none;height:100%;flex-direction:row}
+#app.visivel{display:flex}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--verde-escuro);
+  display:flex;flex-direction:column;height:100vh;position:sticky;top:0;
+  overflow:hidden;
+}
+.sb-topo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo{font-size:22px;margin-bottom:4px}
+.sb-titulo{color:var(--dourado-claro);font-weight:700;font-size:13px;line-height:1.3}
+.sb-sub{color:rgba(245,234,208,.35);font-size:10px;margin-top:2px}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 10px}
+.sb-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:10px;cursor:pointer;color:rgba(245,234,208,.55);
+  font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;
+  border:1px solid transparent;
+}
+.sb-item:hover{background:rgba(255,255,255,.06);color:var(--creme)}
+.sb-item.ativo{background:rgba(45,122,58,.3);border-color:rgba(45,122,58,.4);color:var(--verde-claro)}
+.sb-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center}
+.sb-rodape{
+  padding:14px 18px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:11px;color:rgba(245,234,208,.3);
+}
+.sb-usuario{color:rgba(245,234,208,.7);font-weight:600;font-size:12px;margin-bottom:6px}
+.btn-logout{
+  background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.25);
+  color:#f87171;border-radius:8px;padding:6px 14px;font-size:11px;
+  cursor:pointer;transition:all .15s;width:100%;
+}
+.btn-logout:hover{background:rgba(239,68,68,.25)}
+
+/* ── Conteúdo ────────────────────────────────────────────────── */
+.conteudo{flex:1;overflow-y:auto;padding:24px}
+.tab-pane{display:none}
+.tab-pane.ativo{display:block}
+.page-titulo{font-size:20px;font-weight:700;color:var(--verde-escuro);margin-bottom:4px}
+.page-sub{font-size:12px;color:#6b7280;margin-bottom:22px}
+
+/* ── Cards de stat ───────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat-card{
+  background:#fff;border-radius:14px;padding:18px 16px;
+  border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+.stat-label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.stat-valor{font-size:26px;font-weight:700;color:var(--verde-escuro);line-height:1}
+.stat-valor.verde{color:var(--verde)}
+.stat-valor.dourado{color:var(--dourado)}
+.stat-valor.azul{color:#1d4ed8}
+.stat-valor.vermelho{color:#dc2626}
+.stat-icon{font-size:22px;float:right;margin-top:-4px}
+
+/* ── Gráficos ────────────────────────────────────────────────── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:22px}
+.chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.chart-titulo{font-size:12px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px}
+.chart-wrap{position:relative;height:180px}
+
+/* ── Tabela ──────────────────────────────────────────────────── */
+.tabela-wrap{background:#fff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.tabela-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px;border-bottom:1px solid #f3f4f6;flex-wrap:wrap;gap:10px;
+}
+.tabela-header-titulo{font-size:14px;font-weight:600;color:#111827}
+.tabela-controles{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.input-busca{
+  padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;
+  font-size:13px;outline:none;transition:border .15s;min-width:180px;
+}
+.input-busca:focus{border-color:var(--verde-claro)}
+.select-filtro{
+  padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;
+  font-size:12px;outline:none;background:#fff;cursor:pointer;
+}
+.btn-acao{
+  padding:7px 14px;border-radius:8px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;transition:all .15s;
+}
+.btn-verde{background:var(--verde);color:#fff}
+.btn-verde:hover{background:var(--verde-medio)}
+.btn-azul{background:#1d4ed8;color:#fff}
+.btn-azul:hover{background:#1e40af}
+.btn-cinza{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+.btn-cinza:hover{background:#e5e7eb}
+.btn-verm{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+.btn-verm:hover{background:#fee2e2}
+.btn-sm{padding:4px 10px;font-size:11px;border-radius:6px;border:none;cursor:pointer;font-weight:600;transition:all .15s}
+
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #f3f4f6;background:#fafafa}
+td{padding:10px 14px;border-bottom:1px solid #f9fafb;font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+
+/* ── Chips de status ─────────────────────────────────────────── */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.chip-pago{background:#dcfce7;color:#15803d}
+.chip-pendente{background:#fef9c3;color:#92400e}
+.chip-cancelado{background:#fee2e2;color:#b91c1c}
+.chip-pix{background:#e0f2fe;color:#0369a1}
+.chip-cartao{background:#ede9fe;color:#6d28d9}
+
+/* ── Camiseta counters ───────────────────────────────────────── */
+.tam-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.tam-card{
+  background:#fff;border-radius:12px;padding:18px;text-align:center;
+  border:2px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.tam-letra{font-size:28px;font-weight:800;color:var(--verde-escuro);margin-bottom:4px}
+.tam-count{font-size:36px;font-weight:700;color:var(--verde);line-height:1}
+.tam-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+/* ── Financeiro cards ────────────────────────────────────────── */
+.fin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.fin-valor{font-size:28px;font-weight:700;margin-bottom:4px}
+.fin-label{font-size:12px;color:#6b7280}
+
+/* ── Check-in ────────────────────────────────────────────────── */
+.checkin-busca-wrap{background:#fff;border-radius:14px;padding:24px;border:1px solid #e5e7eb;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.checkin-resultado{background:#fff;border-radius:14px;padding:24px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);display:none}
+.checkin-nome{font-size:20px;font-weight:700;color:var(--verde-escuro);margin-bottom:4px}
+.checkin-ficha{font-size:13px;color:#6b7280;margin-bottom:14px}
+.checkin-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.checkin-info-item{background:#f9fafb;border-radius:8px;padding:12px}
+.checkin-info-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.checkin-info-valor{font-size:15px;font-weight:700;color:#111827}
+.btn-checkin{
+  width:100%;padding:14px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,var(--verde),var(--verde-medio));
+  color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.btn-checkin:hover{opacity:.88}
+.btn-checkin:disabled{opacity:.45;cursor:not-allowed}
+.checkin-ok{background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:14px;text-align:center;font-weight:700;color:#15803d;font-size:15px;margin-top:10px;display:none}
+
+/* ── Config ──────────────────────────────────────────────────── */
+.config-card{background:#fff;border-radius:14px;padding:22px;border:1px solid #e5e7eb;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.config-titulo{font-size:14px;font-weight:700;color:#111827;margin-bottom:4px}
+.config-sub{font-size:12px;color:#6b7280;margin-bottom:14px}
+.toggle-wrap{display:flex;align-items:center;gap:14px}
+.toggle{position:relative;width:48px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;background:#d1d5db;border-radius:26px;cursor:pointer;transition:.3s;
+}
+.toggle-slider::before{
+  content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;
+  background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle input:checked + .toggle-slider{background:var(--verde)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(22px)}
+.toggle-label{font-size:13px;font-weight:600;color:#374151}
+
+/* ── Paginação ───────────────────────────────────────────────── */
+.pag-wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280}
+.pag-btns{display:flex;gap:4px}
+.pag-btn{padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;transition:all .15s}
+.pag-btn:hover{background:#f3f4f6}
+.pag-btn.ativo{background:var(--verde);color:#fff;border-color:var(--verde)}
+.pag-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Spinner e empty ─────────────────────────────────────────── */
+.spin{width:28px;height:28px;border:3px solid rgba(45,122,58,.2);border-top-color:var(--verde);border-radius:50%;animation:girar .7s linear infinite;margin:30px auto;display:block}
+@keyframes girar{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:32px;color:#9ca3af;font-size:13px}
+.alerta-admin{padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px}
+.alerta-verm{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626}
+.alerta-verde{background:#dcfce7;border:1px solid #86efac;color:#15803d}
+
+/* ── Responsivo ──────────────────────────────────────────────── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+  .tam-grid{grid-template-columns:repeat(3,1fr)}
+  .fin-grid{grid-template-columns:1fr}
+  .checkin-info{grid-template-columns:1fr}
+  .conteudo{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TELA DE LOGIN ══════════════════════════════════════════ -->
+<div id="tela-login">
+  <div class="login-card">
+    <div class="login-logo">🚴</div>
+    <div class="login-titulo">Painel Admin</div>
+    <div class="login-sub">Ciclismo Individual 2026 · Costa Marques, RO</div>
+    <input class="login-field" type="text" id="login-user" placeholder="Usuário" autocomplete="username">
+    <input class="login-field" type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+    <button class="btn-login" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+
+<!-- ══ APP PRINCIPAL ══════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sb-topo">
+      <div class="sb-logo">🚴</div>
+      <div class="sb-titulo">Ciclismo 2026</div>
+      <div class="sb-sub">Painel Administrativo</div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-item ativo" onclick="abrirTab('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
+      <div class="sb-item" onclick="abrirTab('inscritos')"><span class="sb-icon">👥</span>Inscritos</div>
+      <div class="sb-item" onclick="abrirTab('camisetas')"><span class="sb-icon">👕</span>Camisetas</div>
+      <div class="sb-item" onclick="abrirTab('financeiro')"><span class="sb-icon">💰</span>Financeiro</div>
+      <div class="sb-item" onclick="abrirTab('checkin')"><span class="sb-icon">✅</span>Check-in</div>
+      <div class="sb-item" onclick="abrirTab('config')"><span class="sb-icon">⚙️</span>Configurações</div>
+    </div>
+    <div class="sb-rodape">
+      <div class="sb-usuario" id="sb-nome">Carregando…</div>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </nav>
+
+  <!-- Conteúdo -->
+  <main class="conteudo">
+
+    <!-- ── DASHBOARD ────────────────────────────────── -->
+    <div class="tab-pane ativo" id="tab-dashboard">
+      <div class="page-titulo">Dashboard</div>
+      <div class="page-sub" id="dash-atualizado">Visão geral — carregando…</div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total inscritos</div><span class="stat-icon">👥</span><div class="stat-valor" id="stat-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pagamento confirmado</div><span class="stat-icon">✅</span><div class="stat-valor verde" id="stat-pagos">—</div></div>
+        <div class="stat-card"><div class="stat-label">Aguardando</div><span class="stat-icon">⏳</span><div class="stat-valor azul" id="stat-pendentes">—</div></div>
+        <div class="stat-card"><div class="stat-label">Total arrecadado</div><span class="stat-icon">💰</span><div class="stat-valor dourado" id="stat-arrecadado">—</div></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-titulo">Por gênero</div><div class="chart-wrap"><canvas id="chart-genero"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Por método de pagamento</div><div class="chart-wrap"><canvas id="chart-metodo"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Camisetas (pagos)</div><div class="chart-wrap"><canvas id="chart-camiseta"></canvas></div></div>
+      </div>
+
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">📋 Últimas inscrições</div>
+          <button class="btn-acao btn-verde" onclick="abrirTab('inscritos')">Ver todos →</button>
+        </div>
+        <table id="tabela-recentes">
+          <thead><tr><th>Ficha</th><th>Nome</th><th>Gênero</th><th>Camiseta</th><th>Status</th><th>Data</th></tr></thead>
+          <tbody id="tbody-recentes"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── INSCRITOS ─────────────────────────────────── -->
+    <div class="tab-pane" id="tab-inscritos">
+      <div class="page-titulo">Lista de Inscritos</div>
+      <div class="page-sub">Busca, filtros, ações manuais e exportação</div>
+
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">👥 <span id="insc-count">—</span> inscritos</div>
+          <div class="tabela-controles">
+            <input class="input-busca" type="text" id="insc-busca" placeholder="Nome, CPF ou ficha…" oninput="filtrarInscritos()">
+            <select class="select-filtro" id="insc-filtro-status" onchange="filtrarInscritos()">
+              <option value="">Todos os status</option>
+              <option value="pago">✅ Pagos</option>
+              <option value="pendente_pagamento">⏳ Pendentes</option>
+              <option value="cancelado">❌ Cancelados</option>
+            </select>
+            <select class="select-filtro" id="insc-filtro-sexo" onchange="filtrarInscritos()">
+              <option value="">M e F</option>
+              <option value="M">🚴 Masculino</option>
+              <option value="F">🚴 Feminino</option>
+            </select>
+            <select class="select-filtro" id="insc-filtro-cam" onchange="filtrarInscritos()">
+              <option value="">Todas camisetas</option>
+              <option value="P">P</option><option value="M">M</option>
+              <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
+            </select>
+            <button class="btn-acao btn-verde" onclick="exportarCSV('inscritos')">⬇ CSV</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Ficha</th><th>Nome</th><th>CPF</th><th>Gênero</th><th>Cidade</th><th>Camiseta</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+            <tbody id="tbody-inscritos"><tr><td colspan="9"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pag-wrap">
+          <span id="insc-pag-info">—</span>
+          <div class="pag-btns" id="insc-pag-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CAMISETAS ─────────────────────────────────── -->
+    <div class="tab-pane" id="tab-camisetas">
+      <div class="page-titulo">Gestão de Camisetas</div>
+      <div class="page-sub">Apenas inscritos com pagamento confirmado</div>
+
+      <div class="tam-grid">
+        <div class="tam-card"><div class="tam-letra">P</div><div class="tam-count" id="cam-P">—</div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">M</div><div class="tam-count" id="cam-M">—</div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">G</div><div class="tam-count" id="cam-G">—</div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">GG</div><div class="tam-count" id="cam-GG">—</div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">XG</div><div class="tam-count" id="cam-XG">—</div><div class="tam-label">camisetas</div></div>
+      </div>
+
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">👕 Lista para confecção — <span id="cam-total-pagos">—</span> camisetas</div>
+          <div class="tabela-controles">
+            <select class="select-filtro" id="cam-filtro-tam" onchange="filtrarCamisetas()">
+              <option value="">Todos os tamanhos</option>
+              <option value="P">P</option><option value="M">M</option>
+              <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
+            </select>
+            <button class="btn-acao btn-verde" onclick="exportarCSV('camisetas')">⬇ CSV Confecção</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Ficha</th><th>Nome</th><th>CPF</th><th>Gênero</th><th>Camiseta</th><th>Cidade</th></tr></thead>
+            <tbody id="tbody-camisetas"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FINANCEIRO ────────────────────────────────── -->
+    <div class="tab-pane" id="tab-financeiro">
+      <div class="page-titulo">Painel Financeiro</div>
+      <div class="page-sub">Totalizações por método e status</div>
+
+      <div class="fin-grid">
+        <div class="fin-card"><div class="fin-valor verde" id="fin-total">R$ —</div><div class="fin-label">Total arrecadado (pagos)</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:var(--azul-pix)" id="fin-pix">R$ —</div><div class="fin-label">Via PIX</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#7c3aed" id="fin-cartao">R$ —</div><div class="fin-label">Via Cartão</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#92400e" id="fin-pendente">R$ —</div><div class="fin-label">A confirmar (pendentes)</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#dc2626" id="fin-cancelado">—</div><div class="fin-label">Cancelados / abandonados</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#374151" id="fin-potencial">R$ —</div><div class="fin-label">Potencial total (todos pagos)</div></div>
+      </div>
+
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">💰 Histórico de pagamentos confirmados</div>
+          <button class="btn-acao btn-verde" onclick="exportarCSV('financeiro')">⬇ CSV Financeiro</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Ficha</th><th>Nome</th><th>Método</th><th>Valor</th><th>Data pagamento</th></tr></thead>
+            <tbody id="tbody-financeiro"><tr><td colspan="5"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CHECK-IN ──────────────────────────────────── -->
+    <div class="tab-pane" id="tab-checkin">
+      <div class="page-titulo">Check-in Presencial</div>
+      <div class="page-sub">Valida pagamento, exibe camiseta e registra presença</div>
+
+      <div class="checkin-busca-wrap">
+        <div style="display:flex;gap:10px;align-items:center">
+          <input class="input-busca" style="flex:1;font-size:15px;padding:12px 16px" type="text"
+            id="checkin-input" placeholder="Digite ficha (CIC-1234), CPF ou nome…"
+            onkeydown="if(event.key==='Enter')buscarCheckin()">
+          <button class="btn-acao btn-verde" style="padding:12px 20px;font-size:14px" onclick="buscarCheckin()">🔍 Buscar</button>
+        </div>
+        <div class="alerta-admin alerta-verm" id="checkin-erro" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div class="checkin-resultado" id="checkin-resultado">
+        <div class="checkin-nome" id="ci-nome">—</div>
+        <div class="checkin-ficha" id="ci-ficha">—</div>
+        <div class="checkin-info">
+          <div class="checkin-info-item"><div class="checkin-info-label">Camiseta</div><div class="checkin-info-valor" id="ci-cam">—</div></div>
+          <div class="checkin-info-item"><div class="checkin-info-label">Gênero</div><div class="checkin-info-valor" id="ci-gen">—</div></div>
+          <div class="checkin-info-item"><div class="checkin-info-label">Cidade</div><div class="checkin-info-valor" id="ci-cid">—</div></div>
+          <div class="checkin-info-item"><div class="checkin-info-label">Status pagamento</div><div class="checkin-info-valor" id="ci-status">—</div></div>
+        </div>
+        <button class="btn-checkin" id="btn-confirmar-ci" onclick="confirmarCheckin()">✅ Confirmar presença e entrega de camiseta</button>
+        <div class="checkin-ok" id="ci-ok">✅ Check-in realizado com sucesso!</div>
+      </div>
+
+      <div class="tabela-wrap" style="margin-top:16px">
+        <div class="tabela-header"><div class="tabela-header-titulo">✅ Últimos check-ins — <span id="ci-count">—</span> realizados</div></div>
+        <table>
+          <thead><tr><th>Ficha</th><th>Nome</th><th>Camiseta</th><th>Horário check-in</th></tr></thead>
+          <tbody id="tbody-checkins"><tr><td colspan="4"><div class="empty">Nenhum check-in ainda</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CONFIGURAÇÕES ─────────────────────────────── -->
+    <div class="tab-pane" id="tab-config">
+      <div class="page-titulo">Configurações</div>
+      <div class="page-sub">Controles do sistema e logs</div>
+
+      <div class="config-card">
+        <div class="config-titulo">⏱ Status das inscrições</div>
+        <div class="config-sub">Controla se o formulário de inscrição está aberto ao público. Quando fechado, o botão "Enviar inscrição" fica desativado.</div>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-inscricoes" onchange="alterarInscricoes()">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" id="toggle-label">Verificando…</span>
+        </div>
+        <div class="alerta-admin" id="inscricoes-alerta" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-titulo">📋 Resumo de versões dos arquivos</div>
+        <div class="config-sub">Controle de versão atual do sistema em produção</div>
+        <table>
+          <thead><tr><th>Arquivo</th><th>Versão</th><th>Situação</th></tr></thead>
+          <tbody>
+            <tr><td>js/app.js</td><td>V3.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/criar-pagamento.js</td><td>V3.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/webhook-pagamento.js</td><td>V1.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>pix.html</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>pagamento.html</td><td>V2.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="config-card">
+        <div class="config-titulo">📡 Últimos webhooks recebidos</div>
+        <div class="config-sub">Notificações de pagamento recebidas do Mercado Pago</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Data</th><th>Inscrição</th><th>MP Payment ID</th><th>Status MP</th><th>Método</th><th>Valor</th></tr></thead>
+            <tbody id="tbody-webhooks"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ================================================================
+// admin.html — Script V1.0
+// © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
+// ================================================================
+
+// ── Estado ───────────────────────────────────────────────────────
+let adminToken   = '';
+let adminPerfil  = '';
+let adminNome    = '';
+let todosDados   = { inscricoes: [], participantes: [] };
+let checkinAtual = null;
+let chartGenero  = null, chartMetodo = null, chartCamiseta = null;
+let insc_pagina  = 1;
+const INSC_POR_PAG = 20;
+let inscFiltrados = [];
+
+// ── Auth ──────────────────────────────────────────────────────────
+async function fazerLogin() {
+  const usuario = document.getElementById('login-user').value.trim();
+  const senha   = document.getElementById('login-senha').value;
+  const erro    = document.getElementById('login-erro');
+  erro.textContent = '';
+
+  if (!usuario || !senha) { erro.textContent = 'Preencha usuário e senha.'; return; }
+
+  try {
+    const r = await fetch('/api/admin-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, senha })
+    });
+    const d = await r.json();
+    if (!d.ok) { erro.textContent = d.erro || 'Usuário ou senha incorretos.'; return; }
+
+    adminToken  = d.token;
+    adminPerfil = d.perfil;
+    adminNome   = d.nome;
+    sessionStorage.setItem('admin_token',  adminToken);
+    sessionStorage.setItem('admin_perfil', adminPerfil);
+    sessionStorage.setItem('admin_nome',   adminNome);
+
+    iniciarApp();
+  } catch { erro.textContent = 'Erro de conexão. Tente novamente.'; }
+}
+
+function logout() {
+  sessionStorage.removeItem('admin_token');
+  sessionStorage.removeItem('admin_perfil');
+  sessionStorage.removeItem('admin_nome');
+  document.getElementById('tela-login').style.display = 'flex';
+  document.getElementById('app').classList.remove('visivel');
+}
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if (e.key === 'Enter') fazerLogin();
+});
+
+// ── Boot ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const t = sessionStorage.getItem('admin_token');
+  if (t) {
+    adminToken  = t;
+    adminPerfil = sessionStorage.getItem('admin_perfil') || '';
+    adminNome   = sessionStorage.getItem('admin_nome') || '';
+    iniciarApp();
+  }
+});
+
+function iniciarApp() {
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('app').classList.add('visivel');
+  document.getElementById('sb-nome').textContent = adminNome + ' (' + adminPerfil + ')';
+  carregarTudo();
+}
+
+// ── Dados ─────────────────────────────────────────────────────────
+async function supabase(tabela, query='') {
+  const r = await fetch('/api/supabase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao:'buscar', tabela, query })
+  });
+  return r.json();
+}
+
+async function supabaseAtualizar(tabela, id, dados) {
+  const r = await fetch('/api/supabase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao:'atualizar', tabela, id, dados })
+  });
+  return r.json();
+}
+
+async function carregarTudo() {
+  const [inscricoes, participantes] = await Promise.all([
+    supabase('inscricoes', 'select=*&order=criado_em.desc'),
+    supabase('participantes', 'select=*')
+  ]);
+  todosDados.inscricoes    = Array.isArray(inscricoes)   ? inscricoes   : [];
+  todosDados.participantes = Array.isArray(participantes) ? participantes : [];
+  renderizarDashboard();
+  renderizarInscritos();
+  renderizarCamisetas();
+  renderizarFinanceiro();
+  carregarWebhooks();
+  carregarCheckins();
+  verificarStatusInscricoes();
+  const agora = new Date().toLocaleString('pt-BR');
+  document.getElementById('dash-atualizado').textContent = `Última atualização: ${agora}`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function getParticipante(pid) {
+  return todosDados.participantes.find(p => p.id === pid) || {};
+}
+
+function chipStatus(s) {
+  if (s === 'pago')                return '<span class="chip chip-pago">✅ Pago</span>';
+  if (s === 'cancelado')           return '<span class="chip chip-cancelado">❌ Cancelado</span>';
+  return '<span class="chip chip-pendente">⏳ Pendente</span>';
+}
+
+function chipMetodo(m) {
+  if (m === 'pix')    return '<span class="chip chip-pix">⚡ PIX</span>';
+  if (m === 'cartao') return '<span class="chip chip-cartao">💳 Cartão</span>';
+  return m ? `<span class="chip">${m}</span>` : '—';
+}
+
+function mascaraCPF(c) {
+  if (!c) return '—';
+  const d = c.replace(/\D/g,'');
+  return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.***.${d.slice(9)}` : c;
+}
+
+function formatarData(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function formatarReais(v) {
+  if (v == null || v === '') return 'R$ —';
+  return 'R$ ' + parseFloat(v).toFixed(2).replace('.', ',');
+}
+
+// ── Tab ───────────────────────────────────────────────────────────
+function abrirTab(nome) {
+  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('ativo'));
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('ativo'));
+  document.getElementById('tab-' + nome).classList.add('ativo');
+  const itens = document.querySelectorAll('.sb-item');
+  const ordem = ['dashboard','inscritos','camisetas','financeiro','checkin','config'];
+  itens[ordem.indexOf(nome)]?.classList.add('ativo');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════════
+function renderizarDashboard() {
+  const insc = todosDados.inscricoes;
+  const part = todosDados.participantes;
+
+  const pagos     = insc.filter(i => i.status === 'pago');
+  const pendentes = insc.filter(i => i.status !== 'pago' && i.status !== 'cancelado');
+  const arrecadado = pagos.reduce((s,i) => s + (parseFloat(i.pagamento_valor)||0), 0);
+
+  document.getElementById('stat-total').textContent      = insc.length;
+  document.getElementById('stat-pagos').textContent      = pagos.length;
+  document.getElementById('stat-pendentes').textContent  = pendentes.length;
+  document.getElementById('stat-arrecadado').textContent = 'R$ ' + arrecadado.toFixed(2).replace('.',',');
+
+  // Gráfico gênero
+  const masc = part.filter(p => p.sexo === 'M').length;
+  const fem  = part.filter(p => p.sexo === 'F').length;
+  renderChart('chart-genero', chartGenero, 'doughnut',
+    ['Masculino','Feminino'], [masc, fem],
+    ['#1a5c2a','#f0b429'], c => chartGenero = c);
+
+  // Gráfico método
+  const pixN    = pagos.filter(i => i.pagamento_metodo === 'pix').length;
+  const cartN   = pagos.filter(i => i.pagamento_metodo === 'cartao').length;
+  const outroN  = pagos.length - pixN - cartN;
+  renderChart('chart-metodo', chartMetodo, 'doughnut',
+    ['PIX','Cartão','Outro'], [pixN, cartN, outroN],
+    ['#00b4d8','#7c3aed','#9ca3af'], c => chartMetodo = c);
+
+  // Gráfico camiseta (apenas pagos)
+  const tamanhos = ['P','M','G','GG','XG'];
+  const countsTam = tamanhos.map(t =>
+    pagos.filter(i => getParticipante(i.participante_id).tamanho_camiseta === t).length
+  );
+  renderChart('chart-camiseta', chartCamiseta, 'bar',
+    tamanhos, countsTam,
+    ['#1a5c2a','#2d7a3a','#7dcf8a','#c8920a','#f0b429'], c => chartCamiseta = c);
+
+  // Últimas inscrições
+  const recentes = insc.slice(0, 10);
+  const tbody = document.getElementById('tbody-recentes');
+  tbody.innerHTML = recentes.length ? recentes.map(i => {
+    const p = getParticipante(i.participante_id);
+    return `<tr>
+      <td><strong>${i.numero_ficha||'—'}</strong></td>
+      <td>${p.nome_completo||'—'}</td>
+      <td>${p.sexo==='M'?'🚴 Masc':'🚴 Fem'}</td>
+      <td>${p.tamanho_camiseta||'—'}</td>
+      <td>${chipStatus(i.status)}</td>
+      <td>${formatarData(i.criado_em)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">Nenhum inscrito</td></tr>';
+}
+
+function renderChart(canvasId, instancia, tipo, labels, data, colors, setter) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (instancia) instancia.destroy();
+  const cfg = {
+    type: tipo,
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderWidth: tipo === 'bar' ? 0 : 2,
+        borderColor: '#fff',
+        borderRadius: tipo === 'bar' ? 6 : 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: tipo==='bar'?'bottom':'right', labels:{ font:{size:11}, padding:10 } } },
+      scales: tipo === 'bar' ? { y: { beginAtZero:true, ticks:{stepSize:1} } } : {}
+    }
+  };
+  setter(new Chart(ctx, cfg));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INSCRITOS
+// ══════════════════════════════════════════════════════════════════
+function filtrarInscritos() {
+  const busca  = document.getElementById('insc-busca').value.toLowerCase().trim();
+  const status = document.getElementById('insc-filtro-status').value;
+  const sexo   = document.getElementById('insc-filtro-sexo').value;
+  const cam    = document.getElementById('insc-filtro-cam').value;
+
+  inscFiltrados = todosDados.inscricoes.filter(i => {
+    const p = getParticipante(i.participante_id);
+    if (status && i.status !== status) return false;
+    if (sexo   && p.sexo !== sexo)     return false;
+    if (cam    && p.tamanho_camiseta !== cam) return false;
+    if (busca) {
+      const txt = `${p.nome_completo||''} ${p.cpf||''} ${i.numero_ficha||''}`.toLowerCase();
+      if (!txt.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  insc_pagina = 1;
+  renderizarInscritos();
+}
+
+function renderizarInscritos() {
+  if (!inscFiltrados.length) inscFiltrados = [...todosDados.inscricoes];
+  document.getElementById('insc-count').textContent = inscFiltrados.length;
+
+  const inicio = (insc_pagina - 1) * INSC_POR_PAG;
+  const pagina = inscFiltrados.slice(inicio, inicio + INSC_POR_PAG);
+  const totalPag = Math.ceil(inscFiltrados.length / INSC_POR_PAG);
+
+  const tbody = document.getElementById('tbody-inscritos');
+  tbody.innerHTML = pagina.length ? pagina.map(i => {
+    const p = getParticipante(i.participante_id);
+    const podeConfirmar = adminPerfil === 'admin' && i.status !== 'pago';
+    return `<tr>
+      <td><strong>${i.numero_ficha||'—'}</strong></td>
+      <td>${p.nome_completo||'—'}</td>
+      <td>${mascaraCPF(p.cpf)}</td>
+      <td>${p.sexo==='M'?'🚴 Masc':'🚴 Fem'}</td>
+      <td>${p.cidade||'—'}</td>
+      <td>${p.tamanho_camiseta||'—'}</td>
+      <td>${chipStatus(i.status)}</td>
+      <td style="font-size:11px">${formatarData(i.criado_em)}</td>
+      <td>
+        ${podeConfirmar?`<button class="btn-sm btn-verde" onclick="confirmarPagamentoManual(${i.id})">✅ Confirmar</button> `:''}
+        ${adminPerfil==='admin'&&i.status!=='cancelado'?`<button class="btn-sm btn-verm" onclick="cancelarInscricao(${i.id})">✕</button>`:''}
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="9" class="empty">Nenhum resultado</td></tr>';
+
+  document.getElementById('insc-pag-info').textContent =
+    `${inicio+1}–${Math.min(inicio+INSC_POR_PAG, inscFiltrados.length)} de ${inscFiltrados.length}`;
+
+  const btns = document.getElementById('insc-pag-btns');
+  btns.innerHTML = '';
+  for (let p = 1; p <= totalPag; p++) {
+    const b = document.createElement('button');
+    b.className = 'pag-btn' + (p === insc_pagina ? ' ativo' : '');
+    b.textContent = p;
+    b.onclick = () => { insc_pagina = p; renderizarInscritos(); };
+    btns.appendChild(b);
+  }
+}
+
+async function confirmarPagamentoManual(id) {
+  if (!confirm('Confirmar pagamento manualmente para esta inscrição?')) return;
+  await supabaseAtualizar('inscricoes', id, {
+    status: 'pago',
+    pagamento_metodo: 'manual',
+    pagamento_data: new Date().toISOString()
+  });
+  await carregarTudo();
+}
+
+async function cancelarInscricao(id) {
+  if (!confirm('Cancelar esta inscrição? Essa ação pode ser revertida manualmente.')) return;
+  await supabaseAtualizar('inscricoes', id, { status: 'cancelado' });
+  await carregarTudo();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CAMISETAS
+// ══════════════════════════════════════════════════════════════════
+function renderizarCamisetas() {
+  const pagos = todosDados.inscricoes.filter(i => i.status === 'pago');
+  const tamanhos = ['P','M','G','GG','XG'];
+  tamanhos.forEach(t => {
+    const n = pagos.filter(i => getParticipante(i.participante_id).tamanho_camiseta === t).length;
+    document.getElementById('cam-' + t).textContent = n;
+  });
+  document.getElementById('cam-total-pagos').textContent = pagos.length;
+  filtrarCamisetas();
+}
+
+function filtrarCamisetas() {
+  const filtroTam = document.getElementById('cam-filtro-tam').value;
+  const pagos = todosDados.inscricoes.filter(i => i.status === 'pago');
+  const lista = filtroTam ? pagos.filter(i => getParticipante(i.participante_id).tamanho_camiseta === filtroTam) : pagos;
+  const tbody = document.getElementById('tbody-camisetas');
+  tbody.innerHTML = lista.length ? lista.map(i => {
+    const p = getParticipante(i.participante_id);
+    return `<tr>
+      <td><strong>${i.numero_ficha||'—'}</strong></td>
+      <td>${p.nome_completo||'—'}</td>
+      <td>${mascaraCPF(p.cpf)}</td>
+      <td>${p.sexo==='M'?'🚴 Masc':'🚴 Fem'}</td>
+      <td><strong>${p.tamanho_camiseta||'—'}</strong></td>
+      <td>${p.cidade||'—'}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">Nenhum inscrito pago</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FINANCEIRO
+// ══════════════════════════════════════════════════════════════════
+function renderizarFinanceiro() {
+  const insc  = todosDados.inscricoes;
+  const pagos = insc.filter(i => i.status === 'pago');
+  const pend  = insc.filter(i => i.status === 'pendente_pagamento' || i.status === 'aguardando_boleto');
+  const canc  = insc.filter(i => i.status === 'cancelado');
+
+  const soma = arr => arr.reduce((s,i) => s + (parseFloat(i.pagamento_valor)||0), 0);
+  const total    = soma(pagos);
+  const viaPix   = soma(pagos.filter(i => i.pagamento_metodo === 'pix'));
+  const viaCartao= soma(pagos.filter(i => i.pagamento_metodo === 'cartao'));
+  const potencial= insc.length * 160;
+
+  document.getElementById('fin-total').textContent     = formatarReais(total);
+  document.getElementById('fin-pix').textContent       = formatarReais(viaPix);
+  document.getElementById('fin-cartao').textContent    = formatarReais(viaCartao);
+  document.getElementById('fin-pendente').textContent  = pend.length + ' inscrições';
+  document.getElementById('fin-cancelado').textContent = canc.length + ' inscrições';
+  document.getElementById('fin-potencial').textContent = 'R$ ' + potencial.toFixed(2).replace('.',',');
+
+  const tbody = document.getElementById('tbody-financeiro');
+  tbody.innerHTML = pagos.length ? pagos.map(i => {
+    const p = getParticipante(i.participante_id);
+    return `<tr>
+      <td><strong>${i.numero_ficha||'—'}</strong></td>
+      <td>${p.nome_completo||'—'}</td>
+      <td>${chipMetodo(i.pagamento_metodo)}</td>
+      <td><strong>${formatarReais(i.pagamento_valor)}</strong></td>
+      <td style="font-size:11px">${formatarData(i.pagamento_data)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty">Nenhum pagamento confirmado</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CHECK-IN
+// ══════════════════════════════════════════════════════════════════
+async function buscarCheckin() {
+  const inp  = document.getElementById('checkin-input').value.trim();
+  const erro = document.getElementById('checkin-erro');
+  const res  = document.getElementById('checkin-resultado');
+  erro.style.display = 'none';
+  res.style.display  = 'none';
+  document.getElementById('ci-ok').style.display = 'none';
+  checkinAtual = null;
+
+  if (!inp) { erro.textContent='Digite ficha, CPF ou nome.'; erro.style.display='block'; return; }
+
+  const norm = inp.toUpperCase().replace(/\s/g,'');
+  let insc = null;
+  let part = null;
+
+  // Busca por ficha
+  if (/^CIC-?\d+$/.test(norm)) {
+    const ficha = norm.replace('CIC','CIC-').replace('--','-');
+    insc = todosDados.inscricoes.find(i => i.numero_ficha === ficha);
+  }
+  // Busca por CPF
+  if (!insc && /^\d{11}$/.test(inp.replace(/\D/g,''))) {
+    const cpfNorm = inp.replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+    part = todosDados.participantes.find(p => p.cpf === cpfNorm || p.cpf === inp.replace(/\D/g,''));
+    if (part) insc = todosDados.inscricoes.find(i => i.participante_id === part.id);
+  }
+  // Busca por nome
+  if (!insc) {
+    part = todosDados.participantes.find(p => (p.nome_completo||'').toLowerCase().includes(inp.toLowerCase()));
+    if (part) insc = todosDados.inscricoes.find(i => i.participante_id === part.id);
+  }
+
+  if (!insc) { erro.textContent='Nenhuma inscrição encontrada.'; erro.style.display='block'; return; }
+
+  part = part || getParticipante(insc.participante_id);
+  checkinAtual = { insc, part };
+
+  document.getElementById('ci-nome').textContent   = part.nome_completo || '—';
+  document.getElementById('ci-ficha').textContent  = `Ficha: ${insc.numero_ficha} · ${part.cidade}`;
+  document.getElementById('ci-cam').textContent    = part.tamanho_camiseta || '—';
+  document.getElementById('ci-gen').textContent    = part.sexo === 'M' ? '🚴 Masculino' : '🚴 Feminino';
+  document.getElementById('ci-cid').textContent    = part.cidade || '—';
+
+  const statusLabel = insc.status === 'pago' ? '✅ Pagamento confirmado'
+    : insc.status === 'cancelado' ? '❌ Cancelado'
+    : '⏳ Pagamento pendente';
+  document.getElementById('ci-status').textContent = statusLabel;
+
+  const btn = document.getElementById('btn-confirmar-ci');
+  btn.disabled = insc.status !== 'pago';
+  if (insc.status !== 'pago') btn.title = 'Pagamento não confirmado — não é possível fazer check-in';
+
+  res.style.display = 'block';
+}
+
+async function confirmarCheckin() {
+  if (!checkinAtual) return;
+  const { insc } = checkinAtual;
+  await supabaseAtualizar('inscricoes', insc.id, {
+    checkin_realizado: true,
+    checkin_data: new Date().toISOString()
+  });
+  document.getElementById('btn-confirmar-ci').disabled = true;
+  document.getElementById('ci-ok').style.display = 'block';
+  await carregarCheckins();
+}
+
+async function carregarCheckins() {
+  const checkins = await supabase('inscricoes',
+    'select=*&checkin_realizado=eq.true&order=checkin_data.desc&limit=20');
+  const lista = Array.isArray(checkins) ? checkins : [];
+  document.getElementById('ci-count').textContent = lista.length;
+  const tbody = document.getElementById('tbody-checkins');
+  tbody.innerHTML = lista.length ? lista.map(i => {
+    const p = getParticipante(i.participante_id);
+    return `<tr>
+      <td><strong>${i.numero_ficha||'—'}</strong></td>
+      <td>${p.nome_completo||'—'}</td>
+      <td>${p.tamanho_camiseta||'—'}</td>
+      <td style="font-size:11px">${formatarData(i.checkin_data)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4"><div class="empty">Nenhum check-in ainda</div></td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONFIGURAÇÕES
+// ══════════════════════════════════════════════════════════════════
+function verificarStatusInscricoes() {
+  // Lê o estado atual baseado na config.js (DATA_LIMITE_INSCRICAO)
+  const aberto = new Date() <= new Date('2026-08-01T23:59:00');
+  const toggle = document.getElementById('toggle-inscricoes');
+  const label  = document.getElementById('toggle-label');
+  toggle.checked = aberto;
+  label.textContent = aberto ? '🟢 Inscrições abertas ao público' : '🔴 Inscrições encerradas';
+}
+
+function alterarInscricoes() {
+  const aberto  = document.getElementById('toggle-inscricoes').checked;
+  const label   = document.getElementById('toggle-label');
+  const alerta  = document.getElementById('inscricoes-alerta');
+  label.textContent = aberto ? '🟢 Inscrições abertas ao público' : '🔴 Inscrições encerradas';
+  alerta.className  = 'alerta-admin ' + (aberto ? 'alerta-verde' : 'alerta-verm');
+  alerta.textContent = aberto
+    ? '✅ Inscrições reabertas — o formulário voltará a funcionar. Atualize DATA_LIMITE_INSCRICAO em config.js para uma data futura.'
+    : '⚠️ Para fechar definitivamente, altere DATA_LIMITE_INSCRICAO em config.js para uma data passada e faça deploy.';
+  alerta.style.display = 'block';
+}
+
+async function carregarWebhooks() {
+  const webhooks = await supabase('pagamentos', 'select=*&order=webhook_recebido_em.desc&limit=30');
+  const lista = Array.isArray(webhooks) ? webhooks : [];
+  const tbody = document.getElementById('tbody-webhooks');
+  tbody.innerHTML = lista.length ? lista.map(w => {
+    const metLabel = w.metodo === 'pix' ? '⚡ PIX' : w.metodo === 'cartao' ? '💳 Cartão' : w.metodo||'—';
+    return `<tr>
+      <td style="font-size:11px">${formatarData(w.webhook_recebido_em)}</td>
+      <td>${w.inscricao_id||'—'}</td>
+      <td style="font-size:11px;font-family:monospace">${w.mp_payment_id||'—'}</td>
+      <td><span class="chip ${w.mp_status==='approved'?'chip-pago':w.mp_status==='cancelled'?'chip-cancelado':'chip-pendente'}">${w.mp_status||'—'}</span></td>
+      <td>${metLabel}</td>
+      <td>${formatarReais(w.valor)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">Nenhum webhook recebido ainda</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EXPORTAR CSV
+// ══════════════════════════════════════════════════════════════════
+function exportarCSV(tipo) {
+  let linhas = [], nome = '';
+
+  if (tipo === 'inscritos') {
+    nome = 'inscritos_ciclismo2026.csv';
+    linhas = [['Ficha','Nome','CPF','Gênero','Camiseta','Cidade','UF','Telefone','Email','Status','Data Inscrição']];
+    inscFiltrados.forEach(i => {
+      const p = getParticipante(i.participante_id);
+      linhas.push([
+        i.numero_ficha, p.nome_completo, p.cpf,
+        p.sexo === 'M' ? 'Masculino' : 'Feminino',
+        p.tamanho_camiseta, p.cidade, p.uf||'RO',
+        p.telefone, p.email||'',
+        i.status, new Date(i.criado_em).toLocaleDateString('pt-BR')
+      ]);
+    });
+  }
+
+  if (tipo === 'camisetas') {
+    nome = 'camisetas_confeccao_ciclismo2026.csv';
+    linhas = [['Ficha','Nome','CPF','Gênero','Camiseta','Cidade']];
+    todosDados.inscricoes.filter(i => i.status === 'pago').forEach(i => {
+      const p = getParticipante(i.participante_id);
+      linhas.push([
+        i.numero_ficha, p.nome_completo, p.cpf,
+        p.sexo === 'M' ? 'Masculino' : 'Feminino',
+        p.tamanho_camiseta, p.cidade
+      ]);
+    });
+    // Sumário no final
+    linhas.push([]);
+    linhas.push(['SUMÁRIO DE CAMISETAS (inscritos pagos)']);
+    ['P','M','G','GG','XG'].forEach(t => {
+      const n = todosDados.inscricoes.filter(i => i.status==='pago' && getParticipante(i.participante_id).tamanho_camiseta===t).length;
+      linhas.push([t, n + ' unidades']);
+    });
+    linhas.push(['TOTAL', todosDados.inscricoes.filter(i=>i.status==='pago').length + ' camisetas']);
+  }
+
+  if (tipo === 'financeiro') {
+    nome = 'financeiro_ciclismo2026.csv';
+    linhas = [['Ficha','Nome','Método','Valor R$','Data Pagamento']];
+    todosDados.inscricoes.filter(i => i.status === 'pago').forEach(i => {
+      const p = getParticipante(i.participante_id);
+      linhas.push([
+        i.numero_ficha, p.nome_completo,
+        i.pagamento_metodo||'—',
+        parseFloat(i.pagamento_valor||0).toFixed(2).replace('.',','),
+        i.pagamento_data ? new Date(i.pagamento_data).toLocaleDateString('pt-BR') : '—'
+      ]);
+    });
+  }
+
+  const csv = linhas.map(l => l.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = nome; a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
