@@ -1,10 +1,12 @@
 // ================================================================
 // server.js — Servidor Express para o Render.com
-// Adapta as funções Netlify para rotas HTTP
+// Serve o site estático + as funções de pagamento
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // ================================================================
 
 const express = require('express');
+const path    = require('path');
+
 const { handler: criarPagamento }  = require('./criar-pagamento');
 const { handler: webhookPagamento } = require('./webhook-pagamento');
 const { handler: supabase }         = require('./supabase');
@@ -21,6 +23,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Arquivos estáticos (HTML, CSS, JS, imagens) ───────────────
+// server.js fica em netlify/functions/ — a raiz do site fica 2 níveis acima
+const PASTA_SITE = path.join(__dirname, '..', '..');
+app.use(express.static(PASTA_SITE));
+
 // ── Adaptador: converte Express → formato Netlify ─────────────
 function adaptador(handler) {
   return async (req, res) => {
@@ -30,23 +37,34 @@ function adaptador(handler) {
       body:       JSON.stringify(req.body),
       queryStringParameters: req.query
     };
-    const resultado = await handler(event);
-    res.status(resultado.statusCode)
-       .set(resultado.headers || {})
-       .send(resultado.body);
+    try {
+      const resultado = await handler(event);
+      res.status(resultado.statusCode)
+         .set(resultado.headers || {})
+         .send(resultado.body);
+    } catch (err) {
+      console.error('Erro na função:', err);
+      res.status(500).json({ erro: 'Erro interno do servidor', detalhe: err.message });
+    }
   };
 }
 
-// ── Rotas ─────────────────────────────────────────────────────
+// ── Rotas de API ──────────────────────────────────────────────
 app.post('/criar-pagamento',   adaptador(criarPagamento));
 app.post('/webhook-pagamento', adaptador(webhookPagamento));
 app.post('/api/supabase',      adaptador(supabase));
 
-// Rota de verificação
-app.get('/', (req, res) => res.json({
+// ── Health check — evita que o servidor durma ─────────────────
+app.get('/health', (req, res) => res.json({
   ok: true,
-  servico: 'Ciclismo 2026 - Funções de Pagamento'
+  servico: 'Ciclismo 2026',
+  hora: new Date().toISOString()
 }));
+
+// ── Fallback: rotas não encontradas → index.html ──────────────
+app.get('*', (req, res) => {
+  res.sendFile(path.join(PASTA_SITE, 'index.html'));
+});
 
 // ── Iniciar servidor ──────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
