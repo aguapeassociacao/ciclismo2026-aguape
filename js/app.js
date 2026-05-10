@@ -343,6 +343,12 @@ async function enviarInscricao() {
     btnPagar.onclick = () => irParaPagamento(inscricaoId, ficha, nome, email);
   }
 
+  // Mostra a referência que aparecerá no extrato do MP
+  const avisoRef = document.getElementById('aviso-ficha-ref');
+  if (avisoRef) {
+    avisoRef.textContent = `Referência no extrato: "${ficha} · ${nome}"`;
+  }
+
   // Gerar QR Code
   setTimeout(() => gerarQRCode(ficha, nome), 100);
 
