@@ -482,20 +482,20 @@ function renderizarConsulta() {
     pendente_pagamento: '⏳ Aguardando pagamento',
     aguardando_boleto:  '📄 Boleto gerado — aguardando compensação',
     pago:               '✅ Pagamento confirmado',
-    cancelado:          '❌ Inscrição cancelada',
+    cancelado:          '⚠️ Tentativa anterior não concluída — tente novamente',
   };
   const statusCor = {
     pendente_pagamento: '#b45309',
     aguardando_boleto:  '#1d4ed8',
     pago:               '#15803d',
-    cancelado:          '#dc2626',
+    cancelado:          '#b45309',
   };
 
   const catLabel  = p.sexo === 'M' ? '🚴 Ciclismo Masculino' : '🚴 Ciclismo Feminino';
   const status    = i?.status || 'pendente_pagamento';
   const cor       = statusCor[status] || '#374151';
   const label     = statusLabel[status] || status;
-  const podePagar = status === 'pendente_pagamento' || status === 'aguardando_boleto';
+  const podePagar = status === 'pendente_pagamento' || status === 'aguardando_boleto' || status === 'cancelado';
   const btnId     = `btn-pagar-consulta-${i?.id || 0}`;
 
   el.innerHTML = `
