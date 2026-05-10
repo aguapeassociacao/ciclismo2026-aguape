@@ -16,7 +16,8 @@ exports.handler = async function (event) {
 
   // Lê as chaves do ambiente (configuradas no Render)
   const MP_ACCESS_TOKEN  = process.env.MP_ACCESS_TOKEN;
-  const URL_SITE = process.env.URL_SITE || 'https://ciclismo2026-aguape.onrender.com';
+  const URL_SITE    = process.env.URL_SITE    || 'https://ciclismo2026-aguape.onrender.com';
+  const URL_FUNCOES = process.env.URL_FUNCOES || 'https://ciclismo2026-funcoes.onrender.com';
 
   if (!MP_ACCESS_TOKEN) {
     return {
@@ -72,7 +73,7 @@ exports.handler = async function (event) {
     // Se aprovado, volta automaticamente (sem precisar clicar)
     auto_return: 'approved',
     // URL que o Mercado Pago chama quando o status muda (webhook)
-    notification_url: `${URL_SITE}/webhook-pagamento`,
+    notification_url: `${URL_FUNCOES}/webhook-pagamento`,
     // Validade da preferência: 30 dias
     expires:           true,
     expiration_date_to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
