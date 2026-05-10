@@ -134,6 +134,21 @@ exports.handler = async function (event) {
   console.log(`Webhook: pagamento ${paymentId} — inscricao ${inscricaoId} — status ${novoStatus}`);
   console.log(`Webhook: banco pagador: ${pagoPorBanco} conta: ${pagoPorConta}`);
 
+  // ── Verifica o status atual antes de atualizar ────────────────
+  // NUNCA rebaixa uma inscrição que já está paga
+  try {
+    const respAtual = await fetch(`${SUPABASE_URL}/rest/v1/inscricoes?id=eq.${inscricaoId}&select=status`, {
+      headers
+    });
+    const atual = await respAtual.json();
+    if (Array.isArray(atual) && atual[0]?.status === 'pago' && novoStatus !== 'pago') {
+      console.log(`Webhook: inscrição ${inscricaoId} já está PAGA — ignorando evento ${pagamento.status}`);
+      return { statusCode: 200, body: JSON.stringify({ ok: true, ignorado: true, motivo: 'já pago' }) };
+    }
+  } catch (err) {
+    console.warn('Webhook: erro ao verificar status atual:', err.message);
+  }
+
   // ── Atualiza a inscrição no banco ─────────────────────────────
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/inscricoes?id=eq.${inscricaoId}`, {
