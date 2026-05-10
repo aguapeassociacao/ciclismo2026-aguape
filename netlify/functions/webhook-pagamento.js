@@ -119,13 +119,18 @@ exports.handler = async function (event) {
   const pagoPorEmail = pagador.email || null;
   const pagoPorCpf   = pagador.identification?.number || null;
 
+  // Banco e conta de quem pagou (disponível mesmo com LGPD)
+  const bankInfo     = pagamento.point_of_interaction?.transaction_data?.bank_info?.payer || {};
+  const pagoPorBanco = bankInfo.long_name || null;
+  const pagoPorConta = bankInfo.account_id ? String(bankInfo.account_id) : null;
+
   // ID da transação PIX (para cruzar com extrato bancário)
   const mpTransactionId = pagamento.transaction_details?.transaction_id
-    || pagamento.point_of_interaction?.transaction_data?.e2e_id
+    || pagamento.point_of_interaction?.transaction_data?.transaction_id
     || String(paymentId);
 
   console.log(`Webhook: pagamento ${paymentId} — inscricao ${inscricaoId} — status ${novoStatus}`);
-  console.log(`Webhook: pago por ${pagoPorNome} (${pagoPorCpf}) — ficha via external_reference ${inscricaoId}`);
+  console.log(`Webhook: banco pagador: ${pagoPorBanco} conta: ${pagoPorConta}`);
 
   // ── Atualiza a inscrição no banco ─────────────────────────────
   try {
@@ -142,6 +147,8 @@ exports.handler = async function (event) {
         pago_por_nome:     pagoPorNome,
         pago_por_email:    pagoPorEmail,
         pago_por_cpf:      pagoPorCpf,
+        pago_por_banco:    pagoPorBanco,
+        pago_por_conta:    pagoPorConta,
         mp_transaction_id: mpTransactionId
       })
     });
