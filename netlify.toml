@@ -10,3 +10,13 @@
   from = "/api/admin-auth"
   to = "/.netlify/functions/admin-auth"
   status = 200
+
+[[redirects]]
+  from = "/api/criar-pagamento"
+  to = "/.netlify/functions/criar-pagamento"
+  status = 200
+
+[[redirects]]
+  from = "/api/webhook-pagamento"
+  to = "/.netlify/functions/webhook-pagamento"
+  status = 200
