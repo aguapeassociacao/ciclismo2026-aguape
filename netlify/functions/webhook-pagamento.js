@@ -83,14 +83,16 @@ exports.handler = async function (event) {
   }
 
   // ── Converte o status do MP para o status do banco ────────────
+  // cancelled/rejected = tentativa falhou, mas inscrição continua ativa para nova tentativa
+  // Só cancela de vez em caso de reembolso ou chargeback
   const mapaStatus = {
     approved:     'pago',
     pending:      'aguardando_boleto',
     in_process:   'aguardando_boleto',
-    cancelled:    'cancelado',
-    rejected:     'cancelado',
-    refunded:     'cancelado',
-    charged_back: 'cancelado'
+    cancelled:    'pendente_pagamento',  // tentativa cancelada → volta para pendente
+    rejected:     'pendente_pagamento',  // tentativa recusada → volta para pendente
+    refunded:     'cancelado',           // reembolso → cancela de vez
+    charged_back: 'cancelado'            // chargeback → cancela de vez
   };
   const novoStatus = mapaStatus[pagamento.status] || 'pendente_pagamento';
 
