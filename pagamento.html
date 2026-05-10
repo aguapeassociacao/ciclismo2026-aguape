@@ -245,28 +245,77 @@
 </div>
 
 <script>
-// Lê os parâmetros que o Mercado Pago coloca na URL ao redirecionar
+// ================================================================
+// pagamento.html — Script  V2.0
+// Suporta retorno do MP (cartão) E redirecionamento do pix.html
+// © 2026 Ewerson Luiz de Oliveira
+// ================================================================
+
+// Lê parâmetros da URL — compatível com MP (cartão) e pix.html (PIX)
 function lerParams() {
   const p = new URLSearchParams(window.location.search);
   return {
-    status:      p.get('collection_status') || p.get('status') || '',
-    paymentId:   p.get('collection_id')     || p.get('payment_id') || '',
-    ficha:       p.get('external_reference') || '',
-    tipo:        p.get('payment_type') || ''
+    status:    p.get('collection_status') || p.get('status') || '',
+    paymentId: p.get('collection_id')     || p.get('payment_id') || '',
+    // fichaDir = CIC-xxx direto (vem do pix.html)
+    // fichaRef = inscricao_id numérico (vem do MP via external_reference)
+    fichaDir:  p.get('ficha') || '',
+    fichaRef:  p.get('external_reference') || '',
+    tipo:      p.get('payment_type') || p.get('metodo') || ''
   };
 }
 
-// Copia o código do boleto
 function copiarBoleto() {
   const cod = document.getElementById('boleto-codigo').textContent;
   navigator.clipboard.writeText(cod).then(() => alert('Código copiado!')).catch(() => {});
 }
 
-// Inicializa a tela correta com base no status
-async function inicializar() {
-  const { status, paymentId, ficha, tipo } = lerParams();
+// Busca ficha e valor pelo inscricao_id numérico (retorno do cartão MP)
+async function buscarPorId(inscricaoId) {
+  if (!inscricaoId) return null;
+  try {
+    const r = await fetch('/api/supabase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        acao: 'buscar', tabela: 'inscricoes',
+        query: `id=eq.${inscricaoId}&select=numero_ficha,pagamento_valor,pagamento_metodo`
+      })
+    });
+    const dados = await r.json();
+    return Array.isArray(dados) && dados.length > 0 ? dados[0] : null;
+  } catch { return null; }
+}
 
-  // Se não veio nenhum parâmetro, mostra carregando e redireciona
+// Busca ficha e valor pelo número de ficha CIC-xxx (retorno do PIX)
+async function buscarPorFicha(ficha) {
+  if (!ficha) return null;
+  try {
+    const r = await fetch('/api/supabase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        acao: 'buscar', tabela: 'inscricoes',
+        query: `numero_ficha=eq.${encodeURIComponent(ficha)}&select=numero_ficha,pagamento_valor,pagamento_metodo`
+      })
+    });
+    const dados = await r.json();
+    return Array.isArray(dados) && dados.length > 0 ? dados[0] : null;
+  } catch { return null; }
+}
+
+function metodoLabel(tipo, metodoDb) {
+  const t = (tipo || metodoDb || '').toLowerCase();
+  if (t === 'pix' || t.includes('pix'))    return '⚡ PIX';
+  if (t.includes('credit'))                return '💳 Cartão de crédito';
+  if (t.includes('debit'))                 return '💳 Cartão de débito';
+  if (t.includes('ticket') || t === 'boleto') return '📄 Boleto bancário';
+  return t || '—';
+}
+
+async function inicializar() {
+  const { status, paymentId, fichaDir, fichaRef, tipo } = lerParams();
+
   if (!status) {
     document.getElementById('tela-carregando').style.display = 'block';
     setTimeout(() => { window.location.href = 'index.html'; }, 3000);
@@ -275,21 +324,31 @@ async function inicializar() {
 
   document.getElementById('tela-carregando').style.display = 'none';
 
-  // APROVADO
+  // ── APROVADO ─────────────────────────────────────────────────
   if (status === 'approved') {
     document.getElementById('tela-aprovado').style.display = 'block';
 
-    // Tenta buscar a ficha real pelo external_reference (que é o inscricao_id)
-    const fichaExibir = await buscarFicha(ficha) || 'CIC-????';
+    // Busca dados: PIX envia fichaDir (CIC-xxx), cartão envia fichaRef (id numérico)
+    let dados = null;
+    if (fichaDir) {
+      dados = await buscarPorFicha(fichaDir);
+    } else if (fichaRef) {
+      dados = await buscarPorId(fichaRef);
+    }
+
+    const fichaExibir = dados?.numero_ficha || fichaDir || 'CIC-????';
+    const valorDb     = dados?.pagamento_valor;
+    const metodoDb    = dados?.pagamento_metodo;
+
     document.getElementById('ficha-aprovado').textContent = fichaExibir;
 
-    const metodoLabel = tipo.includes('pix') ? '⚡ PIX'
-      : tipo.includes('credit') ? '💳 Cartão de crédito'
-      : tipo.includes('debit')  ? '💳 Cartão de débito'
-      : tipo.includes('ticket') ? '📄 Boleto bancário'
-      : tipo;
-    document.getElementById('detalhe-metodo').innerHTML = `Método: <strong>${metodoLabel}</strong>`;
-    document.getElementById('detalhe-valor').innerHTML  = `Valor pago: <strong>R$ 160,00</strong>`;
+    document.getElementById('detalhe-metodo').innerHTML =
+      `Método: <strong>${metodoLabel(tipo, metodoDb)}</strong>`;
+
+    document.getElementById('detalhe-valor').innerHTML =
+      valorDb
+        ? `Valor pago: <strong>R$ ${parseFloat(valorDb).toFixed(2).replace('.', ',')}</strong>`
+        : `Valor pago: <strong>R$ 160,00</strong>`;
 
     const msg = encodeURIComponent(
       `✅ Pagamento confirmado! Estou inscrito no *Ciclismo Individual 2026*!\n` +
@@ -300,84 +359,28 @@ async function inicializar() {
     document.getElementById('btn-whatsapp-aprovado').href = 'https://wa.me/?text=' + msg;
   }
 
-  // PENDENTE (boleto gerado ou em análise)
+  // ── PENDENTE ─────────────────────────────────────────────────
   else if (status === 'pending' || status === 'in_process') {
     document.getElementById('tela-pendente').style.display = 'block';
 
-    const fichaExibir = await buscarFicha(ficha) || 'CIC-????';
-    document.getElementById('ficha-pendente').textContent = fichaExibir;
+    let dados = fichaDir ? await buscarPorFicha(fichaDir) : await buscarPorId(fichaRef);
+    document.getElementById('ficha-pendente').textContent =
+      dados?.numero_ficha || fichaDir || 'CIC-????';
 
     if (tipo.includes('ticket') || tipo === 'ticket') {
       document.getElementById('info-boleto').style.display = 'block';
     } else {
       document.getElementById('info-boleto').innerHTML =
-        '⏳ <strong>Verificando pagamento automaticamente...</strong><br>Esta tela vai atualizar sozinha assim que o PIX for confirmado.';
-
-      // ── Polling: verifica o status no banco a cada 5 segundos ──
-      let tentativas = 0;
-      const maxTentativas = 36; // 3 minutos no total
-      const intervalo = setInterval(async () => {
-        tentativas++;
-        try {
-          const r = await fetch('/api/supabase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              acao: 'buscar',
-              tabela: 'inscricoes',
-              query: `id=eq.${ficha}&select=status,numero_ficha`
-            })
-          });
-          const dados = await r.json();
-          if (Array.isArray(dados) && dados.length > 0) {
-            const inscricao = dados[0];
-            if (inscricao.status === 'pago') {
-              clearInterval(intervalo);
-              // Redireciona para tela de sucesso
-              const params = new URLSearchParams({
-                status: 'approved',
-                external_reference: ficha,
-                payment_type: 'pix'
-              });
-              window.location.href = `pagamento.html?${params.toString()}`;
-            }
-          }
-        } catch (e) { /* ignora erros de rede, tenta de novo */ }
-
-        if (tentativas >= maxTentativas) {
-          clearInterval(intervalo);
-          document.getElementById('info-boleto').innerHTML =
-            '⏳ <strong>Pagamento em processamento.</strong><br>Use "Já inscrito?" no site para verificar o status quando quiser.';
-        }
-      }, 5000); // verifica a cada 5 segundos
+        '⏳ <strong>Verificando pagamento...</strong><br>Esta tela vai atualizar sozinha assim que confirmado.';
     }
   }
 
-  // FALHA / CANCELADO / REJEITADO
+  // ── FALHA / CANCELADO ─────────────────────────────────────────
   else {
     document.getElementById('tela-erro').style.display = 'block';
-    const fichaExibir = await buscarFicha(ficha) || 'CIC-????';
-    document.getElementById('ficha-erro').textContent = fichaExibir;
-  }
-}
-
-// Busca o número de ficha pelo inscricao_id (external_reference)
-async function buscarFicha(inscricaoId) {
-  if (!inscricaoId) return null;
-  try {
-    const r = await fetch('/api/supabase', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        acao: 'buscar',
-        tabela: 'inscricoes',
-        query: `id=eq.${inscricaoId}&select=numero_ficha`
-      })
-    });
-    const dados = await r.json();
-    return Array.isArray(dados) && dados.length > 0 ? dados[0].numero_ficha : null;
-  } catch {
-    return null;
+    let dados = fichaDir ? await buscarPorFicha(fichaDir) : await buscarPorId(fichaRef);
+    document.getElementById('ficha-erro').textContent =
+      dados?.numero_ficha || fichaDir || 'CIC-????';
   }
 }
 

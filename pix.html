@@ -626,7 +626,8 @@ async function checarStatus() {
             `/pagamento.html?status=approved` +
             `&payment_id=${pixData.payment_id}` +
             `&ficha=${encodeURIComponent(pixData.ficha || '')}` +
-            `&nome=${encodeURIComponent(pixData.nome || '')}`;
+            `&nome=${encodeURIComponent(pixData.nome || '')}` +
+            `&payment_type=pix`;
         }, 3000);
         break;
 
