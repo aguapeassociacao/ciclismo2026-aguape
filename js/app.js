@@ -3,8 +3,8 @@
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
-// V3.1 — PIX direto + Cartão (sem boleto) · Modal de escolha
-// V3.1 — scrollIntoView no botão de pagamento da consulta (fix mobile)
+// V3.2 — PIX direto + Cartão (sem boleto) · Modal de escolha
+// V3.2 — botão de pagamento via createElement fora do card (fix Safari/iOS mobile)
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -723,6 +723,7 @@ function renderizarConsulta() {
   const podePagar = status === 'pendente_pagamento' || status === 'aguardando_boleto' || status === 'cancelado';
   const btnId     = `btn-pagar-consulta-${i?.id || 0}`;
 
+  // ── Dados do participante (sem botão — botão vai fora do card) ──
   el.innerHTML = `
     <div class="perfil-nome">${p.nome_completo}</div>
     <div class="perfil-info">📋 Ficha: <strong>${i?.numero_ficha || '—'}</strong></div>
@@ -730,19 +731,6 @@ function renderizarConsulta() {
     <div class="perfil-info">👕 Camiseta: <strong>${p.tamanho_camiseta || '—'}</strong></div>
     <div class="perfil-info">📍 ${p.cidade} / ${p.uf}</div>
     <div class="perfil-status" style="color:${cor};font-weight:700;margin-top:10px;font-size:15px;">${label}</div>
-
-    ${podePagar ? `
-      <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(45,122,58,.2);">
-        <p style="font-size:12px;color:rgba(245,234,208,.5);margin-bottom:12px;line-height:1.5;">
-          Sua inscrição está salva. Clique abaixo para realizar o pagamento agora.
-        </p>
-        <button id="${btnId}"
-          style="width:100%;padding:16px;background:linear-gradient(135deg,#c8920a 0%,#ffd700 50%,#c8920a 100%);color:#3d1a0a;border:none;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;box-shadow:0 4px 20px rgba(200,146,10,.4);">
-          ⚡ Pagar agora — R$ 160,00
-        </button>
-      </div>
-    ` : ''}
-
     ${status === 'pago' ? `
       <div style="margin-top:14px;background:rgba(21,128,61,.1);border:1px solid rgba(21,128,61,.3);border-radius:10px;padding:12px 14px;font-size:12px;color:#86efac;line-height:1.6;">
         ✅ Pagamento confirmado. Sua vaga está garantida!
@@ -752,20 +740,53 @@ function renderizarConsulta() {
 
   document.getElementById('consulta-resultado').style.display = 'block';
 
-  // Liga o botão após renderizar o HTML
+  // ── Remove botão anterior se existir ──────────────────────────
+  const wrapAnterior = document.getElementById('consulta-pagar-wrap');
+  if (wrapAnterior) wrapAnterior.remove();
+
+  // ── Botão de pagamento criado FORA do card via createElement ──
+  // (evita problema de clipping por backdrop-filter no Safari/iOS)
   if (podePagar && i?.id) {
-    const btnPagar = document.getElementById(btnId);
-    if (btnPagar) {
-      btnPagar.addEventListener('click', () => {
-        irParaPagamento(i.id, i.numero_ficha, p.nome_completo, p.email || '', btnPagar);
-      });
-      // ── Rola até o botão no mobile (evita ficar abaixo do fold) ──
-      setTimeout(() => {
-        btnPagar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 150);
-    }
-  } else {
-    // Sem botão de pagar (já pago ou cancelado): rola até o resultado
+    const wrap = document.createElement('div');
+    wrap.id = 'consulta-pagar-wrap';
+    wrap.style.cssText = 'margin-top:12px;padding:0 0 8px;';
+
+    const aviso = document.createElement('p');
+    aviso.style.cssText = 'font-size:12px;color:rgba(245,234,208,.5);margin-bottom:12px;line-height:1.5;padding:0 2px;';
+    aviso.textContent = 'Sua inscrição está salva. Clique abaixo para realizar o pagamento agora.';
+
+    const btn = document.createElement('button');
+    btn.id    = btnId;
+    btn.style.cssText = [
+      'width:100%',
+      'padding:16px',
+      'background:linear-gradient(135deg,#c8920a 0%,#ffd700 50%,#c8920a 100%)',
+      'color:#3d1a0a',
+      'border:none',
+      'border-radius:50px',
+      'font-size:16px',
+      'font-weight:700',
+      'cursor:pointer',
+      "font-family:'Cinzel',serif",
+      'letter-spacing:1px',
+      'box-shadow:0 4px 20px rgba(200,146,10,.4)',
+      'display:block'
+    ].join(';');
+    btn.textContent = '⚡ Pagar agora — R$ 160,00';
+    btn.addEventListener('click', () => {
+      irParaPagamento(i.id, i.numero_ficha, p.nome_completo, p.email || '', btn);
+    });
+
+    wrap.appendChild(aviso);
+    wrap.appendChild(btn);
+    document.getElementById('consulta-resultado').appendChild(wrap);
+
+    // Rola até o botão (fix mobile)
+    setTimeout(() => {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+
+  } else if (status !== 'pago') {
     setTimeout(() => {
       document.getElementById('consulta-resultado')
         .scrollIntoView({ behavior: 'smooth', block: 'start' });
