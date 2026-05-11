@@ -3,7 +3,8 @@
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
-// V3.0 — PIX direto + Cartão (sem boleto) · Modal de escolha
+// V3.1 — PIX direto + Cartão (sem boleto) · Modal de escolha
+// V3.1 — scrollIntoView no botão de pagamento da consulta (fix mobile)
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -758,7 +759,17 @@ function renderizarConsulta() {
       btnPagar.addEventListener('click', () => {
         irParaPagamento(i.id, i.numero_ficha, p.nome_completo, p.email || '', btnPagar);
       });
+      // ── Rola até o botão no mobile (evita ficar abaixo do fold) ──
+      setTimeout(() => {
+        btnPagar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
     }
+  } else {
+    // Sem botão de pagar (já pago ou cancelado): rola até o resultado
+    setTimeout(() => {
+      document.getElementById('consulta-resultado')
+        .scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
   }
 }
 
