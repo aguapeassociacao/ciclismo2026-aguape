@@ -1,5 +1,6 @@
 // ================================================================
-// api/criar-pagamento.js  —  V3.2
+// api/criar-pagamento.js  —  V3.3
+// V3.3 — Atualização domínio para ciclismo.aguape.org
 // PIX direto (tela própria) + Cartão (checkout MP) — sem boleto nem PIX no checkout MP
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // © 2026 Ewerson Luiz de Oliveira
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
   const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
   const SUPABASE_URL    = process.env.SUPABASE_URL;
   const SUPABASE_KEY    = process.env.SUPABASE_KEY;
-  const URL_SITE        = process.env.URL_SITE || 'https://ciclismo2026-aguape.vercel.app';
+  const URL_SITE        = process.env.URL_SITE || 'https://ciclismo.aguape.org';
 
   if (!MP_ACCESS_TOKEN) {
     return res.status(500).json({ erro: 'Credenciais do Mercado Pago não configuradas' });
