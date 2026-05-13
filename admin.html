@@ -1,118 +1,2154 @@
+<!DOCTYPE html>
+<!--
+  admin.html — Painel Administrativo V2.5
+  Ciclismo Individual 2026 — Turismo de Base Comunitária
+  © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
+  V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
+         Check-in com câmera · Relatório pendentes · Export Excel/PDF · Comunicação
+  V2.1 — Mobile: bottom navigation bar + card acesso rápido check-in no dashboard
+  V2.2 — Logo aguape.png: login, sidebar, topbar, relatórios PDF e ficha individual
+         Topbar fixa no painel desktop com nome do usuário e botão atualizar
+  V2.3 — Correção ficha PDF (img element, sem fetch bloqueado em produção)
+  V2.4 — Atualização domínio para ciclismo.aguape.org
+  V2.5 — Gerenciamento de operadores via Supabase (admin_operadores) · sem redeploy
+         Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
+         Seção Gestão de Operadores na aba Configurações
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Ciclismo 2026</title>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- QRCode.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- jsQR (fallback câmera) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<!-- SheetJS (Excel) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- jsPDF + AutoTable (PDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --verde-escuro:#0d2810;--verde:#1a5c2a;--verde-medio:#2d7a3a;
+  --verde-claro:#7dcf8a;--dourado:#c8920a;--dourado-claro:#f0b429;
+  --creme:#f5ead0;--marrom:#3d1a0a;
+  --bg:#f0f4f1;--sidebar-w:240px;
+  --azul-pix:#00b4d8;--err:#ef4444;--warn:#f59e0b;--ok:#22c55e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:var(--bg);color:#1f2937}
+
+/* ══ LOGIN ══════════════════════════════════════════════════════ */
+#tela-login{position:fixed;inset:0;background:var(--verde-escuro);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.login-card{background:rgba(13,40,16,.95);border:1px solid rgba(45,122,58,.35);border-radius:24px;padding:44px 36px 40px;width:100%;max-width:400px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)}
+.login-logo{margin-bottom:18px;display:flex;align-items:center;justify-content:center}
+.login-logo img{width:88px;height:88px;object-fit:contain;filter:drop-shadow(0 4px 16px rgba(200,146,10,.35))}
+.login-titulo{font-size:22px;font-weight:700;color:var(--dourado-claro);margin-bottom:4px;font-family:'Georgia',serif}
+.login-sub{font-size:12px;color:rgba(245,234,208,.4);margin-bottom:30px}
+.login-field{width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(45,122,58,.3);background:rgba(0,0,0,.35);color:var(--creme);font-size:14px;margin-bottom:12px;outline:none;transition:border .2s}
+.login-field:focus{border-color:var(--verde-claro)}
+.login-field::placeholder{color:rgba(245,234,208,.3)}
+.btn-login{width:100%;padding:15px;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,var(--dourado),var(--dourado-claro),var(--dourado));color:var(--marrom);font-size:15px;font-weight:700;letter-spacing:.5px;margin-top:4px;transition:opacity .2s}
+.btn-login:hover{opacity:.9}
+.login-erro{font-size:12px;color:#f87171;margin-top:10px;min-height:18px}
+
+/* ══ LAYOUT ═════════════════════════════════════════════════════ */
+#app{display:none;height:100%;flex-direction:row}
+#app.visivel{display:flex}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--verde-escuro);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow:hidden}
+.sb-topo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:12px}
+.sb-logo{flex-shrink:0}
+.sb-logo img{width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(200,146,10,.3))}
+.sb-titulo{color:var(--dourado-claro);font-weight:700;font-size:13px;font-family:'Georgia',serif;line-height:1.3}
+.sb-sub{color:rgba(245,234,208,.3);font-size:10px;margin-top:1px}
+.sb-nav{flex:1;overflow-y:auto;padding:12px 10px}
+.sb-secao{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(245,234,208,.25);padding:10px 12px 4px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:rgba(245,234,208,.55);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+.sb-item:hover{background:rgba(255,255,255,.06);color:var(--creme)}
+.sb-item.ativo{background:rgba(45,122,58,.3);border-color:rgba(45,122,58,.4);color:var(--verde-claro)}
+.sb-icon{font-size:15px;flex-shrink:0;width:20px;text-align:center}
+.sb-badge{margin-left:auto;background:var(--err);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.sb-rodape{padding:14px 18px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-usuario{color:rgba(245,234,208,.7);font-weight:600;font-size:12px;margin-bottom:8px}
+.btn-logout{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:8px;padding:7px 14px;font-size:11px;cursor:pointer;transition:all .15s;width:100%}
+.btn-logout:hover{background:rgba(239,68,68,.25)}
+.btn-atualizar{background:rgba(45,122,58,.2);border:1px solid rgba(45,122,58,.3);color:var(--verde-claro);border-radius:8px;padding:7px 14px;font-size:11px;cursor:pointer;transition:all .15s;width:100%;margin-bottom:8px}
+.btn-atualizar:hover{background:rgba(45,122,58,.35)}
+
+/* ── Conteúdo ────────────────────────────────────────────────── */
+.conteudo{flex:1;overflow-y:auto;padding:0}
+.conteudo-inner{padding:24px}
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.topbar-esq{display:flex;align-items:center;gap:12px}
+.topbar-logo{width:32px;height:32px;object-fit:contain}
+.topbar-titulo{font-size:15px;font-weight:700;color:var(--verde-escuro);font-family:'Georgia',serif}
+.topbar-sub{font-size:11px;color:#9ca3af;margin-top:1px}
+.topbar-dir{display:flex;align-items:center;gap:8px}
+.topbar-usuario{font-size:12px;color:#6b7280;font-weight:600}
+.page-titulo{font-size:22px;font-weight:700;color:var(--verde-escuro);margin-bottom:2px}
+.page-sub{font-size:12px;color:#6b7280;margin-bottom:22px}
+.tab-pane{display:none}
+.tab-pane.ativo{display:block}
+
+/* ── Stats ───────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:14px;padding:18px 16px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.stat-card.verde::before{background:var(--ok)}
+.stat-card.azul::before{background:#3b82f6}
+.stat-card.dourado::before{background:var(--dourado)}
+.stat-card.roxo::before{background:#7c3aed}
+.stat-label{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.stat-valor{font-size:28px;font-weight:700;color:var(--verde-escuro);line-height:1}
+.stat-icon{font-size:24px;position:absolute;top:16px;right:14px;opacity:.35}
+.stat-pct{font-size:11px;color:#6b7280;margin-top:4px}
+.stat-pct.up{color:var(--ok)}
+.stat-pct.down{color:var(--err)}
+
+/* ── Progresso ───────────────────────────────────────────────── */
+.progress-wrap{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.progress-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:600}
+.progress-bar-bg{height:10px;background:#f3f4f6;border-radius:10px;overflow:hidden}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--verde),var(--verde-claro));border-radius:10px;transition:width .8s ease}
+.progress-sub{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#6b7280}
+
+/* ── Countdown ───────────────────────────────────────────────── */
+.countdown-wrap{background:var(--verde-escuro);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.countdown-label{font-size:12px;color:rgba(245,234,208,.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.countdown-titulo{font-size:16px;font-weight:700;color:var(--dourado-claro);font-family:'Georgia',serif}
+.countdown-nums{display:flex;gap:10px}
+.countdown-item{text-align:center;background:rgba(255,255,255,.07);border-radius:10px;padding:8px 14px;min-width:56px}
+.countdown-num{font-size:26px;font-weight:700;color:var(--verde-claro);line-height:1;font-family:'Georgia',serif}
+.countdown-unit{font-size:9px;color:rgba(245,234,208,.35);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+/* ── Charts ──────────────────────────────────────────────────── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
+.chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.chart-card.wide{grid-column:span 2}
+.chart-titulo{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px}
+.chart-wrap{position:relative;height:180px}
+
+/* ── Top cidades ─────────────────────────────────────────────── */
+.cidade-item-dash{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f3f4f6}
+.cidade-item-dash:last-child{border-bottom:none}
+.cidade-bar{flex:1;height:6px;background:#f3f4f6;border-radius:6px;overflow:hidden}
+.cidade-bar-fill{height:100%;background:var(--verde);border-radius:6px}
+.cidade-nome{font-size:12px;font-weight:600;color:#374151;min-width:80px}
+.cidade-count{font-size:12px;color:#6b7280;min-width:24px;text-align:right}
+
+/* ── Tabela ──────────────────────────────────────────────────── */
+.tabela-wrap{background:#fff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.tabela-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #f3f4f6;flex-wrap:wrap;gap:10px}
+.tabela-header-titulo{font-size:14px;font-weight:700;color:#111827}
+.tabela-controles{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.input-busca{padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;transition:border .15s;min-width:190px}
+.input-busca:focus{border-color:var(--verde-claro)}
+.select-filtro{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;outline:none;background:#fff;cursor:pointer}
+.btn-acao{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;white-space:nowrap}
+.btn-verde{background:var(--verde);color:#fff}.btn-verde:hover{background:var(--verde-medio)}
+.btn-azul{background:#1d4ed8;color:#fff}.btn-azul:hover{background:#1e40af}
+.btn-verde-claro{background:#dcfce7;color:#15803d;border:1px solid #86efac}.btn-verde-claro:hover{background:#bbf7d0}
+.btn-roxo{background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd}.btn-roxo:hover{background:#ddd6fe}
+.btn-laranja{background:#fff7ed;color:#c2410c;border:1px solid #fdba74}.btn-laranja:hover{background:#ffedd5}
+.btn-cinza{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}.btn-cinza:hover{background:#e5e7eb}
+.btn-verm{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}.btn-verm:hover{background:#fee2e2}
+.btn-sm{padding:4px 10px;font-size:11px;border-radius:6px;border:none;cursor:pointer;font-weight:600;transition:all .15s}
+.btn-group{display:flex;gap:4px}
+
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #f3f4f6;background:#fafafa;cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{background:#f3f4f6}
+td{padding:10px 14px;border-bottom:1px solid #f9fafb;font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.row-nova td{background:#f0fdf4}
+.row-nova:hover td{background:#dcfce7}
+
+/* ── Chips ───────────────────────────────────────────────────── */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.chip-pago{background:#dcfce7;color:#15803d}
+.chip-pendente{background:#fef9c3;color:#92400e}
+.chip-cancelado{background:#fee2e2;color:#b91c1c}
+.chip-pix{background:#e0f2fe;color:#0369a1}
+.chip-cartao{background:#ede9fe;color:#6d28d9}
+.chip-manual{background:#fef3c7;color:#92400e}
+.chip-nova{background:#dcfce7;color:#15803d;font-size:9px;padding:2px 6px}
+
+/* ── Camisetas ───────────────────────────────────────────────── */
+.tam-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.tam-card{background:#fff;border-radius:12px;padding:20px 16px;text-align:center;border:2px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:border .2s}
+.tam-card:hover{border-color:var(--verde-claro)}
+.tam-letra{font-size:30px;font-weight:800;color:var(--verde-escuro);margin-bottom:4px}
+.tam-masc{font-size:22px;font-weight:700;color:var(--verde)}
+.tam-fem{font-size:22px;font-weight:700;color:#be185d}
+.tam-total{font-size:28px;font-weight:700;color:var(--verde-escuro)}
+.tam-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+/* ── Financeiro ──────────────────────────────────────────────── */
+.fin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.fin-valor{font-size:26px;font-weight:700;margin-bottom:4px;line-height:1}
+.fin-label{font-size:12px;color:#6b7280}
+
+/* ── Check-in ────────────────────────────────────────────────── */
+.ci-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.ci-stat{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;text-align:center}
+.ci-num{font-size:34px;font-weight:700;color:var(--verde-escuro)}
+.ci-lbl{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-top:4px}
+.ci-pct{font-size:14px;font-weight:700;color:var(--ok);margin-top:2px}
+
+.checkin-busca-wrap{background:#fff;border-radius:14px;padding:24px;border:1px solid #e5e7eb;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.checkin-resultado{background:#fff;border-radius:14px;padding:24px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);display:none}
+.ci-nome{font-size:20px;font-weight:700;color:var(--verde-escuro);margin-bottom:4px}
+.ci-ficha-txt{font-size:13px;color:#6b7280;margin-bottom:16px}
+.ci-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.ci-info-item{background:#f9fafb;border-radius:8px;padding:12px}
+.ci-info-lbl{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.ci-info-val{font-size:15px;font-weight:700;color:#111827}
+.btn-ci{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--verde),var(--verde-medio));color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.btn-ci:hover{opacity:.88}
+.btn-ci:disabled{opacity:.4;cursor:not-allowed}
+.ci-ok{background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:14px;text-align:center;font-weight:700;color:#15803d;font-size:15px;margin-top:10px;display:none}
+
+/* ── Câmera ──────────────────────────────────────────────────── */
+.camera-wrap{position:relative;background:#000;border-radius:16px;overflow:hidden;margin-bottom:12px;max-width:340px}
+.camera-frame-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.camera-frame{width:220px;height:220px;border:3px solid var(--azul-pix);border-radius:18px}
+.camera-linha{position:absolute;left:10px;right:10px;height:2px;background:linear-gradient(90deg,transparent,var(--azul-pix),transparent);animation:scanLine 2s ease-in-out infinite}
+@keyframes scanLine{0%,100%{top:10px;opacity:0}10%{opacity:1}90%{opacity:1}to{top:calc(100% - 10px)}}
+.camera-status{text-align:center;font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;margin:8px 0}
+.camera-status.lendo{color:var(--azul-pix)}
+.camera-status.ok{color:var(--ok);background:#dcfce7}
+.camera-status.erro{color:var(--err);background:#fef2f2}
+
+/* ── Modal ───────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:8000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.aberto{display:flex}
+.modal-box{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #f3f4f6}
+.modal-header h3{font-size:16px;font-weight:700;color:#111827}
+.modal-fechar{background:#f3f4f6;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;color:#6b7280}
+.modal-fechar:hover{background:#e5e7eb}
+.modal-body{padding:24px}
+
+/* ── Ficha para impressão / download ─────────────────────────── */
+.ficha-preview{background:var(--verde-escuro);border-radius:16px;padding:24px;color:var(--creme);text-align:center;max-width:320px;margin:0 auto}
+.ficha-evento{font-size:10px;letter-spacing:2px;color:var(--dourado);text-transform:uppercase;margin-bottom:4px}
+.ficha-titulo{font-size:18px;font-weight:700;color:var(--creme);font-family:'Georgia',serif;margin-bottom:16px}
+.ficha-num{font-size:36px;font-weight:700;color:var(--dourado-claro);font-family:'Georgia',serif;margin-bottom:4px}
+.ficha-nome-txt{font-size:15px;font-weight:600;margin-bottom:4px}
+.ficha-detalhes{font-size:12px;color:rgba(245,234,208,.6);margin-bottom:14px;line-height:1.7}
+.ficha-qr-wrap{background:#fff;border-radius:10px;padding:10px;display:inline-block;margin-bottom:12px}
+.ficha-local{font-size:11px;color:rgba(245,234,208,.4);line-height:1.6}
+
+/* ── Pendentes ───────────────────────────────────────────────── */
+.pend-card{background:#fff;border-radius:14px;border:1px solid #e5e7eb;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.pend-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f9fafb;flex-wrap:wrap;gap:8px}
+.pend-nome{font-weight:700;font-size:14px;color:#111827}
+.pend-ficha{font-size:12px;color:#6b7280}
+.pend-dias{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.pend-dias.urgente{background:#fee2e2;color:#b91c1c}
+.pend-dias.atencao{background:#fef9c3;color:#92400e}
+.pend-dias.novo{background:#dcfce7;color:#15803d}
+.pend-info{padding:10px 18px 14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.pend-tel{font-size:13px;color:#374151;font-weight:600}
+.btn-wpp{display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity .2s}
+.btn-wpp:hover{opacity:.88}
+
+/* ── Comunicação ─────────────────────────────────────────────── */
+.template-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.template-titulo{font-size:14px;font-weight:700;color:#111827;margin-bottom:8px}
+.template-preview{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:13px;color:#374151;line-height:1.7;white-space:pre-wrap;margin-bottom:12px}
+.lista-wpp{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;font-size:12px;color:#15803d;line-height:2;max-height:200px;overflow-y:auto;font-family:monospace;white-space:pre-wrap;margin-bottom:12px}
+
+/* ── Config ──────────────────────────────────────────────────── */
+.config-card{background:#fff;border-radius:14px;padding:22px;border:1px solid #e5e7eb;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.config-titulo{font-size:14px;font-weight:700;color:#111827;margin-bottom:4px}
+.config-sub{font-size:12px;color:#6b7280;margin-bottom:14px}
+.toggle-wrap{display:flex;align-items:center;gap:14px}
+.toggle{position:relative;width:48px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#d1d5db;border-radius:26px;cursor:pointer;transition:.3s}
+.toggle-slider::before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.toggle-slider{background:var(--verde)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(22px)}
+.toggle-label{font-size:13px;font-weight:600;color:#374151}
+
+/* ── Paginação ───────────────────────────────────────────────── */
+.pag-wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid #f3f4f6;font-size:12px;color:#6b7280}
+.pag-btns{display:flex;gap:4px;flex-wrap:wrap}
+.pag-btn{padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;transition:all .15s}
+.pag-btn:hover{background:#f3f4f6}
+.pag-btn.ativo{background:var(--verde);color:#fff;border-color:var(--verde)}
+
+/* ── Utils ───────────────────────────────────────────────────── */
+.spin{width:28px;height:28px;border:3px solid rgba(45,122,58,.2);border-top-color:var(--verde);border-radius:50%;animation:girar .7s linear infinite;margin:30px auto;display:block}
+@keyframes girar{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:32px;color:#9ca3af;font-size:13px}
+.alerta-admin{padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px}
+.alerta-verm{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626}
+.alerta-verde{background:#dcfce7;border:1px solid #86efac;color:#15803d}
+.alerta-azul{background:#eff6ff;border:1px solid #93c5fd;color:#1d4ed8}
+
+/* ── Bottom Nav Mobile ───────────────────────────────────────── */
+.bottom-nav{display:none}
+.checkin-rapido-card{display:none}
+
+@media(max-width:900px){
+  .sidebar{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+  .chart-card.wide{grid-column:span 1}
+  .tam-grid{grid-template-columns:repeat(3,1fr)}
+  .fin-grid{grid-template-columns:1fr}
+  .ci-stats{grid-template-columns:1fr 1fr}
+  .ci-info-grid{grid-template-columns:1fr}
+  .topbar{display:none}
+  .conteudo-inner{padding:14px 14px 90px}
+
+  /* Bottom navigation bar */
+  .bottom-nav{
+    display:flex;
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--verde-escuro);
+    border-top:1px solid rgba(255,255,255,.1);
+    z-index:1000;
+    padding:0;
+    height:64px;
+    box-shadow:0 -4px 20px rgba(0,0,0,.35);
+  }
+  .bn-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;cursor:pointer;
+    color:rgba(245,234,208,.4);
+    font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+    padding:8px 2px;
+    transition:color .15s, background .15s;
+    position:relative;
+    border:none;background:transparent;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bn-item:active{background:rgba(255,255,255,.06)}
+  .bn-item.ativo{color:var(--verde-claro)}
+  .bn-item.ativo .bn-icon{transform:translateY(-2px)}
+  .bn-icon{font-size:20px;transition:transform .15s;line-height:1}
+  .bn-badge{
+    position:absolute;top:6px;right:calc(50% - 18px);
+    background:var(--err);color:#fff;font-size:9px;font-weight:700;
+    padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;
+    line-height:16px;height:16px;
+  }
+
+  /* Card check-in rápido no dashboard */
+  .checkin-rapido-card{
+    background:linear-gradient(135deg,var(--verde-escuro) 0%,#1a4d24 100%);
+    border-radius:16px;padding:20px;margin-bottom:20px;
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    border:1px solid rgba(45,122,58,.4);
+    box-shadow:0 4px 16px rgba(0,0,0,.15);
+  }
+  .checkin-rapido-info{flex:1}
+  .checkin-rapido-titulo{font-size:15px;font-weight:700;color:var(--dourado-claro);font-family:'Georgia',serif;margin-bottom:3px}
+  .checkin-rapido-sub{font-size:12px;color:rgba(245,234,208,.55);line-height:1.4}
+  .btn-checkin-rapido{
+    background:linear-gradient(135deg,var(--dourado),var(--dourado-claro));
+    color:var(--marrom);border:none;border-radius:12px;
+    padding:12px 18px;font-size:13px;font-weight:700;
+    cursor:pointer;white-space:nowrap;flex-shrink:0;
+    box-shadow:0 3px 10px rgba(200,146,10,.35);
+    transition:opacity .15s,transform .1s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-checkin-rapido:active{opacity:.85;transform:scale(.97)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="tela-login">
+  <div class="login-card">
+    <div class="login-logo"><img src="aguape.png" alt="Aguapé"></div>
+    <div class="login-titulo">Painel Admin</div>
+    <div class="login-sub">Ciclismo Individual 2026 · Costa Marques, RO</div>
+    <input class="login-field" type="text" id="login-user" placeholder="Usuário" autocomplete="username">
+    <input class="login-field" type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+    <button class="btn-login" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+
+<!-- MODAL PARTICIPANTE -->
+<div class="modal-overlay" id="modal-participante">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📋 Ficha do Participante</h3>
+      <button class="modal-fechar" onclick="fecharModal('modal-participante')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-participante-body"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="sidebar">
+    <div class="sb-topo">
+      <div class="sb-logo"><img src="aguape.png" alt="Aguapé"></div>
+      <div>
+        <div class="sb-titulo">Ciclismo 2026</div>
+        <div class="sb-sub">Painel Administrativo · V2.5</div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-secao">Visão Geral</div>
+      <div class="sb-item ativo" onclick="abrirTab('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
+      <div class="sb-secao">Gestão</div>
+      <div class="sb-item" onclick="abrirTab('inscritos')"><span class="sb-icon">👥</span>Inscritos</div>
+      <div class="sb-item" onclick="abrirTab('pendentes')"><span class="sb-icon">⏳</span>Pendentes <span class="sb-badge" id="badge-pendentes">0</span></div>
+      <div class="sb-item" onclick="abrirTab('camisetas')"><span class="sb-icon">👕</span>Camisetas</div>
+      <div class="sb-item" onclick="abrirTab('financeiro')"><span class="sb-icon">💰</span>Financeiro</div>
+      <div class="sb-secao">Evento</div>
+      <div class="sb-item" onclick="abrirTab('checkin')"><span class="sb-icon">✅</span>Check-in</div>
+      <div class="sb-item" onclick="abrirTab('comunicacao')"><span class="sb-icon">📱</span>Comunicação</div>
+      <div class="sb-secao">Sistema</div>
+      <div class="sb-item" onclick="abrirTab('config')"><span class="sb-icon">⚙️</span>Configurações</div>
+    </div>
+    <div class="sb-rodape">
+      <div class="sb-usuario" id="sb-nome"></div>
+      <button class="btn-atualizar" onclick="carregarTudo()">🔄 Atualizar dados</button>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </nav>
+
+  <main class="conteudo">
+
+    <!-- ═══ TOPBAR ════════════════════════════════════════════ -->
+    <div class="topbar">
+      <div class="topbar-esq">
+        <img class="topbar-logo" src="aguape.png" alt="Aguapé">
+        <div>
+          <div class="topbar-titulo">Ciclismo Individual 2026</div>
+          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.5</div>
+        </div>
+      </div>
+      <div class="topbar-dir">
+        <span class="topbar-usuario" id="topbar-usuario"></span>
+        <button class="btn-atualizar" style="width:auto;margin:0" onclick="carregarTudo()">🔄 Atualizar</button>
+      </div>
+    </div>
+
+    <div class="conteudo-inner">
+
+    <!-- ═══ DASHBOARD ══════════════════════════════════════════ -->
+    <div class="tab-pane ativo" id="tab-dashboard">
+      <div class="page-titulo">Dashboard</div>
+      <div class="page-sub" id="dash-atualizado">Carregando…</div>
+
+      <!-- Countdown -->
+      <div class="countdown-wrap">
+        <div>
+          <div class="countdown-label">Contagem regressiva</div>
+          <div class="countdown-titulo">🚴 09 de Agosto de 2026 — Costa Marques, RO</div>
+        </div>
+        <div class="countdown-nums">
+          <div class="countdown-item"><div class="countdown-num" id="cd-dias">—</div><div class="countdown-unit">dias</div></div>
+          <div class="countdown-item"><div class="countdown-num" id="cd-horas">—</div><div class="countdown-unit">horas</div></div>
+          <div class="countdown-item"><div class="countdown-num" id="cd-min">—</div><div class="countdown-unit">min</div></div>
+        </div>
+      </div>
+
+      <!-- Card check-in rápido (visível só no mobile via CSS) -->
+      <div class="checkin-rapido-card">
+        <div class="checkin-rapido-info">
+          <div class="checkin-rapido-titulo">✅ Check-in do Evento</div>
+          <div class="checkin-rapido-sub">Abrir painel de check-in<br>com leitura de QR Code</div>
+        </div>
+        <button class="btn-checkin-rapido" onclick="abrirTab('checkin')">Fazer Check-in →</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card azul"><div class="stat-label">Total inscritos</div><span class="stat-icon">👥</span><div class="stat-valor" id="stat-total">—</div><div class="stat-pct" id="stat-conv">— % convertidos</div></div>
+        <div class="stat-card verde"><div class="stat-label">Pagamento confirmado</div><span class="stat-icon">✅</span><div class="stat-valor" id="stat-pagos">—</div><div class="stat-pct up" id="stat-pagos24">— últimas 24h</div></div>
+        <div class="stat-card roxo"><div class="stat-label">Pendentes</div><span class="stat-icon">⏳</span><div class="stat-valor" id="stat-pendentes">—</div><div class="stat-pct down" id="stat-pend-pct">— % do total</div></div>
+        <div class="stat-card dourado"><div class="stat-label">Arrecadado</div><span class="stat-icon">💰</span><div class="stat-valor" id="stat-arrecadado">—</div><div class="stat-pct" id="stat-ticket">ticket médio: —</div></div>
+      </div>
+
+      <!-- Barra de progresso de arrecadação -->
+      <div class="progress-wrap">
+        <div class="progress-label"><span>💰 Meta de arrecadação</span><span id="prog-pct">0%</span></div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar" style="width:0%"></div></div>
+        <div class="progress-sub"><span id="prog-atual">R$ 0,00 arrecadados</span><span id="prog-meta">meta: R$ 0,00</span></div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-titulo">Gênero</div><div class="chart-wrap"><canvas id="chart-genero"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Método de pagamento</div><div class="chart-wrap"><canvas id="chart-metodo"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Camisetas (pagos)</div><div class="chart-wrap"><canvas id="chart-camiseta"></canvas></div></div>
+        <div class="chart-card wide"><div class="chart-titulo">Inscrições por dia</div><div class="chart-wrap" style="height:160px"><canvas id="chart-timeline"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Top 5 Cidades</div><div id="chart-cidades" style="margin-top:8px"></div></div>
+      </div>
+
+      <!-- Últimas inscrições -->
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">📋 Últimas inscrições</div>
+          <button class="btn-acao btn-verde" onclick="abrirTab('inscritos')">Ver todos →</button>
+        </div>
+        <table>
+          <thead><tr><th>Ficha</th><th>Nome</th><th>Gênero</th><th>Camiseta</th><th>Status</th><th>Data</th></tr></thead>
+          <tbody id="tbody-recentes"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ INSCRITOS ══════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-inscritos">
+      <div class="page-titulo">Lista de Inscritos</div>
+      <div class="page-sub">Clique em um nome para ver a ficha completa</div>
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">👥 <span id="insc-count">—</span> inscritos</div>
+          <div class="tabela-controles">
+            <input class="input-busca" type="text" id="insc-busca" placeholder="Nome, CPF ou ficha…" oninput="filtrarInscritos()">
+            <select class="select-filtro" id="insc-filtro-status" onchange="filtrarInscritos()">
+              <option value="">Todos os status</option>
+              <option value="pago">✅ Pagos</option>
+              <option value="pendente_pagamento">⏳ Pendentes</option>
+              <option value="cancelado">❌ Cancelados</option>
+            </select>
+            <select class="select-filtro" id="insc-filtro-sexo" onchange="filtrarInscritos()">
+              <option value="">M e F</option>
+              <option value="M">🚴 Masculino</option>
+              <option value="F">🚴 Feminino</option>
+            </select>
+            <select class="select-filtro" id="insc-filtro-cam" onchange="filtrarInscritos()">
+              <option value="">Todas camisetas</option>
+              <option value="P">P</option><option value="M">M</option>
+              <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
+            </select>
+            <div class="btn-group">
+              <button class="btn-acao btn-verde-claro" onclick="exportarExcel('inscritos')">📊 Excel</button>
+              <button class="btn-acao btn-roxo" onclick="exportarPDF('inscritos')">📄 PDF</button>
+            </div>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="ordenar('numero_ficha')">Ficha ⇅</th>
+                <th onclick="ordenar('nome_completo')">Nome ⇅</th>
+                <th>CPF</th>
+                <th onclick="ordenar('sexo')">Gênero ⇅</th>
+                <th onclick="ordenar('cidade')">Cidade ⇅</th>
+                <th onclick="ordenar('tamanho_camiseta')">Camiseta ⇅</th>
+                <th onclick="ordenar('status')">Status ⇅</th>
+                <th onclick="ordenar('criado_em')">Data ⇅</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-inscritos"><tr><td colspan="9"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pag-wrap">
+          <span id="insc-pag-info">—</span>
+          <div class="pag-btns" id="insc-pag-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PENDENTES ══════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-pendentes">
+      <div class="page-titulo">Pendentes de Pagamento</div>
+      <div class="page-sub">Contato direto via WhatsApp para lembrar o pagamento</div>
+      <div class="tabela-wrap" style="margin-bottom:16px">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">⏳ <span id="pend-count">—</span> inscrições pendentes</div>
+          <div class="tabela-controles">
+            <input class="input-busca" type="text" id="pend-busca" placeholder="Filtrar por nome…" oninput="filtrarPendentes()">
+            <button class="btn-acao btn-verde-claro" onclick="exportarExcel('pendentes')">📊 Excel</button>
+            <button class="btn-acao btn-roxo" onclick="exportarPDF('pendentes')">📄 PDF</button>
+          </div>
+        </div>
+      </div>
+      <div id="lista-pendentes"><div class="spin"></div></div>
+    </div>
+
+    <!-- ═══ CAMISETAS ══════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-camisetas">
+      <div class="page-titulo">Gestão de Camisetas</div>
+      <div class="page-sub">Apenas inscritos com pagamento confirmado</div>
+      <div class="tam-grid">
+        <div class="tam-card"><div class="tam-letra">P</div><div class="tam-total" id="cam-P-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-P-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-P-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">M</div><div class="tam-total" id="cam-M-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-M-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-M-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">G</div><div class="tam-total" id="cam-G-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-G-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-G-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">GG</div><div class="tam-total" id="cam-GG-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-GG-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-GG-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">XG</div><div class="tam-total" id="cam-XG-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-XG-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-XG-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+      </div>
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">👕 Lista para confecção — <span id="cam-total-pagos">—</span> camisetas</div>
+          <div class="tabela-controles">
+            <select class="select-filtro" id="cam-filtro-tam" onchange="filtrarCamisetas()">
+              <option value="">Todos os tamanhos</option>
+              <option value="P">P</option><option value="M">M</option>
+              <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
+            </select>
+            <select class="select-filtro" id="cam-filtro-sexo" onchange="filtrarCamisetas()">
+              <option value="">M e F</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
+            <button class="btn-acao btn-verde-claro" onclick="exportarExcel('camisetas')">📊 Excel</button>
+            <button class="btn-acao btn-roxo" onclick="exportarPDF('camisetas')">📄 PDF Confecção</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Ficha</th><th>Nome</th><th>Gênero</th><th>Camiseta</th><th>Cidade</th><th>Ficha PDF</th></tr></thead>
+            <tbody id="tbody-camisetas"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FINANCEIRO ════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-financeiro">
+      <div class="page-titulo">Painel Financeiro</div>
+      <div class="page-sub">Totalizações e histórico de pagamentos</div>
+      <div class="fin-grid">
+        <div class="fin-card"><div class="fin-valor" style="color:var(--ok)" id="fin-total">R$ —</div><div class="fin-label">Total arrecadado (pagos)</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:var(--azul-pix)" id="fin-pix">R$ —</div><div class="fin-label">Via PIX</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#7c3aed" id="fin-cartao">R$ —</div><div class="fin-label">Via Cartão</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#92400e" id="fin-pendente-val">—</div><div class="fin-label">Pendentes (qtd)</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#374151" id="fin-ticket">R$ —</div><div class="fin-label">Ticket médio</div></div>
+        <div class="fin-card"><div class="fin-valor" style="color:#374151" id="fin-potencial">R$ —</div><div class="fin-label">Potencial (todos pagos)</div></div>
+      </div>
+      <div class="tabela-wrap">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">💰 Histórico de pagamentos confirmados</div>
+          <div class="btn-group">
+            <button class="btn-acao btn-verde-claro" onclick="exportarExcel('financeiro')">📊 Excel</button>
+            <button class="btn-acao btn-roxo" onclick="exportarPDF('financeiro')">📄 PDF</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Ficha</th><th>Nome</th><th>Método</th><th>Valor</th><th>Data pagamento</th></tr></thead>
+            <tbody id="tbody-financeiro"><tr><td colspan="5"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CHECK-IN ══════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-checkin">
+      <div class="page-titulo">Check-in Presencial</div>
+      <div class="page-sub">Valida pagamento e registra presença no evento</div>
+
+      <!-- Banner: abrir checkin.html para a equipe -->
+      <div style="background:linear-gradient(135deg,var(--verde-escuro),#1a4d24);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid rgba(45,122,58,.4);box-shadow:0 4px 14px rgba(0,0,0,.12)">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--dourado-claro);font-family:'Georgia',serif;margin-bottom:3px">📱 Página de Check-in para a Equipe</div>
+          <div style="font-size:12px;color:rgba(245,234,208,.55);line-height:1.5">Abra <strong style="color:var(--verde-claro)">checkin.html</strong> no celular dos operadores de pista.<br>Leitura de QR Code · Busca por nome, ficha ou CPF · Funciona offline.</div>
+        </div>
+        <a href="checkin.html" target="_blank" style="background:linear-gradient(135deg,var(--dourado),var(--dourado-claro));color:var(--marrom);border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;flex-shrink:0;box-shadow:0 3px 10px rgba(200,146,10,.35)">Abrir Check-in →</a>
+      </div>
+
+      <div class="ci-stats">
+        <div class="ci-stat"><div class="ci-num" id="ci-total-pagos">—</div><div class="ci-lbl">Inscritos pagos</div></div>
+        <div class="ci-stat"><div class="ci-num" id="ci-total-ci">—</div><div class="ci-lbl">Check-ins realizados</div><div class="ci-pct" id="ci-pct">—</div></div>
+        <div class="ci-stat"><div class="ci-num" id="ci-faltam">—</div><div class="ci-lbl">Aguardando check-in</div></div>
+      </div>
+
+      <div class="checkin-busca-wrap">
+        <div style="margin-bottom:12px;font-weight:600;color:#374151">🔍 Buscar participante</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <input class="input-busca" style="flex:1;font-size:15px;padding:12px 16px" type="text"
+            id="checkin-input" placeholder="Ficha (CIC-1234), CPF ou nome…"
+            onkeydown="if(event.key==='Enter')buscarCheckin()">
+          <button class="btn-acao btn-verde" style="padding:12px 20px;font-size:14px" onclick="buscarCheckin()">🔍 Buscar</button>
+        </div>
+        <!-- Câmera QR Code -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-acao btn-azul" onclick="iniciarCamera()" id="btn-camera">📷 Ler QR Code</button>
+          <button class="btn-acao btn-cinza" onclick="pararCamera()" id="btn-parar-camera" style="display:none">⏹ Parar câmera</button>
+        </div>
+        <div id="camera-container" style="display:none;margin-top:12px">
+          <div class="camera-wrap" style="max-width:300px">
+            <video id="camera-video" style="width:100%;display:block" playsinline autoplay muted></video>
+            <div class="camera-frame-wrap"><div class="camera-frame"><div class="camera-linha"></div></div></div>
+          </div>
+          <canvas id="camera-canvas" style="display:none"></canvas>
+          <div class="camera-status lendo" id="camera-status">📷 Aponte para o QR Code da ficha…</div>
+        </div>
+        <div class="alerta-admin alerta-verm" id="checkin-erro" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div class="checkin-resultado" id="checkin-resultado">
+        <div class="ci-nome" id="ci-nome">—</div>
+        <div class="ci-ficha-txt" id="ci-ficha-txt">—</div>
+        <div class="ci-info-grid">
+          <div class="ci-info-item"><div class="ci-info-lbl">Camiseta</div><div class="ci-info-val" id="ci-cam">—</div></div>
+          <div class="ci-info-item"><div class="ci-info-lbl">Gênero</div><div class="ci-info-val" id="ci-gen">—</div></div>
+          <div class="ci-info-item"><div class="ci-info-lbl">Cidade</div><div class="ci-info-val" id="ci-cid">—</div></div>
+          <div class="ci-info-item"><div class="ci-info-lbl">Pagamento</div><div class="ci-info-val" id="ci-status-pgto">—</div></div>
+        </div>
+        <button class="btn-ci" id="btn-confirmar-ci" onclick="confirmarCheckin()">✅ Confirmar presença e entrega de camiseta</button>
+        <div class="ci-ok" id="ci-ok">✅ Check-in realizado com sucesso!</div>
+        <button class="btn-acao btn-cinza" style="width:100%;margin-top:10px;padding:10px" onclick="novaLeituraCI()">🔄 Nova leitura</button>
+      </div>
+
+      <div class="tabela-wrap" style="margin-top:16px">
+        <div class="tabela-header">
+          <div class="tabela-header-titulo">✅ Check-ins realizados — <span id="ci-count-lista">0</span></div>
+          <button class="btn-acao btn-verde-claro" onclick="exportarExcel('checkins')">📊 Excel</button>
+        </div>
+        <table>
+          <thead><tr><th>Ficha</th><th>Nome</th><th>Camiseta</th><th>Gênero</th><th>Horário</th></tr></thead>
+          <tbody id="tbody-checkins"><tr><td colspan="5"><div class="empty">Nenhum check-in ainda</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ COMUNICAÇÃO ════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-comunicacao">
+      <div class="page-titulo">Comunicação</div>
+      <div class="page-sub">Templates de mensagem e lista para grupos de WhatsApp</div>
+
+      <div class="template-card">
+        <div class="template-titulo">💬 Template — Lembrete de pagamento (pendentes)</div>
+        <div class="template-preview" id="template-pagamento">Olá, [NOME]! 👋
+
+Identificamos que sua inscrição no *Ciclismo Individual 2026* ainda está pendente de pagamento.
+
+📋 Sua ficha: *[FICHA]*
+💰 Valor: *R$ 160,00*
+📅 Evento: *09 de agosto de 2026*
+📍 Costa Marques, Rondônia
+
+Para garantir sua vaga, acesse o link abaixo e conclua o pagamento:
+🔗 https://ciclismo.aguape.org
+
+Dúvidas? Fale com a organização.
+🚴 Equipe Aguapé — Turismo de Base Comunitária</div>
+        <button class="btn-acao btn-verde" onclick="gerarListaWpp()">📲 Gerar lista de links WhatsApp</button>
+      </div>
+
+      <div class="template-card" id="lista-wpp-card" style="display:none">
+        <div class="template-titulo">📲 Links WhatsApp — <span id="wpp-count">0</span> pendentes</div>
+        <div class="lista-wpp" id="lista-wpp-conteudo"></div>
+        <button class="btn-acao btn-verde" onclick="copiarListaWpp()">📋 Copiar todos os links</button>
+      </div>
+
+      <div class="template-card">
+        <div class="template-titulo">📢 Template — Aviso geral para grupo</div>
+        <div class="template-preview">🚴 *CICLISMO INDIVIDUAL 2026*
+Turismo de Base Comunitária · Aguapé
+
+📅 Data: *09 de agosto de 2026*
+📍 Local: Costa Marques, Rondônia
+💰 Inscrição: R$ 160,00
+🔗 Inscrições: https://ciclismo.aguape.org
+
+Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
+
+🌿 Associação dos Seringueiros do Vale do Guaporé</div>
+      </div>
+    </div>
+
+    <!-- ═══ CONFIGURAÇÕES ══════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-config">
+      <div class="page-titulo">Configurações</div>
+      <div class="page-sub">Controles do sistema, versões e logs</div>
+
+      <!-- ── Gestão de Operadores ─────────────────────────────── -->
+      <div class="config-card">
+        <div class="config-titulo">👥 Operadores do sistema</div>
+        <div class="config-sub">Usuários com acesso ao painel admin e ao check-in. Gerencie direto aqui — sem precisar entrar no Vercel.</div>
+
+        <!-- Preview rápido dos operadores ativos -->
+        <div id="operadores-preview">
+          <div style="font-size:12px;color:#6b7280;font-style:italic">Carregando operadores…</div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="abrirGerenciarUsuarios()"
+            style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:var(--verde-escuro);color:var(--creme);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+            🔐 Gerenciar usuários
+          </button>
+          <button onclick="previewOperadores()"
+            style="padding:10px 14px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#374151">
+            🔄 Recarregar
+          </button>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-titulo">⏱ Status das inscrições</div>
+        <div class="config-sub">Controla se o formulário está aberto ao público.</div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" id="toggle-inscricoes" onchange="alterarInscricoes()"><span class="toggle-slider"></span></label>
+          <span class="toggle-label" id="toggle-label">Verificando…</span>
+        </div>
+        <div class="alerta-admin" id="inscricoes-alerta" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-titulo">📋 Versões dos arquivos</div>
+        <table>
+          <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>admin.html</td><td>V2.5</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>js/app.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/criar-pagamento.js</td><td>V3.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/webhook-pagamento.js</td><td>V1.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/admin-auth.js</td><td>V3.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/admin-operadores.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>pix.html</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>pagamento.html</td><td>V2.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="config-card">
+        <div class="config-titulo">📡 Últimos webhooks</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Data</th><th>Inscrição</th><th>Payment ID</th><th>Status MP</th><th>Método</th><th>Valor</th></tr></thead>
+            <tbody id="tbody-webhooks"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- /conteudo-inner -->
+
+  </main>
+
+  <!-- ═══ BOTTOM NAV (mobile) ════════════════════════════════ -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bn-item ativo" onclick="navMobile('dashboard')" id="bn-dashboard">
+      <span class="bn-icon">📊</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('inscritos')" id="bn-inscritos">
+      <span class="bn-icon">👥</span>
+      <span>Inscritos</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('checkin')" id="bn-checkin">
+      <span class="bn-icon">✅</span>
+      <span>Check-in</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('pendentes')" id="bn-pendentes">
+      <span class="bn-icon">⏳</span>
+      <span>Pendentes</span>
+      <span class="bn-badge" id="bn-badge-pendentes" style="display:none">0</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('financeiro')" id="bn-financeiro">
+      <span class="bn-icon">💰</span>
+      <span>Financeiro</span>
+    </button>
+  </nav>
+
+</div>
+
+<script>
 // ================================================================
-// api/admin-auth.js — V2.1
-// Autenticação segura — sem fallback hardcoded
-// V2.1 — Removida referência à Prefeitura
-// Sessão expira em 8 horas
-// Ciclismo Individual 2026 — Turismo de Base Comunitária
-// © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
+// admin.html — Script V2.5
+// © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
 
-// Gera token com timestamp de expiração embutido
-function gerarToken(usuario, perfil) {
-  const expira = Date.now() + (8 * 60 * 60 * 1000); // 8 horas
-  const payload = `${usuario}:${perfil}:${expira}`;
-  const rand    = Math.random().toString(36).slice(2);
-  return Buffer.from(payload).toString('base64') + '.' + rand;
+let adminToken='', adminPerfil='', adminNome='';
+let todosDados = { inscricoes:[], participantes:[] };
+let checkinAtual = null;
+let chartGenero=null, chartMetodo=null, chartCamiseta=null, chartTimeline=null;
+let insc_pagina=1, insc_ordem='criado_em', insc_desc=true;
+const INSC_POR_PAG=20;
+let inscFiltrados=[], pendFiltrados=[];
+let streamAtivo=null, animFrame=null, barcodeDetector=null;
+let scanAtivo=false;
+
+if('BarcodeDetector' in window){
+  try{ barcodeDetector = new BarcodeDetector({formats:['qr_code']}); }catch(e){}
 }
 
-// Valida token — retorna dados ou null se expirado/inválido
-export function validarToken(token) {
-  try {
-    const [payload] = token.split('.');
-    const decoded   = Buffer.from(payload, 'base64').toString('utf8');
-    const [usuario, perfil, expira] = decoded.split(':');
-    if (Date.now() > parseInt(expira)) return null; // expirado
-    return { usuario, perfil };
-  } catch {
-    return null;
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+async function fazerLogin(){
+  const usuario=document.getElementById('login-user').value.trim();
+  const senha=document.getElementById('login-senha').value;
+  const erro=document.getElementById('login-erro');
+  erro.textContent='';
+  if(!usuario||!senha){erro.textContent='Preencha usuário e senha.';return;}
+  try{
+    const r=await fetch('/api/admin-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario,senha})});
+    const d=await r.json();
+    if(!d.ok){erro.textContent=d.erro||'Usuário ou senha incorretos.';return;}
+    adminToken=d.token; adminPerfil=d.perfil; adminNome=d.nome;
+    sessionStorage.setItem('admin_token',adminToken);
+    sessionStorage.setItem('admin_perfil',adminPerfil);
+    sessionStorage.setItem('admin_nome',adminNome);
+    if(d.expira_em) sessionStorage.setItem('admin_expira',d.expira_em);
+    iniciarApp(); iniciarAvisoExpiracao(d.expira_em);
+  }catch{erro.textContent='Erro de conexão. Tente novamente.';}
+}
+
+function logout(){
+  pararCamera();
+  sessionStorage.clear();
+  document.getElementById('tela-login').style.display='flex';
+  document.getElementById('app').classList.remove('visivel');
+}
+
+document.getElementById('login-senha').addEventListener('keydown',e=>{if(e.key==='Enter')fazerLogin();});
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const t=sessionStorage.getItem('admin_token');
+  if(t) validarSessaoAtiva(t);
+  iniciarCountdown();
+});
+
+async function validarSessaoAtiva(t){
+  try{
+    const r=await fetch('/api/admin-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'validarSessao',token:t})});
+    const d=await r.json();
+    if(d.ok){
+      adminToken=t;
+      adminPerfil=sessionStorage.getItem('admin_perfil')||d.perfil;
+      adminNome=sessionStorage.getItem('admin_nome')||d.usuario;
+      iniciarApp();
+    }else{sessionStorage.clear();document.getElementById('login-erro').textContent='Sessão expirada. Faça login novamente.';}
+  }catch{
+    adminToken=t;
+    adminPerfil=sessionStorage.getItem('admin_perfil')||'';
+    adminNome=sessionStorage.getItem('admin_nome')||'';
+    iniciarApp();
   }
 }
 
-export default function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ erro: 'Método não permitido' });
+function iniciarAvisoExpiracao(expiraEm){
+  if(!expiraEm) return;
+  const restante=expiraEm-Date.now();
+  if(restante<=0){logout();return;}
+  const avisoEm=restante-(10*60*1000);
+  if(avisoEm>0) setTimeout(()=>{if(confirm('⚠️ Sessão expira em 10 minutos. Deseja continuar?')) alert('Para renovar, faça logout e login novamente.');},avisoEm);
+  setTimeout(()=>{alert('⏱️ Sessão expirada.');logout();},restante);
+}
+
+function iniciarApp(){
+  document.getElementById('tela-login').style.display='none';
+  document.getElementById('app').classList.add('visivel');
+  document.getElementById('sb-nome').textContent=adminNome+' ('+adminPerfil+')';
+  const tu=document.getElementById('topbar-usuario');
+  if(tu) tu.textContent=adminNome;
+  const exp=parseInt(sessionStorage.getItem('admin_expira')||'0');
+  if(exp) iniciarAvisoExpiracao(exp);
+  carregarTudo();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DADOS
+// ═══════════════════════════════════════════════════════════════
+async function supabase(tabela,query=''){
+  const r=await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'buscar',tabela,query})});
+  return r.json();
+}
+async function supabaseAtualizar(tabela,id,dados){
+  const r=await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'atualizar',tabela,id,dados})});
+  return r.json();
+}
+
+async function carregarTudo(){
+  document.getElementById('dash-atualizado').textContent='Atualizando…';
+  const [inscricoes,participantes]=await Promise.all([
+    supabase('inscricoes','select=*&order=criado_em.desc'),
+    supabase('participantes','select=*')
+  ]);
+  todosDados.inscricoes=Array.isArray(inscricoes)?inscricoes:[];
+  todosDados.participantes=Array.isArray(participantes)?participantes:[];
+  inscFiltrados=[...todosDados.inscricoes];
+  pendFiltrados=todosDados.inscricoes.filter(i=>i.status==='pendente_pagamento'||i.status==='aguardando_boleto');
+  document.getElementById('badge-pendentes').textContent=pendFiltrados.length;
+  // Sincroniza badge da bottom nav
+  const bnBadge=document.getElementById('bn-badge-pendentes');
+  if(bnBadge){bnBadge.textContent=pendFiltrados.length;bnBadge.style.display=pendFiltrados.length>0?'block':'none';}
+  renderizarDashboard();
+  renderizarInscritos();
+  renderizarPendentes();
+  renderizarCamisetas();
+  renderizarFinanceiro();
+  carregarCheckins();
+  carregarWebhooks();
+  verificarStatusInscricoes();
+  document.getElementById('dash-atualizado').textContent='Última atualização: '+new Date().toLocaleString('pt-BR');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+const gP=pid=>todosDados.participantes.find(p=>p.id===pid)||{};
+const fR=v=>v!=null?'R$ '+parseFloat(v).toFixed(2).replace('.',','):'R$ —';
+const fD=d=>d?new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const fDcurta=d=>d?new Date(d).toLocaleDateString('pt-BR'):'—';
+const mCPF=c=>{if(!c)return'—';const d=c.replace(/\D/g,'');return d.length===11?`${d.slice(0,3)}.${d.slice(3,6)}.***-${d.slice(9)}`:c;};
+
+function chipStatus(s){
+  if(s==='pago') return '<span class="chip chip-pago">✅ Pago</span>';
+  if(s==='cancelado') return '<span class="chip chip-cancelado">❌ Cancelado</span>';
+  return '<span class="chip chip-pendente">⏳ Pendente</span>';
+}
+function chipMetodo(m){
+  if(m==='pix') return '<span class="chip chip-pix">⚡ PIX</span>';
+  if(m==='cartao') return '<span class="chip chip-cartao">💳 Cartão</span>';
+  if(m==='manual') return '<span class="chip chip-manual">✍️ Manual</span>';
+  return m?`<span class="chip">${m}</span>`:'—';
+}
+
+function abrirTab(nome){
+  document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('ativo'));
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('ativo'));
+  document.getElementById('tab-'+nome).classList.add('ativo');
+  const mapa={dashboard:0,inscritos:1,pendentes:2,camisetas:3,financeiro:4,checkin:5,comunicacao:6,config:7};
+  document.querySelectorAll('.sb-item')[mapa[nome]]?.classList.add('ativo');
+  if(nome!=='checkin') pararCamera();
+  if(nome==='config') carregarOperadores();
+}
+
+function navMobile(nome){
+  abrirTab(nome);
+  // Atualiza estado ativo na bottom nav
+  document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('ativo'));
+  const el=document.getElementById('bn-'+nome);
+  if(el) el.classList.add('ativo');
+  // Scroll ao topo do conteúdo
+  document.querySelector('.conteudo')?.scrollTo({top:0,behavior:'smooth'});
+}
+
+function fecharModal(id){document.getElementById(id).classList.remove('aberto');}
+
+// ═══════════════════════════════════════════════════════════════
+// COUNTDOWN
+// ═══════════════════════════════════════════════════════════════
+function iniciarCountdown(){
+  function atualizar(){
+    const diff=new Date('2026-08-09T07:00:00').getTime()-Date.now();
+    if(diff<=0){['cd-dias','cd-horas','cd-min'].forEach(id=>document.getElementById(id).textContent='0');return;}
+    const dias=Math.floor(diff/86400000);
+    const horas=Math.floor((diff%86400000)/3600000);
+    const min=Math.floor((diff%3600000)/60000);
+    document.getElementById('cd-dias').textContent=String(dias).padStart(2,'0');
+    document.getElementById('cd-horas').textContent=String(horas).padStart(2,'0');
+    document.getElementById('cd-min').textContent=String(min).padStart(2,'0');
   }
+  atualizar(); setInterval(atualizar,60000);
+}
 
-  const ADMIN_USER  = process.env.ADMIN_USER;
-  const ADMIN_SENHA = process.env.ADMIN_SENHA;
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderizarDashboard(){
+  const insc=todosDados.inscricoes, part=todosDados.participantes;
+  const pagos=insc.filter(i=>i.status==='pago');
+  const pendentes=insc.filter(i=>i.status!=='pago'&&i.status!=='cancelado');
+  const agora=Date.now();
+  const pagos24=pagos.filter(i=>agora-new Date(i.pagamento_data||i.criado_em).getTime()<86400000).length;
+  const arrecadado=pagos.reduce((s,i)=>s+(parseFloat(i.pagamento_valor)||0),0);
+  const ticket=pagos.length?arrecadado/pagos.length:0;
+  const meta=insc.length*160;
+  const pct=meta>0?Math.round(arrecadado/meta*100):0;
 
-  // ── Bloqueia se variáveis não configuradas ────────────────────
-  if (!ADMIN_USER || !ADMIN_SENHA) {
-    console.error('admin-auth: ADMIN_USER ou ADMIN_SENHA não configurados no Vercel');
-    return res.status(503).json({
-      ok:   false,
-      erro: 'Painel não configurado. Configure ADMIN_USER e ADMIN_SENHA nas variáveis de ambiente do Vercel.'
-    });
+  document.getElementById('stat-total').textContent=insc.length;
+  document.getElementById('stat-conv').textContent=(insc.length?Math.round(pagos.length/insc.length*100):0)+'% convertidos';
+  document.getElementById('stat-pagos').textContent=pagos.length;
+  document.getElementById('stat-pagos24').textContent='+'+pagos24+' últimas 24h';
+  document.getElementById('stat-pendentes').textContent=pendentes.length;
+  document.getElementById('stat-pend-pct').textContent=(insc.length?Math.round(pendentes.length/insc.length*100):0)+'% do total';
+  document.getElementById('stat-arrecadado').textContent=fR(arrecadado);
+  document.getElementById('stat-ticket').textContent='ticket médio: '+fR(ticket);
+
+  document.getElementById('prog-bar').style.width=Math.min(pct,100)+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('prog-atual').textContent=fR(arrecadado)+' arrecadados';
+  document.getElementById('prog-meta').textContent='meta: '+fR(meta);
+
+  // Charts
+  const masc=part.filter(p=>p.sexo==='M').length, fem=part.filter(p=>p.sexo==='F').length;
+  mkChart('chart-genero',chartGenero,'doughnut',['Masculino','Feminino'],[masc,fem],['#1a5c2a','#be185d'],c=>chartGenero=c);
+
+  const pixN=pagos.filter(i=>i.pagamento_metodo==='pix').length;
+  const carN=pagos.filter(i=>i.pagamento_metodo==='cartao').length;
+  const manN=pagos.filter(i=>i.pagamento_metodo==='manual').length;
+  mkChart('chart-metodo',chartMetodo,'doughnut',['PIX','Cartão','Manual'],[pixN,carN,manN],['#00b4d8','#7c3aed','#f59e0b'],c=>chartMetodo=c);
+
+  const tams=['P','M','G','GG','XG'];
+  const ctsT=tams.map(t=>pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t).length);
+  mkChart('chart-camiseta',chartCamiseta,'bar',tams,ctsT,['#1a5c2a','#2d7a3a','#7dcf8a','#c8920a','#f0b429'],c=>chartCamiseta=c);
+
+  // Timeline — inscrições por dia (últimos 14 dias)
+  const dias14=[]; const labels14=[];
+  for(let i=13;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const d2=new Date(d); d2.setDate(d2.getDate()+1);
+    labels14.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    dias14.push(insc.filter(x=>{const c=new Date(x.criado_em);return c>=d&&c<d2;}).length);
   }
+  mkChartTimeline(labels14,dias14);
 
-  const { usuario, senha, acao, token } = req.body;
+  // Top cidades
+  const ctCid={};
+  part.forEach(p=>{if(p.cidade) ctCid[p.cidade]=(ctCid[p.cidade]||0)+1;});
+  const top5=Object.entries(ctCid).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const max=top5[0]?.[1]||1;
+  document.getElementById('chart-cidades').innerHTML=top5.map(([c,n])=>
+    `<div class="cidade-item-dash"><span class="cidade-nome">${c}</span><div class="cidade-bar"><div class="cidade-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div><span class="cidade-count">${n}</span></div>`
+  ).join('');
 
-  // ── Validar token existente (checagem de sessão ativa) ────────
-  if (acao === 'validarSessao') {
-    if (!token) return res.status(401).json({ ok: false, erro: 'Token não informado' });
-    const dados = validarToken(token);
-    if (!dados)  return res.status(401).json({ ok: false, erro: 'Sessão expirada' });
-    return res.status(200).json({ ok: true, ...dados });
+  // Últimas inscrições
+  const tbody=document.getElementById('tbody-recentes');
+  tbody.innerHTML=insc.slice(0,8).map(i=>{
+    const p=gP(i.participante_id);
+    const nova=Date.now()-new Date(i.criado_em).getTime()<86400000;
+    return `<tr class="${nova?'row-nova':''}"><td><strong>${i.numero_ficha||'—'}</strong>${nova?' <span class="chip chip-nova">NOVA</span>':''}</td><td>${p.nome_completo||'—'}</td><td>${p.sexo==='M'?'🚴 Masc':'🚴 Fem'}</td><td>${p.tamanho_camiseta||'—'}</td><td>${chipStatus(i.status)}</td><td style="font-size:11px">${fD(i.criado_em)}</td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Nenhum inscrito</td></tr>';
+}
+
+function mkChart(id,inst,tipo,labels,data,colors,setter){
+  const ctx=document.getElementById(id); if(!ctx)return;
+  if(inst) inst.destroy();
+  setter(new Chart(ctx,{type:tipo,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:tipo==='bar'?0:2,borderColor:'#fff',borderRadius:tipo==='bar'?6:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:tipo==='bar'?'bottom':'right',labels:{font:{size:11},padding:10}}},scales:tipo==='bar'?{y:{beginAtZero:true,ticks:{stepSize:1}}}:{}}}));
+}
+
+function mkChartTimeline(labels,data){
+  const ctx=document.getElementById('chart-timeline'); if(!ctx)return;
+  if(chartTimeline) chartTimeline.destroy();
+  chartTimeline=new Chart(ctx,{type:'line',data:{labels,datasets:[{data,borderColor:'#1a5c2a',backgroundColor:'rgba(26,92,42,.1)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#1a5c2a'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INSCRITOS
+// ═══════════════════════════════════════════════════════════════
+function ordenar(campo){
+  if(insc_ordem===campo) insc_desc=!insc_desc;
+  else{insc_ordem=campo;insc_desc=true;}
+  filtrarInscritos();
+}
+
+function filtrarInscritos(){
+  const busca=document.getElementById('insc-busca').value.toLowerCase().trim();
+  const status=document.getElementById('insc-filtro-status').value;
+  const sexo=document.getElementById('insc-filtro-sexo').value;
+  const cam=document.getElementById('insc-filtro-cam').value;
+  inscFiltrados=todosDados.inscricoes.filter(i=>{
+    const p=gP(i.participante_id);
+    if(status&&i.status!==status)return false;
+    if(sexo&&p.sexo!==sexo)return false;
+    if(cam&&p.tamanho_camiseta!==cam)return false;
+    if(busca){const txt=`${p.nome_completo||''} ${p.cpf||''} ${i.numero_ficha||''}`.toLowerCase();if(!txt.includes(busca))return false;}
+    return true;
+  });
+  // Ordenação
+  inscFiltrados.sort((a,b)=>{
+    const pa=gP(a.participante_id), pb=gP(b.participante_id);
+    const va=['numero_ficha','status','criado_em'].includes(insc_ordem)?a[insc_ordem]:(pa[insc_ordem]||'');
+    const vb=['numero_ficha','status','criado_em'].includes(insc_ordem)?b[insc_ordem]:(pb[insc_ordem]||'');
+    return insc_desc?(vb>va?1:-1):(va>vb?1:-1);
+  });
+  insc_pagina=1;
+  renderizarInscritos();
+}
+
+function renderizarInscritos(){
+  document.getElementById('insc-count').textContent=inscFiltrados.length;
+  const inicio=(insc_pagina-1)*INSC_POR_PAG;
+  const pagina=inscFiltrados.slice(inicio,inicio+INSC_POR_PAG);
+  const totalPag=Math.ceil(inscFiltrados.length/INSC_POR_PAG);
+  const tbody=document.getElementById('tbody-inscritos');
+  tbody.innerHTML=pagina.map(i=>{
+    const p=gP(i.participante_id);
+    const nova=Date.now()-new Date(i.criado_em).getTime()<86400000;
+    return `<tr class="${nova?'row-nova':''}">
+      <td><strong>${i.numero_ficha||'—'}</strong>${nova?' <span class="chip chip-nova">NOVA</span>':''}</td>
+      <td><a href="#" onclick="abrirFicha(${i.id})" style="color:var(--verde);font-weight:600;text-decoration:none">${p.nome_completo||'—'}</a></td>
+      <td>${mCPF(p.cpf)}</td>
+      <td>${p.sexo==='M'?'♂ Masc':'♀ Fem'}</td>
+      <td>${p.cidade||'—'}</td>
+      <td><strong>${p.tamanho_camiseta||'—'}</strong></td>
+      <td>${chipStatus(i.status)}</td>
+      <td style="font-size:11px">${fDcurta(i.criado_em)}</td>
+      <td>
+        <div class="btn-group">
+          <button class="btn-sm btn-cinza" onclick="abrirFicha(${i.id})" title="Ver ficha">👁</button>
+          ${adminPerfil==='admin'&&i.status!=='pago'?`<button class="btn-sm btn-verde" onclick="confirmarPagtoManual(${i.id})" title="Confirmar pagamento">✅</button>`:''}
+          ${adminPerfil==='admin'&&i.status!=='cancelado'?`<button class="btn-sm btn-verm" onclick="cancelarInscricao(${i.id})" title="Cancelar">✕</button>`:''}
+          ${p.telefone?`<a class="btn-sm btn-verde-claro" href="https://wa.me/55${p.telefone.replace(/\D/g,'')}" target="_blank" title="WhatsApp">💬</a>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="9" class="empty">Nenhum resultado</td></tr>';
+
+  document.getElementById('insc-pag-info').textContent=`${inicio+1}–${Math.min(inicio+INSC_POR_PAG,inscFiltrados.length)} de ${inscFiltrados.length}`;
+  const btns=document.getElementById('insc-pag-btns'); btns.innerHTML='';
+  for(let p=1;p<=totalPag;p++){
+    const b=document.createElement('button');
+    b.className='pag-btn'+(p===insc_pagina?' ativo':'');
+    b.textContent=p; b.onclick=()=>{insc_pagina=p;renderizarInscritos();};
+    btns.appendChild(b);
   }
+}
 
-  // ── Verificar permissão de operador ───────────────────────────
-  if (acao === 'verificarPermissao') {
-    if (!token) return res.status(401).json({ ok: false });
-    const dados = validarToken(token);
-    if (!dados)  return res.status(401).json({ ok: false, erro: 'Sessão expirada' });
-
-    if (dados.usuario === ADMIN_USER) {
-      return res.status(200).json({ ok: true, podeExcluir: true });
+// ─── Modal ficha completa ──────────────────────────────────────
+function abrirFicha(inscId){
+  const i=todosDados.inscricoes.find(x=>x.id===inscId); if(!i) return;
+  const p=gP(i.participante_id);
+  const modal=document.getElementById('modal-participante');
+  const body=document.getElementById('modal-participante-body');
+  const qrEl=`<div id="ficha-qr-modal" class="ficha-qr-wrap"></div>`;
+  body.innerHTML=`
+    <div class="ficha-preview" id="ficha-preview-modal">
+      <div class="ficha-evento">🚴 Ciclismo Individual 2026</div>
+      <div class="ficha-titulo">Turismo de Base Comunitária · Aguapé</div>
+      <div class="ficha-num">${i.numero_ficha||'—'}</div>
+      <div class="ficha-nome-txt">${p.nome_completo||'—'}</div>
+      <div class="ficha-detalhes">${p.sexo==='M'?'🚴 Masculino':'🚴 Feminino'} · Camiseta ${p.tamanho_camiseta||'—'}<br>${p.cidade||'—'} / ${p.uf||'RO'}<br>${chipStatus(i.status)}</div>
+      ${qrEl}
+      <div class="ficha-local">📅 09/08/2026 · Costa Marques, RO<br>Apresente esta ficha no dia do evento</div>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:#f9fafb;border-radius:8px;padding:12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Telefone</div><div style="font-weight:600">${p.telefone||'—'}</div></div>
+      <div style="background:#f9fafb;border-radius:8px;padding:12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">E-mail</div><div style="font-weight:600;font-size:12px">${p.email||'—'}</div></div>
+      <div style="background:#f9fafb;border-radius:8px;padding:12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Nascimento</div><div style="font-weight:600">${p.data_nascimento?new Date(p.data_nascimento+'T12:00').toLocaleDateString('pt-BR'):'—'}</div></div>
+      <div style="background:#f9fafb;border-radius:8px;padding:12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Inscrito em</div><div style="font-weight:600;font-size:12px">${fD(i.criado_em)}</div></div>
+      <div style="background:#f9fafb;border-radius:8px;padding:12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Pagamento</div><div>${chipMetodo(i.pagamento_metodo)}</div></div>
+      <div style="background:#f9fafb;border-radius:8px;padding:12px"><div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Valor</div><div style="font-weight:600">${fR(i.pagamento_valor)}</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn-acao btn-roxo" onclick="baixarFichaIndividual(${i.id})" style="flex:1">📄 Baixar ficha PDF</button>
+      ${p.telefone?`<a class="btn-acao btn-verde" href="https://wa.me/55${p.telefone.replace(/\D/g,'')}" target="_blank" style="flex:1;text-align:center;text-decoration:none">💬 WhatsApp</a>`:''}
+    </div>
+  `;
+  modal.classList.add('aberto');
+  setTimeout(()=>{
+    const qrDiv=document.getElementById('ficha-qr-modal');
+    if(qrDiv&&i.numero_ficha){
+      new QRCode(qrDiv,{text:`${i.numero_ficha}|${p.nome_completo}`,width:100,height:100,colorDark:'#0d2810',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
     }
-    for (let i = 1; i <= 20; i++) {
-      const op = process.env[`OPERADOR_${i}`];
-      if (!op) continue;
-      const [opUser, , , opExcluir] = op.split(':');
-      if (opUser === dados.usuario) {
-        return res.status(200).json({ ok: true, podeExcluir: opExcluir === 'true' });
+  },100);
+}
+
+// ─── Ações manuais ─────────────────────────────────────────────
+async function confirmarPagtoManual(id){
+  if(!confirm('Confirmar pagamento manualmente?'))return;
+  await supabaseAtualizar('inscricoes',id,{status:'pago',pagamento_metodo:'manual',pagamento_data:new Date().toISOString(),pagamento_valor:160.00});
+  await carregarTudo();
+}
+async function cancelarInscricao(id){
+  if(!confirm('Cancelar esta inscrição?'))return;
+  await supabaseAtualizar('inscricoes',id,{status:'cancelado'});
+  await carregarTudo();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PENDENTES
+// ═══════════════════════════════════════════════════════════════
+function filtrarPendentes(){
+  const busca=document.getElementById('pend-busca').value.toLowerCase().trim();
+  pendFiltrados=todosDados.inscricoes.filter(i=>i.status==='pendente_pagamento'||i.status==='aguardando_boleto');
+  if(busca) pendFiltrados=pendFiltrados.filter(i=>gP(i.participante_id).nome_completo?.toLowerCase().includes(busca));
+  renderizarPendentes();
+}
+
+function renderizarPendentes(){
+  const lista=pendFiltrados;
+  document.getElementById('pend-count').textContent=lista.length;
+  const container=document.getElementById('lista-pendentes');
+  if(!lista.length){container.innerHTML='<div class="empty">✅ Nenhum pendente!</div>';return;}
+  container.innerHTML=lista.map(i=>{
+    const p=gP(i.participante_id);
+    const dias=Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000);
+    const cls=dias>=7?'urgente':dias>=3?'atencao':'novo';
+    const telFmt=p.telefone?p.telefone.replace(/\D/g,''):'';
+    const msgWpp=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! 👋\n\nSua inscrição no *Ciclismo Individual 2026* ainda está pendente de pagamento.\n\n📋 Ficha: *${i.numero_ficha}*\n💰 Valor: *R$ 160,00*\n📅 Evento: *09 de agosto de 2026*\n\nAcesse e conclua o pagamento:\n🔗 https://ciclismo.aguape.org\n\n🚴 Equipe Aguapé`);
+    return `<div class="pend-card">
+      <div class="pend-header">
+        <div><div class="pend-nome">${p.nome_completo||'—'}</div><div class="pend-ficha">Ficha: ${i.numero_ficha||'—'} · ${p.cidade||'—'} · 👕 ${p.tamanho_camiseta||'—'}</div></div>
+        <span class="pend-dias ${cls}">${dias===0?'Hoje':dias===1?'1 dia':dias+' dias'}</span>
+      </div>
+      <div class="pend-info">
+        <span class="pend-tel">📞 ${p.telefone||'Sem telefone'}</span>
+        ${telFmt?`<a class="btn-wpp" href="https://wa.me/55${telFmt}?text=${msgWpp}" target="_blank">💬 WhatsApp</a>`:''}
+        ${adminPerfil==='admin'?`<button class="btn-acao btn-verde btn-sm" onclick="confirmarPagtoManual(${i.id})">✅ Confirmar</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAMISETAS
+// ═══════════════════════════════════════════════════════════════
+function renderizarCamisetas(){
+  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+  document.getElementById('cam-total-pagos').textContent=pagos.length;
+  ['P','M','G','GG','XG'].forEach(t=>{
+    const m=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
+    const f=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
+    document.getElementById(`cam-${t}-t`).textContent=m+f;
+    document.getElementById(`cam-${t}-m`).textContent=m;
+    document.getElementById(`cam-${t}-f`).textContent=f;
+  });
+  filtrarCamisetas();
+}
+
+function filtrarCamisetas(){
+  const t=document.getElementById('cam-filtro-tam').value;
+  const s=document.getElementById('cam-filtro-sexo').value;
+  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+  const lista=pagos.filter(i=>{
+    const p=gP(i.participante_id);
+    if(t&&p.tamanho_camiseta!==t)return false;
+    if(s&&p.sexo!==s)return false;
+    return true;
+  });
+  document.getElementById('tbody-camisetas').innerHTML=lista.map(i=>{
+    const p=gP(i.participante_id);
+    return `<tr><td><strong>${i.numero_ficha||'—'}</strong></td><td>${p.nome_completo||'—'}</td><td>${p.sexo==='M'?'♂ Masc':'♀ Fem'}</td><td><strong>${p.tamanho_camiseta||'—'}</strong></td><td>${p.cidade||'—'}</td><td><button class="btn-sm btn-roxo" onclick="baixarFichaIndividual(${i.id})">📄 PDF</button></td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Nenhum resultado</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FINANCEIRO
+// ═══════════════════════════════════════════════════════════════
+function renderizarFinanceiro(){
+  const insc=todosDados.inscricoes;
+  const pagos=insc.filter(i=>i.status==='pago');
+  const pend=insc.filter(i=>i.status!=='pago'&&i.status!=='cancelado');
+  const soma=arr=>arr.reduce((s,i)=>s+(parseFloat(i.pagamento_valor)||0),0);
+  const total=soma(pagos);
+  document.getElementById('fin-total').textContent=fR(total);
+  document.getElementById('fin-pix').textContent=fR(soma(pagos.filter(i=>i.pagamento_metodo==='pix')));
+  document.getElementById('fin-cartao').textContent=fR(soma(pagos.filter(i=>i.pagamento_metodo==='cartao')));
+  document.getElementById('fin-pendente-val').textContent=pend.length+' inscrições';
+  document.getElementById('fin-ticket').textContent=fR(pagos.length?total/pagos.length:0);
+  document.getElementById('fin-potencial').textContent=fR(insc.length*160);
+  document.getElementById('tbody-financeiro').innerHTML=pagos.map(i=>{
+    const p=gP(i.participante_id);
+    return `<tr><td><strong>${i.numero_ficha||'—'}</strong></td><td>${p.nome_completo||'—'}</td><td>${chipMetodo(i.pagamento_metodo)}</td><td><strong>${fR(i.pagamento_valor)}</strong></td><td style="font-size:11px">${fD(i.pagamento_data)}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">Nenhum pagamento</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHECK-IN
+// ═══════════════════════════════════════════════════════════════
+async function buscarCheckin(){
+  const inp=document.getElementById('checkin-input').value.trim();
+  const erro=document.getElementById('checkin-erro');
+  const res=document.getElementById('checkin-resultado');
+  erro.style.display='none'; res.style.display='none';
+  document.getElementById('ci-ok').style.display='none'; checkinAtual=null;
+  if(!inp){erro.textContent='Digite ficha, CPF ou nome.';erro.style.display='block';return;}
+
+  const norm=inp.toUpperCase().replace(/\s/g,'');
+  let insc=null, part=null;
+  if(/^CIC-?\d+$/.test(norm)){
+    const ficha='CIC-'+norm.replace(/^CIC-?/,'');
+    insc=todosDados.inscricoes.find(i=>i.numero_ficha===ficha);
+  }
+  if(!insc&&/^\d{11}$/.test(inp.replace(/\D/g,''))){
+    const cpf=inp.replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+    part=todosDados.participantes.find(p=>p.cpf===cpf||p.cpf===inp.replace(/\D/g,''));
+    if(part) insc=todosDados.inscricoes.find(i=>i.participante_id===part.id);
+  }
+  if(!insc){
+    part=todosDados.participantes.find(p=>(p.nome_completo||'').toLowerCase().includes(inp.toLowerCase()));
+    if(part) insc=todosDados.inscricoes.find(i=>i.participante_id===part.id);
+  }
+  if(!insc){erro.textContent='Nenhuma inscrição encontrada.';erro.style.display='block';return;}
+
+  part=part||gP(insc.participante_id);
+  checkinAtual={insc,part};
+  document.getElementById('ci-nome').textContent=part.nome_completo||'—';
+  document.getElementById('ci-ficha-txt').textContent=`Ficha: ${insc.numero_ficha} · Inscrito em ${fDcurta(insc.criado_em)}`;
+  document.getElementById('ci-cam').textContent=part.tamanho_camiseta||'—';
+  document.getElementById('ci-gen').textContent=part.sexo==='M'?'🚴 Masculino':'🚴 Feminino';
+  document.getElementById('ci-cid').textContent=part.cidade||'—';
+  document.getElementById('ci-status-pgto').textContent=insc.status==='pago'?'✅ Pago':insc.status==='cancelado'?'❌ Cancelado':'⏳ Pendente';
+  const btn=document.getElementById('btn-confirmar-ci');
+  btn.disabled=insc.status!=='pago';
+  btn.title=insc.status!=='pago'?'Pagamento não confirmado':'';
+  res.style.display='block';
+  pararCamera();
+}
+
+function novaLeituraCI(){
+  document.getElementById('checkin-resultado').style.display='none';
+  document.getElementById('checkin-input').value='';
+  document.getElementById('checkin-input').focus();
+  checkinAtual=null;
+}
+
+async function confirmarCheckin(){
+  if(!checkinAtual)return;
+  await supabaseAtualizar('inscricoes',checkinAtual.insc.id,{checkin_realizado:true,checkin_data:new Date().toISOString()});
+  document.getElementById('btn-confirmar-ci').disabled=true;
+  document.getElementById('ci-ok').style.display='block';
+  await carregarCheckins();
+}
+
+async function carregarCheckins(){
+  const lista=todosDados.inscricoes.filter(i=>i.checkin_realizado);
+  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+  document.getElementById('ci-total-pagos').textContent=pagos.length;
+  document.getElementById('ci-total-ci').textContent=lista.length;
+  document.getElementById('ci-faltam').textContent=Math.max(0,pagos.length-lista.length);
+  document.getElementById('ci-pct').textContent=pagos.length?Math.round(lista.length/pagos.length*100)+'% presentes':'—';
+  document.getElementById('ci-count-lista').textContent=lista.length;
+  document.getElementById('tbody-checkins').innerHTML=lista.map(i=>{
+    const p=gP(i.participante_id);
+    return `<tr><td><strong>${i.numero_ficha||'—'}</strong></td><td>${p.nome_completo||'—'}</td><td><strong>${p.tamanho_camiseta||'—'}</strong></td><td>${p.sexo==='M'?'♂ Masc':'♀ Fem'}</td><td style="font-size:11px">${fD(i.checkin_data)}</td></tr>`;
+  }).join('')||'<tr><td colspan="5"><div class="empty">Nenhum check-in ainda</div></td></tr>';
+}
+
+// ─── Câmera QR Code ────────────────────────────────────────────
+async function iniciarCamera(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    streamAtivo=stream;
+    const video=document.getElementById('camera-video');
+    video.srcObject=stream; await video.play();
+    document.getElementById('camera-container').style.display='block';
+    document.getElementById('btn-camera').style.display='none';
+    document.getElementById('btn-parar-camera').style.display='inline-block';
+    scanAtivo=true;
+    document.getElementById('camera-status').textContent='📷 Aponte para o QR Code da ficha…';
+    document.getElementById('camera-status').className='camera-status lendo';
+    requestAnimationFrame(scanFrame);
+  }catch(e){
+    document.getElementById('checkin-erro').textContent='Câmera não disponível: '+e.message;
+    document.getElementById('checkin-erro').style.display='block';
+  }
+}
+
+async function scanFrame(){
+  if(!scanAtivo)return;
+  const video=document.getElementById('camera-video');
+  if(video.readyState!==video.HAVE_ENOUGH_DATA){animFrame=requestAnimationFrame(scanFrame);return;}
+  let resultado=null;
+  if(barcodeDetector){
+    try{const codes=await barcodeDetector.detect(video);if(codes.length)resultado=codes[0].rawValue;}catch(e){}
+  }
+  if(!resultado){
+    const canvas=document.getElementById('camera-canvas');
+    canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+    const ctx=canvas.getContext('2d'); ctx.drawImage(video,0,0);
+    const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+    if(code) resultado=code.data;
+  }
+  if(resultado){
+    document.getElementById('camera-status').textContent='✅ QR Code lido!';
+    document.getElementById('camera-status').className='camera-status ok';
+    // Extrai ficha do QR (formato: "CIC-XXXX|Nome" ou só "CIC-XXXX")
+    const ficha=resultado.split('|')[0].trim();
+    document.getElementById('checkin-input').value=ficha;
+    pararCamera();
+    setTimeout(()=>buscarCheckin(),300);
+    return;
+  }
+  animFrame=requestAnimationFrame(scanFrame);
+}
+
+function pararCamera(){
+  scanAtivo=false;
+  if(animFrame)cancelAnimationFrame(animFrame);
+  if(streamAtivo){streamAtivo.getTracks().forEach(t=>t.stop());streamAtivo=null;}
+  document.getElementById('camera-container').style.display='none';
+  document.getElementById('btn-camera').style.display='inline-block';
+  document.getElementById('btn-parar-camera').style.display='none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMUNICAÇÃO
+// ═══════════════════════════════════════════════════════════════
+function gerarListaWpp(){
+  const pend=todosDados.inscricoes.filter(i=>i.status==='pendente_pagamento'||i.status==='aguardando_boleto');
+  document.getElementById('wpp-count').textContent=pend.length;
+  const links=pend.map(i=>{
+    const p=gP(i.participante_id);
+    const tel=(p.telefone||'').replace(/\D/g,'');
+    if(!tel)return`${p.nome_completo} — sem telefone`;
+    const msg=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! Sua inscrição ${i.numero_ficha} está pendente. Acesse: https://ciclismo.aguape.org`);
+    return`${p.nome_completo} — https://wa.me/55${tel}?text=${msg}`;
+  }).join('\n');
+  document.getElementById('lista-wpp-conteudo').textContent=links;
+  document.getElementById('lista-wpp-card').style.display='block';
+}
+
+async function copiarListaWpp(){
+  const txt=document.getElementById('lista-wpp-conteudo').textContent;
+  await navigator.clipboard.writeText(txt).catch(()=>{});
+  alert('Links copiados!');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIGURAÇÕES
+// ═══════════════════════════════════════════════════════════════
+function verificarStatusInscricoes(){
+  const aberto=new Date()<=new Date('2026-08-01T23:59:00');
+  document.getElementById('toggle-inscricoes').checked=aberto;
+  document.getElementById('toggle-label').textContent=aberto?'🟢 Inscrições abertas':'🔴 Inscrições encerradas';
+}
+// ═══════════════════════════════════════════════════════════════
+// GESTÃO DE OPERADORES — redirecionado para o novo sistema
+// ═══════════════════════════════════════════════════════════════
+// Compat: chamada antiga de carregarOperadores() agora usa previewOperadores()
+function carregarOperadores(){ if(typeof previewOperadores==='function') previewOperadores(); }
+
+
+function alterarInscricoes(){
+  const aberto=document.getElementById('toggle-inscricoes').checked;
+  const label=document.getElementById('toggle-label');
+  const alerta=document.getElementById('inscricoes-alerta');
+  label.textContent=aberto?'🟢 Inscrições abertas':'🔴 Inscrições encerradas';
+  alerta.className='alerta-admin '+(aberto?'alerta-verde':'alerta-verm');
+  alerta.textContent=aberto?'✅ Para reabrir definitivamente, atualize DATA_LIMITE_INSCRICAO em config.js.':'⚠️ Para fechar definitivamente, altere DATA_LIMITE_INSCRICAO em config.js para uma data passada e faça deploy.';
+  alerta.style.display='block';
+}
+async function carregarWebhooks(){
+  const w=await supabase('pagamentos','select=*&order=webhook_recebido_em.desc&limit=30');
+  const lista=Array.isArray(w)?w:[];
+  document.getElementById('tbody-webhooks').innerHTML=lista.map(x=>`<tr>
+    <td style="font-size:11px">${fD(x.webhook_recebido_em)}</td>
+    <td>${x.inscricao_id||'—'}</td>
+    <td style="font-size:11px;font-family:monospace">${x.mp_payment_id||'—'}</td>
+    <td><span class="chip ${x.mp_status==='approved'?'chip-pago':x.mp_status==='cancelled'?'chip-cancelado':'chip-pendente'}">${x.mp_status||'—'}</span></td>
+    <td>${chipMetodo(x.metodo)}</td>
+    <td>${fR(x.valor)}</td>
+  </tr>`).join('')||'<tr><td colspan="6" class="empty">Nenhum webhook</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORTAR EXCEL (SheetJS)
+// ═══════════════════════════════════════════════════════════════
+function exportarExcel(tipo){
+  let rows=[], nome='';
+  if(tipo==='inscritos'){
+    nome='inscritos_ciclismo2026.xlsx';
+    rows=[['Ficha','Nome','CPF','Gênero','Camiseta','Cidade','UF','Telefone','E-mail','Status','Data Inscrição']];
+    inscFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.cpf,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade,p.uf||'RO',p.telefone,p.email||'',i.status,fDcurta(i.criado_em)]);});
+  }else if(tipo==='pendentes'){
+    nome='pendentes_ciclismo2026.xlsx';
+    rows=[['Ficha','Nome','Telefone','Cidade','Camiseta','Dias pendente']];
+    pendFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.telefone,p.cidade,p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)]);});
+  }else if(tipo==='camisetas'){
+    nome='camisetas_ciclismo2026.xlsx';
+    rows=[['Tamanho','Masculino','Feminino','Total']];
+    const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+    ['P','M','G','GG','XG'].forEach(t=>{
+      const m=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
+      const f=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
+      rows.push([t,m,f,m+f]);
+    });
+    rows.push(['','','TOTAL',pagos.length]);
+    rows.push([]);
+    rows.push(['Ficha','Nome','Gênero','Camiseta','Cidade']);
+    pagos.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade]);});
+  }else if(tipo==='financeiro'){
+    nome='financeiro_ciclismo2026.xlsx';
+    rows=[['Ficha','Nome','Método','Valor (R$)','Data Pagamento']];
+    todosDados.inscricoes.filter(i=>i.status==='pago').forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,i.pagamento_metodo||'—',parseFloat(i.pagamento_valor||0),fDcurta(i.pagamento_data)]);});
+  }else if(tipo==='checkins'){
+    nome='checkins_ciclismo2026.xlsx';
+    rows=[['Ficha','Nome','Camiseta','Gênero','Horário Check-in']];
+    todosDados.inscricoes.filter(i=>i.checkin_realizado).forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.tamanho_camiseta,p.sexo==='M'?'Masculino':'Feminino',fD(i.checkin_data)]);});
+  }
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  // Largura das colunas
+  ws['!cols']=[{wch:12},{wch:35},{wch:18},{wch:12},{wch:10},{wch:20},{wch:6},{wch:16},{wch:30},{wch:18},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Dados');
+  XLSX.writeFile(wb,nome);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORTAR PDF (jsPDF)
+// ═══════════════════════════════════════════════════════════════
+function exportarPDF(tipo){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const cor=[13,40,16];
+
+  function _gerarPDFComLogo(logoDataUrl){
+    // ── Cabeçalho verde profissional ──────────────────────────
+    doc.setFillColor(...cor);
+    doc.rect(0,0,297,22,'F');
+
+    // Logo Aguapé à esquerda
+    if(logoDataUrl){
+      doc.addImage(logoDataUrl,'PNG',5,1.5,19,19);
+    }
+
+    // Linha dourada decorativa sob o header
+    doc.setFillColor(200,146,10);
+    doc.rect(0,22,297,1,'F');
+
+    // Texto do cabeçalho
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('CICLISMO INDIVIDUAL 2026 — Turismo de Base Comunitária · Aguapé', logoDataUrl?28:8, 11);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(200,230,200);
+    doc.text('Prefeitura de Costa Marques · DTI', logoDataUrl?28:8, 17);
+    doc.setTextColor(240,180,40);
+    doc.setFontSize(9);
+    doc.text('Costa Marques, Rondônia · '+new Date().toLocaleDateString('pt-BR'), 289, 13, {align:'right'});
+    doc.setTextColor(30,30,30);
+
+    let head=[], body=[], titulo='';
+    if(tipo==='inscritos'){
+      titulo='Lista de Inscritos';
+      head=[['Ficha','Nome','Gênero','Camiseta','Cidade','Status','Data']];
+      body=inscFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masc':'Fem',p.tamanho_camiseta,p.cidade,i.status,fDcurta(i.criado_em)];});
+    }else if(tipo==='pendentes'){
+      titulo='Pendentes de Pagamento';
+      head=[['Ficha','Nome','Telefone','Cidade','Camiseta','Dias pendente']];
+      body=pendFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.telefone||'—',p.cidade,p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)+' dias'];});
+    }else if(tipo==='camisetas'){
+      titulo='Relatório de Camisetas — Pagos confirmados';
+      head=[['Ficha','Nome','Gênero','Camiseta','Cidade']];
+      body=todosDados.inscricoes.filter(i=>i.status==='pago').map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade];});
+    }else if(tipo==='financeiro'){
+      titulo='Relatório Financeiro';
+      head=[['Ficha','Nome','Método','Valor','Data']];
+      body=todosDados.inscricoes.filter(i=>i.status==='pago').map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,i.pagamento_metodo||'—',fR(i.pagamento_valor),fDcurta(i.pagamento_data)];});
+    }
+
+    doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(13,40,16);
+    doc.text(titulo, 8, 32);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+    doc.text(`Total: ${body.length} registros  ·  Gerado em ${new Date().toLocaleString('pt-BR')}`, 8, 38);
+
+    doc.autoTable({
+      head, body, startY:43,
+      styles:{fontSize:9,cellPadding:3},
+      headStyles:{fillColor:cor,textColor:255,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[246,250,246]},
+      margin:{left:8,right:8},
+      didDrawPage:(data)=>{
+        // Repete cabeçalho em páginas seguintes
+        if(data.pageNumber>1){
+          doc.setFillColor(...cor); doc.rect(0,0,297,22,'F');
+          if(logoDataUrl) doc.addImage(logoDataUrl,'PNG',5,1.5,19,19);
+          doc.setFillColor(200,146,10); doc.rect(0,22,297,1,'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
+          doc.text('CICLISMO INDIVIDUAL 2026 — '+titulo, logoDataUrl?28:8, 13);
+        }
       }
-    }
-    return res.status(404).json({ ok: false, erro: 'Operador não encontrado' });
-  }
-
-  // ── Login ─────────────────────────────────────────────────────
-  if (!usuario || !senha) {
-    return res.status(400).json({ ok: false, erro: 'Usuário e senha obrigatórios' });
-  }
-
-  // Admin master
-  if (usuario === ADMIN_USER && senha === ADMIN_SENHA) {
-    return res.status(200).json({
-      ok:          true,
-      token:       gerarToken(usuario, 'admin'),
-      perfil:      'admin',
-      nome:        'Administrador',
-      podeExcluir: true,
-      expira_em:   Date.now() + (8 * 60 * 60 * 1000)
     });
+
+    // Rodapé em todas as páginas
+    const pags=doc.getNumberOfPages();
+    for(let pg=1;pg<=pags;pg++){
+      doc.setPage(pg);
+      doc.setFillColor(245,245,245); doc.rect(0,doc.internal.pageSize.height-10,297,10,'F');
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(0,doc.internal.pageSize.height-10,297,doc.internal.pageSize.height-10);
+      doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+      doc.text(`Página ${pg} de ${pags}  ·  Ciclismo Individual 2026  ·  Prefeitura de Costa Marques, RO`,297/2,doc.internal.pageSize.height-3.5,{align:'center'});
+    }
+
+    doc.save(`${tipo}_ciclismo2026_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
   }
 
-  // Operadores (OPERADOR_1, OPERADOR_2... formato: usuario:senha:nome:podeExcluir)
-  for (let i = 1; i <= 20; i++) {
-    const op = process.env[`OPERADOR_${i}`];
-    if (!op) continue;
-    const partes = op.split(':');
-    if (partes.length < 3) continue;
-    const [opUser, opSenha, opNome, opExcluir] = partes;
-    if (usuario === opUser && senha === opSenha) {
-      return res.status(200).json({
-        ok:          true,
-        token:       gerarToken(usuario, 'operador'),
-        perfil:      'operador',
-        nome:        opNome || opUser,
-        podeExcluir: opExcluir === 'true',
-        expira_em:   Date.now() + (8 * 60 * 60 * 1000)
+  // Carrega logo via elemento <img> — evita bloqueio de fetch em produção
+  const _imgLogo=document.createElement('img');
+  _imgLogo.crossOrigin='anonymous';
+  _imgLogo.onload=function(){
+    try{
+      const cv=document.createElement('canvas'); cv.width=_imgLogo.naturalWidth; cv.height=_imgLogo.naturalHeight;
+      cv.getContext('2d').drawImage(_imgLogo,0,0);
+      _gerarPDFComLogo(cv.toDataURL('image/png'));
+    }catch(e){_gerarPDFComLogo(null);}
+  };
+  _imgLogo.onerror=function(){_gerarPDFComLogo(null);};
+  _imgLogo.src='aguape.png?v='+Date.now();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FICHA INDIVIDUAL PDF — V2.5 (com logo Aguapé via img element)
+// ═══════════════════════════════════════════════════════════════
+function baixarFichaIndividual(inscId){
+  const i=todosDados.inscricoes.find(x=>x.id===inscId); if(!i)return;
+  const p=gP(i.participante_id);
+  if(!window.jspdf){alert('jsPDF não carregado. Verifique a conexão e tente novamente.');return;}
+  const {jsPDF}=window.jspdf;
+
+  const doc=new jsPDF({unit:'mm',format:'a6',orientation:'portrait'});
+  const W=105, H=148;
+  const corVerde=[13,40,16];
+  const corDourado=[200,146,10];
+  const corDouradoClaro=[240,180,40];
+  const corCreme=[245,234,208];
+  const corVerdeMedio=[45,122,58];
+  const corVerdeClaro=[125,207,138];
+
+  function _desenharFicha(logoDataUrl){
+    doc.setFillColor(...corVerde); doc.rect(0,0,W,H,'F');
+    doc.setDrawColor(...corDourado); doc.setLineWidth(2); doc.rect(4,4,W-8,H-8);
+    doc.setLineWidth(0.4); doc.rect(6.5,6.5,W-13,H-13);
+    doc.setFillColor(...corVerdeMedio); doc.rect(4,4,W-8,24,'F');
+    if(logoDataUrl){ try{doc.addImage(logoDataUrl,'PNG',7,5.5,20,20);}catch(e){} }
+    const txX = logoDataUrl ? W/2+5 : W/2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...corDouradoClaro);
+    doc.text('CICLISMO INDIVIDUAL 2026',txX,13,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(200,230,200);
+    doc.text('Turismo de Base Comunitaria  |  Aguape  |  Costa Marques, RO',txX,19,{align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(36); doc.setTextColor(...corDouradoClaro);
+    doc.text(i.numero_ficha||'---',W/2,48,{align:'center'});
+    doc.setDrawColor(...corDourado); doc.setLineWidth(0.6); doc.line(14,52,W-14,52);
+    const nome=(p.nome_completo||'---').toUpperCase();
+    doc.setFont('helvetica','bold'); doc.setFontSize(nome.length>25?9:11); doc.setTextColor(...corCreme);
+    doc.text(nome,W/2,61,{align:'center',maxWidth:86});
+    const genero=p.sexo==='M'?'MASCULINO':'FEMININO'; const cam=p.tamanho_camiseta||'--';
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...corVerdeClaro);
+    doc.text(`${genero}   |   CAMISETA ${cam}`,W/2,69,{align:'center'});
+    doc.setFontSize(7.5); doc.setTextColor(170,210,170);
+    doc.text(`${p.cidade||'---'} / ${p.uf||'RO'}`,W/2,75,{align:'center'});
+    doc.setDrawColor(...corVerdeMedio); doc.setLineWidth(0.4); doc.line(14,79,W-14,79);
+
+    // QR Code
+    const qrDiv=document.createElement('div'); qrDiv.style.cssText='position:fixed;left:-9999px;top:0';
+    document.body.appendChild(qrDiv);
+    new QRCode(qrDiv,{text:`${i.numero_ficha}|${p.nome_completo}`,width:160,height:160,colorDark:'#0d2810',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    setTimeout(()=>{
+      const imgEl=qrDiv.querySelector('img')||qrDiv.querySelector('canvas');
+      if(imgEl){
+        doc.setFillColor(255,255,255); doc.roundedRect(W/2-20,82,40,40,2,2,'F');
+        try{doc.addImage(imgEl.tagName==='IMG'?imgEl.src:imgEl.toDataURL(),'PNG',W/2-19,83,38,38);}catch(e){}
+      }
+      document.body.removeChild(qrDiv);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(120,160,120);
+      doc.text('Escaneie para verificar a inscricao',W/2,125,{align:'center'});
+      doc.setFillColor(...corVerdeMedio); doc.rect(4,H-22,W-8,18,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...corDouradoClaro);
+      doc.text('09 DE AGOSTO DE 2026',W/2,H-15,{align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(200,230,200);
+      doc.text('Apresente esta ficha para retirar a camiseta',W/2,H-10,{align:'center'});
+      doc.setFontSize(5.5); doc.setTextColor(150,190,150);
+      doc.text('Assoc. dos Seringueiros do Vale do Guapore',W/2,H-6,{align:'center'});
+      doc.save(`ficha_${i.numero_ficha}_${(p.nome_completo||'').split(' ')[0]}.pdf`);
+    },600);
+  }
+
+  // Carrega logo via elemento <img> no DOM — evita bloqueio de fetch em produção
+  const imgLogo=document.createElement('img');
+  imgLogo.crossOrigin='anonymous';
+  imgLogo.onload=function(){
+    try{
+      const cv=document.createElement('canvas'); cv.width=imgLogo.naturalWidth; cv.height=imgLogo.naturalHeight;
+      cv.getContext('2d').drawImage(imgLogo,0,0);
+      _desenharFicha(cv.toDataURL('image/png'));
+    }catch(e){_desenharFicha(null);}
+  };
+  imgLogo.onerror=function(){_desenharFicha(null);};
+  imgLogo.src='aguape.png?v='+Date.now();
+}
+</script>
+
+<!-- ================================================================ -->
+<!-- MODAL — Gerenciar Usuários / Operadores                          -->
+<!-- Dados salvos no Supabase — tabela admin_operadores               -->
+<!-- Ativo imediatamente, sem redeploy                                -->
+<!-- ================================================================ -->
+<div id="modal-usuarios-bg"
+  style="display:none;position:fixed;inset:0;z-index:1000;
+         background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:540px;
+               max-height:88vh;overflow-y:auto;margin:16px;
+               box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;
+                position:sticky;top:0;background:white;z-index:1;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#374f2f;">🔐 Gerenciar Operadores</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">
+          Alterações ativam <strong>imediatamente</strong> — sem redeploy
+        </div>
+      </div>
+      <button onclick="fecharGerenciarUsuarios()"
+        style="background:none;border:none;font-size:24px;cursor:pointer;color:#94a3b8;line-height:1;padding:4px;">×</button>
+    </div>
+
+    <!-- Lista -->
+    <div style="padding:14px 24px 0;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:12px;font-weight:600;color:#475569;">Operadores cadastrados</div>
+      <button onclick="guCarregarLista()"
+        style="font-size:11px;color:#374f2f;background:none;border:none;cursor:pointer;text-decoration:underline;">
+        🔄 Recarregar
+      </button>
+    </div>
+    <div id="gu-lista" style="padding:10px 24px 4px;"></div>
+
+    <hr style="margin:0 24px 4px;border:none;border-top:1px solid #f1f5f9;">
+
+    <!-- Formulário novo operador -->
+    <div style="padding:14px 24px 24px;">
+      <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px;">➕ Novo operador</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">LOGIN</label>
+          <input id="gu-user" type="text" placeholder="ex: joao" maxlength="20"
+            style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">SENHA</label>
+          <input id="gu-senha" type="password" placeholder="ex: senha123" maxlength="30"
+            style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">NOME COMPLETO</label>
+          <input id="gu-nome" type="text" placeholder="ex: João Silva" maxlength="50"
+            style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">PERMISSÃO DE EXCLUIR</label>
+          <select id="gu-excluir"
+            style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;">
+            <option value="false">🔒 Não pode excluir inscrições/participantes</option>
+            <option value="true">🗑 Pode excluir inscrições e participantes</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="guAdicionarUsuario()"
+        style="width:100%;padding:11px;background:#374f2f;color:white;border:none;
+               border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
+        ✅ Adicionar operador
+      </button>
+      <div id="gu-msg" style="margin-top:10px;font-size:12px;display:none;padding:10px 12px;border-radius:7px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edição inline -->
+<div id="modal-editar-bg"
+  style="display:none;position:fixed;inset:0;z-index:1100;
+         background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:100%;max-width:420px;margin:16px;
+               box-shadow:0 16px 48px rgba(0,0,0,0.3);">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid #e2e8f0;">
+      <div style="font-size:15px;font-weight:700;color:#374f2f;">✏️ Editar operador</div>
+      <div id="editar-subtitulo" style="font-size:12px;color:#6b7280;margin-top:2px;"></div>
+    </div>
+    <div style="padding:16px 24px 24px;">
+      <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">NOVA SENHA <span style="color:#9ca3af;font-weight:400;">(deixe vazio para manter)</span></label>
+      <input id="editar-senha" type="password" placeholder="nova senha" maxlength="30"
+        style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;margin-bottom:12px;">
+
+      <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">PERMISSÃO DE EXCLUIR</label>
+      <select id="editar-excluir"
+        style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;margin-bottom:12px;">
+        <option value="false">🔒 Não pode excluir</option>
+        <option value="true">🗑 Pode excluir</option>
+      </select>
+
+      <label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px;">STATUS</label>
+      <select id="editar-ativo"
+        style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;margin-bottom:16px;">
+        <option value="true">✅ Ativo — pode fazer login</option>
+        <option value="false">🚫 Inativo — login bloqueado</option>
+      </select>
+
+      <div style="display:flex;gap:8px;">
+        <button onclick="fecharEditar()"
+          style="flex:1;padding:10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;">
+          Cancelar
+        </button>
+        <button onclick="guSalvarEdicao()"
+          style="flex:2;padding:10px;background:#374f2f;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+          💾 Salvar alterações
+        </button>
+      </div>
+      <div id="editar-msg" style="margin-top:10px;font-size:12px;display:none;padding:8px 12px;border-radius:7px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// GERENCIAMENTO DE OPERADORES — Supabase (admin_operadores)
+// Sem localStorage, sem Vercel API, sem redeploy
+// Ativo imediatamente após salvar
+// ================================================================
+
+let guEditandoId = null; // ID do operador sendo editado
+
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function guMsg(txt, ok, elId = 'gu-msg') {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = txt;
+  el.style.display  = 'block';
+  el.style.background = ok ? '#f0fdf4' : '#fff5f5';
+  el.style.color      = ok ? '#166534' : '#dc2626';
+  el.style.border     = `1px solid ${ok ? '#bbf7d0' : '#fecaca'}`;
+}
+
+// ── Abrir / fechar modal principal ────────────────────────────
+async function abrirGerenciarUsuarios() {
+  document.getElementById('modal-usuarios-bg').style.display = 'flex';
+  document.getElementById('gu-msg').style.display = 'none';
+  document.getElementById('gu-user').value  = '';
+  document.getElementById('gu-senha').value = '';
+  document.getElementById('gu-nome').value  = '';
+  await guCarregarLista();
+}
+
+function fecharGerenciarUsuarios() {
+  document.getElementById('modal-usuarios-bg').style.display = 'none';
+  previewOperadores();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const mbg = document.getElementById('modal-usuarios-bg');
+  if (mbg) mbg.addEventListener('click', e => { if (e.target === mbg) fecharGerenciarUsuarios(); });
+  const ebg = document.getElementById('modal-editar-bg');
+  if (ebg) ebg.addEventListener('click', e => { if (e.target === ebg) fecharEditar(); });
+});
+
+// ── Carregar lista do Supabase ────────────────────────────────
+async function guCarregarLista() {
+  const lista = document.getElementById('gu-lista');
+  if (!lista) return;
+  lista.innerHTML = '<div style="font-size:12px;color:#6b7280;padding:8px 0;">Carregando…</div>';
+
+  try {
+    const r = await fetch('/api/admin-operadores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'listar', token: adminToken })
+    });
+    const d = await r.json();
+
+    // Admin master sempre no topo
+    let html = `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:10px 12px;background:#f0fdf4;border:1px solid #86efac;
+                  border-radius:8px;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#166534;">👑 Administrador Master</div>
+          <div style="font-size:11px;color:#4ade80;">Login: configurado via ADMIN_USER · Acesso total</div>
+        </div>
+        <span style="font-size:10px;background:#16a34a;color:white;padding:2px 8px;border-radius:20px;">Admin</span>
+      </div>`;
+
+    if (!d.ok) {
+      html += `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;
+                           padding:10px 12px;font-size:12px;color:#991b1b;margin-top:4px;">
+        ❌ ${escHtml(d.erro || 'Erro ao carregar operadores')}<br>
+        <span style="font-size:11px;color:#b91c1c;">Verifique se a tabela admin_operadores foi criada no Supabase.</span>
+      </div>`;
+      lista.innerHTML = html;
+      return;
+    }
+
+    const ops = d.operadores || [];
+    if (ops.length === 0) {
+      html += `<div style="text-align:center;color:#94a3b8;font-size:12px;padding:14px 0;">
+        Nenhum operador cadastrado ainda.</div>`;
+    } else {
+      ops.forEach(op => {
+        html += `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;
+                    padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-weight:600;font-size:13px;color:#1e293b;">${escHtml(op.nome)}</span>
+              ${op.ativo
+                ? '<span style="font-size:10px;background:#dcfce7;color:#166534;padding:1px 7px;border-radius:10px;">✅ ativo</span>'
+                : '<span style="font-size:10px;background:#fef2f2;color:#dc2626;padding:1px 7px;border-radius:10px;">🚫 inativo</span>'}
+            </div>
+            <div style="font-size:11px;color:#64748b;margin-top:1px;">
+              Login: <strong>${escHtml(op.usuario)}</strong> ·
+              ${op.pode_excluir
+                ? '<span style="color:#dc2626;">🗑 pode excluir</span>'
+                : '<span style="color:#9ca3af;">🔒 sem exclusão</span>'}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button onclick="abrirEditar(${op.id}, '${escHtml(op.usuario)}', '${escHtml(op.nome)}', ${op.pode_excluir}, ${op.ativo})"
+              style="padding:5px 10px;font-size:11px;background:#f8fafc;color:#1e293b;
+                     border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;font-weight:600;">
+              ✏️ Editar
+            </button>
+            <button onclick="guRemover(${op.id}, '${escHtml(op.nome)}')"
+              style="padding:5px 10px;font-size:11px;background:#fff5f5;color:#dc2626;
+                     border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-weight:600;">
+              🗑
+            </button>
+          </div>
+        </div>`;
       });
     }
+
+    lista.innerHTML = html;
+  } catch(e) {
+    document.getElementById('gu-lista').innerHTML =
+      `<div style="font-size:12px;color:#dc2626;padding:8px;">Erro: ${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── Adicionar ─────────────────────────────────────────────────
+async function guAdicionarUsuario() {
+  const usuario    = document.getElementById('gu-user').value.trim().toLowerCase();
+  const senha      = document.getElementById('gu-senha').value.trim();
+  const nome       = document.getElementById('gu-nome').value.trim();
+  const pode_excluir = document.getElementById('gu-excluir').value === 'true';
+
+  if (!usuario || !senha || !nome) return guMsg('⚠️ Preencha todos os campos.', false);
+  if (!/^[a-z0-9_]+$/.test(usuario)) return guMsg('⚠️ Login: só letras minúsculas, números e _.', false);
+  if (senha.length < 4) return guMsg('⚠️ Senha deve ter pelo menos 4 caracteres.', false);
+
+  guMsg('⏳ Salvando…', true);
+
+  try {
+    const r = await fetch('/api/admin-operadores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'adicionar', usuario, senha, nome, pode_excluir, token: adminToken })
+    });
+    const d = await r.json();
+    if (!d.ok) return guMsg(`❌ ${d.erro || 'Erro ao salvar'}`, false);
+
+    document.getElementById('gu-user').value  = '';
+    document.getElementById('gu-senha').value = '';
+    document.getElementById('gu-nome').value  = '';
+    guMsg(`✅ "${nome}" cadastrado! Pode fazer login agora.`, true);
+    await guCarregarLista();
+  } catch(e) {
+    guMsg(`❌ Erro: ${e.message}`, false);
+  }
+}
+
+// ── Editar — abre modal de edição ─────────────────────────────
+function abrirEditar(id, usuario, nome, podeExcluir, ativo) {
+  guEditandoId = id;
+  document.getElementById('editar-subtitulo').textContent = `${nome} · login: ${usuario}`;
+  document.getElementById('editar-senha').value   = '';
+  document.getElementById('editar-excluir').value = podeExcluir ? 'true' : 'false';
+  document.getElementById('editar-ativo').value   = ativo ? 'true' : 'false';
+  document.getElementById('editar-msg').style.display = 'none';
+  document.getElementById('modal-editar-bg').style.display = 'flex';
+}
+
+function fecharEditar() {
+  document.getElementById('modal-editar-bg').style.display = 'none';
+  guEditandoId = null;
+}
+
+async function guSalvarEdicao() {
+  if (!guEditandoId) return;
+  const senha       = document.getElementById('editar-senha').value.trim();
+  const pode_excluir = document.getElementById('editar-excluir').value === 'true';
+  const ativo        = document.getElementById('editar-ativo').value === 'true';
+
+  const payload = { acao: 'editar', id: guEditandoId, pode_excluir, ativo, token: adminToken };
+  if (senha) {
+    if (senha.length < 4) return guMsg('⚠️ Senha deve ter pelo menos 4 caracteres.', false, 'editar-msg');
+    payload.senha = senha;
   }
 
-  // Delay artificial para dificultar brute force
-  return new Promise(resolve => setTimeout(() => {
-    resolve(res.status(401).json({ ok: false, erro: 'Usuário ou senha incorretos' }));
-  }, 800));
+  guMsg('⏳ Salvando…', true, 'editar-msg');
+  try {
+    const r = await fetch('/api/admin-operadores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!d.ok) return guMsg(`❌ ${d.erro || 'Erro ao editar'}`, false, 'editar-msg');
+
+    guMsg('✅ Alterações salvas!', true, 'editar-msg');
+    await guCarregarLista();
+    setTimeout(fecharEditar, 900);
+  } catch(e) {
+    guMsg(`❌ Erro: ${e.message}`, false, 'editar-msg');
+  }
 }
+
+// ── Remover ───────────────────────────────────────────────────
+async function guRemover(id, nome) {
+  if (!confirm(`Remover "${nome}"?\n\nO operador perderá o acesso imediatamente.`)) return;
+  try {
+    const r = await fetch('/api/admin-operadores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'remover', id, token: adminToken })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(`Erro ao remover: ${d.erro}`); return; }
+    await guCarregarLista();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+// ── Preview no card da aba Configurações ──────────────────────
+async function previewOperadores() {
+  const el = document.getElementById('operadores-preview');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:#6b7280;font-style:italic;">Verificando…</div>';
+  try {
+    const r = await fetch('/api/admin-operadores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'listar', token: adminToken })
+    });
+    const d = await r.json();
+    if (d.ok && d.operadores) {
+      const ops = d.operadores;
+      if (ops.length === 0) {
+        el.innerHTML = '<div style="font-size:12px;color:#9ca3af;font-style:italic;">Somente o Admin Master cadastrado.</div>';
+        return;
+      }
+      const rows = ops.map(op => `
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+          <div>
+            ${op.ativo
+              ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;margin-right:6px;">Op</span>'
+              : '<span style="font-size:10px;background:#f1f5f9;color:#94a3b8;padding:1px 7px;border-radius:10px;margin-right:6px;">Off</span>'}
+            <strong>${escHtml(op.nome)}</strong>
+          </div>
+          <code style="color:#64748b;background:#f8fafc;padding:1px 6px;border-radius:4px;font-size:11px;">${escHtml(op.usuario)}</code>
+        </div>`).join('');
+      el.innerHTML = `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:4px 12px;">${rows}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:6px;">${ops.length} operador(es) + admin master</div>`;
+    } else {
+      el.innerHTML = `<div style="font-size:12px;color:#dc2626;font-style:italic;">
+        ${escHtml(d.erro || 'Tabela admin_operadores não encontrada — execute o schema.sql no Supabase.')}
+      </div>`;
+    }
+  } catch {
+    el.innerHTML = '<div style="font-size:12px;color:#9ca3af;font-style:italic;">Clique em Gerenciar operadores para ver.</div>';
+  }
+}
+
+// Compat: chamada antiga redirected para previewOperadores
+function carregarOperadores() { if (typeof previewOperadores === 'function') previewOperadores(); }
+</script>
+</body>
