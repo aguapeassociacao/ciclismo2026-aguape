@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — Lógica principal do formulário de inscrições
+// app.js — V3.3Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -685,7 +685,7 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo) {
 
   ctx.fillStyle = 'rgba(200,230,200,0.8)';
   ctx.font = '18px Arial, sans-serif';
-  ctx.fillText('Turismo de Base Comunitária  ·  Aguapé  ·  Costa Marques, RO', W / 2, 108);
+  ctx.fillText('Turismo de Base Comunitária  ·  Assoc. Seringueiros do Vale do Guaporé', W / 2, 108);
 
   // ── Número da ficha
   ctx.fillStyle = '#f0b429';
