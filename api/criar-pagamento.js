@@ -77,7 +77,7 @@ export default async function handler(req, res) {
 
     const payload = {
       payment_method_id:  'pix',
-      transaction_amount:  160.00,
+      transaction_amount:  1.00,
       description:        `Ciclismo 2026 - Ficha ${numero_ficha} - ${nome}`,
       external_reference:  String(inscricao_id),
       date_of_expiration:  expiraPix,
