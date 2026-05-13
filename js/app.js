@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V3.6 — Lógica principal do formulário de inscrições
+// app.js — V3.7 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -8,6 +8,8 @@
 // V3.4 — Web Share API para salvar ficha no celular (iOS/Android)
 // V3.5 — Data de nascimento: 3 selects (dia/mês/ano) no lugar do calendário nativo
 // V3.6 — Scroll para tela de sucesso após inscrição · botão salvar ficha não trava mais
+// V3.7 — Correção: botão "Salvar ficha" não trava mais em "Gerando ficha…"
+//         img.onerror adicionado · fallback canvas tainted · desenharSemQR centralizado
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -798,15 +800,36 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
           link.click();
         }
       } catch(e) {
-        alert('Erro ao salvar: ' + e.message);
+        // Silencia erro de canvas tainted; outros erros mostra alerta
+        if (!String(e).includes('tainted') && !String(e).includes('cross') && !String(e).includes('SecurityError')) {
+          alert('Erro ao salvar: ' + e.message);
+        }
       } finally {
         resetBtn(); // ← sempre reseta o botão, seja qual for o caminho
       }
     }, 'image/png');
   };
 
+  const desenharSemQR = () => {
+    // Placeholder quando QR não está disponível ou falhou ao carregar
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(W/2 - 160, 560, 320, 320);
+    ctx.fillStyle = '#0d2810';
+    ctx.font = '20px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(ficha, W/2, 730);
+    desenharRodape();
+  };
+
   if (qrImg) {
-    const src = qrImg.tagName === 'CANVAS' ? qrImg.toDataURL() : qrImg.src;
+    let src;
+    try {
+      src = qrImg.tagName === 'CANVAS' ? qrImg.toDataURL() : qrImg.src;
+    } catch(e) {
+      // Canvas tainted (cross-origin) — cai no placeholder
+      desenharSemQR();
+      return;
+    }
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -816,7 +839,11 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
       ctx.beginPath();
       ctx.roundRect(qrX - 10, qrY - 10, 330, 330, 14);
       ctx.fill();
-      ctx.drawImage(img, qrX, qrY, 310, 310);
+      try {
+        ctx.drawImage(img, qrX, qrY, 310, 310);
+      } catch(e) {
+        // drawImage falhou (canvas tainted) — apenas salta o QR
+      }
 
       ctx.fillStyle = 'rgba(125,207,138,0.7)';
       ctx.font = '18px Arial, sans-serif';
@@ -825,15 +852,14 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
 
       desenharRodape();
     };
+    img.onerror = () => {
+      // Imagem não carregou — desenha ficha sem QR e reseta o botão
+      desenharSemQR();
+    };
     img.src = src;
   } else {
     // Sem QR disponível ainda — desenha placeholder
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(W/2 - 160, 560, 320, 320);
-    ctx.fillStyle = '#0d2810';
-    ctx.font = '16px Arial';
-    ctx.fillText('QR Code', W/2, 720);
-    desenharRodape();
+    desenharSemQR();
   }
 }
 
