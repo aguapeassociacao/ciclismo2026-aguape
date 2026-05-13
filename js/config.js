@@ -26,7 +26,7 @@ const TAMANHOS_CAMISETA = ['P', 'M', 'G', 'GG', 'XG'];
 const PREFIXO_FICHA = 'CIC';
 
 // URL do site
-const URL_SITE = 'https://ciclismo2026-aguape-pied.vercel.app';
+const URL_SITE = 'https://ciclismo.aguape.org';
 
 // Lista de municípios de Rondônia (autocomplete)
 const MUNICIPIOS_RO = [
