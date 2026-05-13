@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V3.7 — Lógica principal do formulário de inscrições
+// app.js — V3.8 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -10,6 +10,8 @@
 // V3.6 — Scroll para tela de sucesso após inscrição · botão salvar ficha não trava mais
 // V3.7 — Correção: botão "Salvar ficha" não trava mais em "Gerando ficha…"
 //         img.onerror adicionado · fallback canvas tainted · desenharSemQR centralizado
+// V3.8 — QR Code gerado em canvas isolado (_gerarQRDataURL) — sem cross-origin
+//         QR Code aparece corretamente na ficha salva no celular
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -667,6 +669,49 @@ function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
   wrap.appendChild(dica);
 }
 
+// ── Gera QR Code como dataURL em canvas isolado (sem cross-origin) ──
+function _gerarQRDataURL(texto, tamanho, callback) {
+  try {
+    if (typeof QRCode === 'undefined') { callback(null); return; }
+
+    const div = document.createElement('div');
+    div.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:' + tamanho + 'px;height:' + tamanho + 'px;';
+    document.body.appendChild(div);
+
+    new QRCode(div, {
+      text:         texto,
+      width:        tamanho,
+      height:       tamanho,
+      colorDark:    '#0d2810',
+      colorLight:   '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    // qrcodejs pode criar <canvas> ou <img> dependendo do browser
+    setTimeout(() => {
+      try {
+        const qrCanvas = div.querySelector('canvas');
+        const qrImg    = div.querySelector('img');
+        let dataUrl    = null;
+
+        if (qrCanvas) {
+          dataUrl = qrCanvas.toDataURL('image/png');
+        } else if (qrImg && qrImg.src) {
+          dataUrl = qrImg.src;
+        }
+
+        document.body.removeChild(div);
+        callback(dataUrl);
+      } catch(e) {
+        try { document.body.removeChild(div); } catch(_) {}
+        callback(null);
+      }
+    }, 150);
+  } catch(e) {
+    callback(null);
+  }
+}
+
 // ── Gera imagem da ficha via Canvas e faz download ─────────────
 function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   // Tamanho: 800×1100px (proporção A5 vertical)
@@ -736,10 +781,7 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   ctx.font = '22px Arial, sans-serif';
   ctx.fillText('Apresente o QR Code abaixo no credenciamento', W / 2, 540);
 
-  // ── QR Code (pega do DOM já gerado)
-  const qrImg = document.querySelector('#qrcode-sucesso img') ||
-                document.querySelector('#qrcode-sucesso canvas');
-
+  // ── QR Code: gera direto em canvas isolado (sem cross-origin) ──
   const desenharRodape = () => {
     // Linha separadora
     ctx.strokeStyle = '#2d7a3a';
@@ -777,12 +819,12 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
           if (navigator.canShare({ files: [file] })) {
             try {
               await navigator.share({ files: [file], title: 'Ficha Ciclismo 2026', text: `Ficha ${ficha}` });
-              resetBtn(); // ← reseta mesmo após share bem-sucedido
+              resetBtn();
               return;
             } catch(e) { /* cancelou — cai no fallback */ }
           }
         }
-        // Fallback: abre em nova aba (segurar para salvar) ou link direto
+        // Fallback: abre em nova aba ou link direto
         if (blob) {
           const url = URL.createObjectURL(blob);
           const nova = window.open(url, '_blank');
@@ -793,74 +835,60 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
             link.click();
           }
         } else {
-          // Último recurso sem blob
           const link = document.createElement('a');
           link.download = nomeArq;
           link.href = canvas.toDataURL('image/png');
           link.click();
         }
       } catch(e) {
-        // Silencia erro de canvas tainted; outros erros mostra alerta
-        if (!String(e).includes('tainted') && !String(e).includes('cross') && !String(e).includes('SecurityError')) {
-          alert('Erro ao salvar: ' + e.message);
-        }
+        alert('Erro ao salvar: ' + e.message);
       } finally {
-        resetBtn(); // ← sempre reseta o botão, seja qual for o caminho
+        resetBtn();
       }
     }, 'image/png');
   };
 
-  const desenharSemQR = () => {
-    // Placeholder quando QR não está disponível ou falhou ao carregar
+  const desenharQRNoCanvas = (qrDataUrl) => {
+    const qrX = W / 2 - 155, qrY = 565;
+
+    // Fundo branco arredondado para o QR
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(W/2 - 160, 560, 320, 320);
-    ctx.fillStyle = '#0d2810';
-    ctx.font = '20px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(ficha, W/2, 730);
-    desenharRodape();
-  };
+    ctx.beginPath();
+    ctx.roundRect(qrX - 10, qrY - 10, 330, 330, 14);
+    ctx.fill();
 
-  if (qrImg) {
-    let src;
-    try {
-      src = qrImg.tagName === 'CANVAS' ? qrImg.toDataURL() : qrImg.src;
-    } catch(e) {
-      // Canvas tainted (cross-origin) — cai no placeholder
-      desenharSemQR();
-      return;
-    }
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      // Fundo branco arredondado para o QR
-      ctx.fillStyle = '#ffffff';
-      const qrX = W / 2 - 155, qrY = 565;
-      ctx.beginPath();
-      ctx.roundRect(qrX - 10, qrY - 10, 330, 330, 14);
-      ctx.fill();
-      try {
-        ctx.drawImage(img, qrX, qrY, 310, 310);
-      } catch(e) {
-        // drawImage falhou (canvas tainted) — apenas salta o QR
-      }
-
+    const continuar = () => {
       ctx.fillStyle = 'rgba(125,207,138,0.7)';
       ctx.font = '18px Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Escaneie para verificar sua inscrição', W / 2, 920);
-
       desenharRodape();
     };
-    img.onerror = () => {
-      // Imagem não carregou — desenha ficha sem QR e reseta o botão
-      desenharSemQR();
-    };
-    img.src = src;
-  } else {
-    // Sem QR disponível ainda — desenha placeholder
-    desenharSemQR();
-  }
+
+    if (qrDataUrl) {
+      const img = new Image();
+      img.onload  = () => { ctx.drawImage(img, qrX, qrY, 310, 310); continuar(); };
+      img.onerror = () => {
+        // QR falhou — escreve número como fallback dentro do quadrado
+        ctx.fillStyle = '#0d2810';
+        ctx.font = 'bold 24px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ficha, W / 2, qrY + 165);
+        continuar();
+      };
+      img.src = qrDataUrl;
+    } else {
+      // Sem QR — escreve número como fallback dentro do quadrado
+      ctx.fillStyle = '#0d2810';
+      ctx.font = 'bold 24px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(ficha, W / 2, qrY + 165);
+      continuar();
+    }
+  };
+
+  // Gera QR Code fresco em canvas isolado (sem cross-origin)
+  _gerarQRDataURL(ficha, 310, desenharQRNoCanvas);
 }
 
 // ══════════════════════════════════════════════════════════════
