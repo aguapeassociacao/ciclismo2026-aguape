@@ -1,18 +1,12 @@
 // ================================================================
-// app.js — V3.9 — Lógica principal do formulário de inscrições
+// app.js — V4.0 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
 // V3.3 — PIX direto + Cartão (sem boleto) · Modal de escolha
-// V3.3 — QR Code na ficha + botão "Salvar ficha no celular" (canvas PNG)
-// V3.4 — Web Share API para salvar ficha no celular (iOS/Android)
-// V3.5 — Data de nascimento: 3 selects (dia/mês/ano) no lugar do calendário nativo
-// V3.6 — Scroll para tela de sucesso após inscrição · botão salvar ficha não trava mais
-// V3.7 — Correção: botão "Salvar ficha" não trava mais em "Gerando ficha…"
-//         img.onerror adicionado · fallback canvas tainted · desenharSemQR centralizado
 // V3.8 — QR Code gerado em canvas isolado (_gerarQRDataURL) — sem cross-origin
-//         QR Code aparece corretamente na ficha salva no celular
-// V3.9 — Correção de cor (preto) e margem (quiet zone) do QR Code para leitura em web/celular
+// V3.9 — Correção de cor (preto) e margem (quiet zone) do QR Code
+// V4.0 — Correção de Layout: Ajuste das posições (Y) para o fundo branco não cobrir as letras
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -362,21 +356,12 @@ async function enviarInscricao() {
 // PAGAMENTO — MODAL DE ESCOLHA (PIX ou Cartão)
 // ══════════════════════════════════════════════════════════════
 
-/**
- * Ponto de entrada: exibe o modal de escolha do método de pagamento.
- * Chamado pelo botão "Pagar agora" tanto na tela de sucesso quanto na consulta.
- */
 function irParaPagamento(inscricaoId, ficha, nome, email, btnEl) {
-  // Restaura o botão de origem caso o usuário feche o modal
   const btnOrigem = btnEl || document.getElementById('btn-pagar-agora');
   abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem);
 }
 
-/**
- * Cria e exibe o modal overlay com as opções PIX e Cartão.
- */
 function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
-  // Remove modal anterior se existir
   const antigo = document.getElementById('modal-pagamento');
   if (antigo) antigo.remove();
 
@@ -385,17 +370,13 @@ function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
   modal.innerHTML = `
     <div id="modal-overlay" onclick="fecharModalPagamento()"></div>
     <div id="modal-box" role="dialog" aria-modal="true" aria-label="Escolha o método de pagamento">
-
       <button class="modal-fechar" onclick="fecharModalPagamento()" aria-label="Fechar">✕</button>
-
       <div class="modal-topo">
         <div class="modal-icone">💳</div>
         <h2 class="modal-titulo">Como deseja pagar?</h2>
         <p class="modal-sub">Inscrição · Ciclismo Individual 2026 · <strong>R$ 160,00</strong></p>
       </div>
-
       <div class="modal-opcoes">
-
         <button class="modal-opcao" id="btn-modal-pix" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','pix')">
           <div class="opcao-icone opcao-icone-pix">⚡</div>
           <div class="opcao-info">
@@ -404,7 +385,6 @@ function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
           </div>
           <div class="opcao-seta">→</div>
         </button>
-
         <button class="modal-opcao" id="btn-modal-cartao" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','cartao')">
           <div class="opcao-icone opcao-icone-cartao">💳</div>
           <div class="opcao-info">
@@ -413,120 +393,50 @@ function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
           </div>
           <div class="opcao-seta">→</div>
         </button>
-
       </div>
-
       <div id="modal-processando" style="display:none">
         <div class="modal-spinner"></div>
         <p class="modal-processando-txt">Preparando pagamento…</p>
       </div>
-
       <p class="modal-seguranca">🔒 Pagamento processado com segurança pelo Mercado Pago</p>
     </div>
   `;
 
-  // Estilos inline do modal (autônomo, não depende de styles.css)
   const style = document.createElement('style');
   style.id = 'modal-pagamento-css';
   style.textContent = `
-    #modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.65);
-      backdrop-filter: blur(4px);
-      z-index: 9998;
-      animation: fadeIn .2s ease;
-    }
-    #modal-box {
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%,-50%);
-      background: #0d2810;
-      border: 1px solid rgba(45,122,58,.45);
-      border-radius: 22px;
-      padding: 32px 28px 24px;
-      width: min(420px, calc(100vw - 32px));
-      z-index: 9999;
-      box-shadow: 0 24px 64px rgba(0,0,0,.6);
-      animation: slideUp .22s ease;
-    }
+    #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(4px); z-index: 9998; animation: fadeIn .2s ease; }
+    #modal-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #0d2810; border: 1px solid rgba(45,122,58,.45); border-radius: 22px; padding: 32px 28px 24px; width: min(420px, calc(100vw - 32px)); z-index: 9999; box-shadow: 0 24px 64px rgba(0,0,0,.6); animation: slideUp .22s ease; }
     @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
     @keyframes slideUp { from{opacity:0;transform:translate(-50%,-44%)} to{opacity:1;transform:translate(-50%,-50%)} }
-
-    .modal-fechar {
-      position: absolute; top: 14px; right: 16px;
-      background: rgba(255,255,255,.08); border: none;
-      color: rgba(245,234,208,.5); font-size: 16px;
-      width: 30px; height: 30px; border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: background .15s, color .15s;
-    }
+    .modal-fechar { position: absolute; top: 14px; right: 16px; background: rgba(255,255,255,.08); border: none; color: rgba(245,234,208,.5); font-size: 16px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
     .modal-fechar:hover { background: rgba(255,255,255,.15); color: #f5ead0; }
-
     .modal-topo { text-align: center; margin-bottom: 24px; }
     .modal-icone { font-size: 36px; margin-bottom: 10px; }
-    .modal-titulo {
-      font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700;
-      color: #f5ead0; margin-bottom: 6px;
-    }
+    .modal-titulo { font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700; color: #f5ead0; margin-bottom: 6px; }
     .modal-sub { font-size: 13px; color: rgba(245,234,208,.55); }
     .modal-sub strong { color: #f0b429; }
-
     .modal-opcoes { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
-
-    .modal-opcao {
-      display: flex; align-items: center; gap: 14px;
-      padding: 16px 18px;
-      background: rgba(45,122,58,.1);
-      border: 1px solid rgba(45,122,58,.28);
-      border-radius: 14px;
-      cursor: pointer;
-      transition: background .15s, border-color .15s, transform .1s;
-      text-align: left; width: 100%;
-      color: #f5ead0;
-    }
-    .modal-opcao:hover {
-      background: rgba(45,122,58,.22);
-      border-color: rgba(45,122,58,.5);
-      transform: translateY(-1px);
-    }
+    .modal-opcao { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: rgba(45,122,58,.1); border: 1px solid rgba(45,122,58,.28); border-radius: 14px; cursor: pointer; transition: background .15s, border-color .15s, transform .1s; text-align: left; width: 100%; color: #f5ead0; }
+    .modal-opcao:hover { background: rgba(45,122,58,.22); border-color: rgba(45,122,58,.5); transform: translateY(-1px); }
     .modal-opcao:active { transform: translateY(0); }
     .modal-opcao:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-    .opcao-icone {
-      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
-    }
+    .opcao-icone { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
     .opcao-icone-pix    { background: linear-gradient(135deg,#00b4d8,#0077b6); }
     .opcao-icone-cartao { background: linear-gradient(135deg,#7c3aed,#4c1d95); }
-
     .opcao-info { flex: 1; }
     .opcao-nome { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
     .opcao-desc { font-size: 12px; color: rgba(245,234,208,.5); }
     .opcao-seta { font-size: 18px; color: rgba(245,234,208,.3); flex-shrink: 0; }
-
-    .modal-processando {
-      text-align: center; padding: 12px 0;
-    }
-    .modal-spinner {
-      width: 36px; height: 36px;
-      border: 3px solid rgba(125,207,138,.2);
-      border-top-color: #7dcf8a;
-      border-radius: 50%; animation: girar .8s linear infinite;
-      margin: 0 auto 12px;
-    }
+    .modal-processando { text-align: center; padding: 12px 0; }
+    .modal-spinner { width: 36px; height: 36px; border: 3px solid rgba(125,207,138,.2); border-top-color: #7dcf8a; border-radius: 50%; animation: girar .8s linear infinite; margin: 0 auto 12px; }
     @keyframes girar { to { transform: rotate(360deg); } }
     .modal-processando-txt { font-size: 13px; color: rgba(245,234,208,.6); }
-
-    .modal-seguranca {
-      text-align: center; font-size: 11px;
-      color: rgba(245,234,208,.25); margin-top: 4px;
-    }
+    .modal-seguranca { text-align: center; font-size: 11px; color: rgba(245,234,208,.25); margin-top: 4px; }
   `;
 
   document.head.appendChild(style);
   document.body.appendChild(modal);
-
-  // Fecha com ESC
   document.addEventListener('keydown', _fecharComEsc);
 }
 
@@ -542,12 +452,7 @@ function fecharModalPagamento() {
   document.removeEventListener('keydown', _fecharComEsc);
 }
 
-/**
- * Processa o pagamento após o usuário escolher o método.
- * metodo: 'pix' | 'cartao'
- */
 async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
-  // Mostra spinner, desabilita botões
   const btnPix    = document.getElementById('btn-modal-pix');
   const btnCartao = document.getElementById('btn-modal-cartao');
   const processd  = document.getElementById('modal-processando');
@@ -567,15 +472,10 @@ async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
 
     const dados = await r.json();
 
-    if (!dados.ok) {
-      throw new Error(dados.erro || 'Erro ao criar pagamento');
-    }
+    if (!dados.ok) throw new Error(dados.erro || 'Erro ao criar pagamento');
 
     if (metodo === 'pix') {
-      // Grava dados do PIX no sessionStorage e redireciona para pix.html
-      if (!dados.qr_code) {
-        throw new Error('QR Code PIX não recebido do servidor');
-      }
+      if (!dados.qr_code) throw new Error('QR Code PIX não recebido do servidor');
       sessionStorage.setItem('pix_data', JSON.stringify({
         payment_id:     dados.payment_id,
         qr_code:        dados.qr_code,
@@ -586,26 +486,18 @@ async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
       }));
       fecharModalPagamento();
       window.location.href = '/pix.html';
-
     } else {
-      // Cartão: redireciona para checkout do Mercado Pago
-      if (!dados.url) {
-        throw new Error('URL de checkout não recebida do servidor');
-      }
+      if (!dados.url) throw new Error('URL de checkout não recebida do servidor');
       fecharModalPagamento();
       window.location.href = dados.url;
     }
 
   } catch (err) {
-    console.error('processarPagamento:', err);
-
-    // Restaura o modal para o estado inicial
     if (opcoes)   opcoes.style.display   = '';
     if (processd) processd.style.display  = 'none';
     if (btnPix)   btnPix.disabled    = false;
     if (btnCartao) btnCartao.disabled = false;
 
-    // Exibe erro dentro do modal
     let msgErro = document.getElementById('modal-erro-txt');
     if (!msgErro) {
       msgErro = document.createElement('p');
@@ -622,7 +514,6 @@ function gerarQRCode(ficha, nome, camiseta, sexo) {
   if (!el || typeof QRCode === 'undefined') return;
   el.innerHTML = '';
 
-  // Conteúdo do QR: número da ficha (lido pelo check-in do admin)
   new QRCode(el, {
     text:         ficha,
     width:        160,
@@ -632,17 +523,12 @@ function gerarQRCode(ficha, nome, camiseta, sexo) {
     correctLevel: QRCode.CorrectLevel.M
   });
 
-  // Após gerar o QR, insere o botão de salvar ficha
   setTimeout(() => inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo), 200);
 }
 
-// ── Insere botão "Salvar ficha no celular" na tela de sucesso ──
 function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
   const wrap = document.querySelector('.qrcode-wrap');
-  if (!wrap) return;
-
-  // Não duplica
-  if (document.getElementById('btn-salvar-ficha')) return;
+  if (!wrap || document.getElementById('btn-salvar-ficha')) return;
 
   const btn = document.createElement('button');
   btn.id = 'btn-salvar-ficha';
@@ -668,7 +554,6 @@ function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
   wrap.appendChild(dica);
 }
 
-// ── Gera QR Code como dataURL em canvas isolado (sem cross-origin) ──
 function _gerarQRDataURL(texto, tamanho, callback) {
   try {
     if (typeof QRCode === 'undefined') { callback(null); return; }
@@ -686,7 +571,6 @@ function _gerarQRDataURL(texto, tamanho, callback) {
       correctLevel: QRCode.CorrectLevel.M
     });
 
-    // qrcodejs pode criar <canvas> ou <img> dependendo do browser
     setTimeout(() => {
       try {
         const qrCanvas = div.querySelector('canvas');
@@ -698,7 +582,6 @@ function _gerarQRDataURL(texto, tamanho, callback) {
         } else if (qrImg && qrImg.src) {
           dataUrl = qrImg.src;
         }
-
         document.body.removeChild(div);
         callback(dataUrl);
       } catch(e) {
@@ -711,26 +594,24 @@ function _gerarQRDataURL(texto, tamanho, callback) {
   }
 }
 
-// ── Gera imagem da ficha via Canvas e faz download ─────────────
 function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
-  // Tamanho: 800×1100px (proporção A5 vertical)
   const W = 800, H = 1100;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // ── Fundo verde-escuro
+  // Fundo verde-escuro
   ctx.fillStyle = '#0d2810';
   ctx.fillRect(0, 0, W, H);
 
-  // ── Borda dupla dourada
+  // Borda dupla dourada
   ctx.strokeStyle = '#c8920a';
   ctx.lineWidth = 8;
   ctx.strokeRect(16, 16, W - 32, H - 32);
   ctx.lineWidth = 2;
   ctx.strokeRect(28, 28, W - 56, H - 56);
 
-  // ── Faixa cabeçalho
+  // Faixa cabeçalho
   ctx.fillStyle = '#1a5c2a';
   ctx.fillRect(16, 16, W - 32, 120);
 
@@ -743,7 +624,7 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   ctx.font = '18px Arial, sans-serif';
   ctx.fillText('Turismo de Base Comunitária  ·  Assoc. Seringueiros do Vale do Guaporé', W / 2, 108);
 
-  // ── Número da ficha
+  // Número da ficha
   ctx.fillStyle = '#f0b429';
   ctx.font = 'bold 110px Georgia, serif';
   ctx.textAlign = 'center';
@@ -754,17 +635,16 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(80, 330); ctx.lineTo(W - 80, 330); ctx.stroke();
 
-  // ── Nome
+  // Nome
   ctx.fillStyle = '#f5ead0';
   ctx.font = 'bold 38px Arial, sans-serif';
   const nomeUpper = (nome || '').toUpperCase();
-  // Quebra nome se muito longo
   if (ctx.measureText(nomeUpper).width > 640) {
     ctx.font = 'bold 30px Arial, sans-serif';
   }
   ctx.fillText(nomeUpper, W / 2, 400);
 
-  // ── Categoria e camiseta
+  // Categoria e camiseta
   const genero = sexo === 'M' ? 'MASCULINO' : 'FEMININO';
   ctx.fillStyle = '#7dcf8a';
   ctx.font = '26px Arial, sans-serif';
@@ -778,33 +658,31 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   // ── Instrução
   ctx.fillStyle = 'rgba(245,234,208,0.6)';
   ctx.font = '22px Arial, sans-serif';
-  ctx.fillText('Apresente o QR Code abaixo no credenciamento', W / 2, 540);
+  ctx.fillText('Apresente o QR Code abaixo no credenciamento', W / 2, 530); // <- Corrigido (Subi 10px)
 
-  // ── QR Code: gera direto em canvas isolado (sem cross-origin) ──
   const desenharRodape = () => {
     // Linha separadora
     ctx.strokeStyle = '#2d7a3a';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(80, 940); ctx.lineTo(W - 80, 940); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, 950); ctx.lineTo(W - 80, 950); ctx.stroke(); // <- Corrigido (Desci 10px)
 
     // Faixa rodapé
     ctx.fillStyle = '#1a5c2a';
-    ctx.fillRect(16, 940, W - 32, 144);
+    ctx.fillRect(16, 950, W - 32, 134); // <- Corrigido (Ajustado com a linha)
 
     ctx.fillStyle = '#f0b429';
     ctx.font = 'bold 28px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillText('09 DE AGOSTO DE 2026 · COSTA MARQUES, RO', W / 2, 992);
+    ctx.fillText('09 DE AGOSTO DE 2026 · COSTA MARQUES, RO', W / 2, 995); // <- Corrigido (Desci)
 
     ctx.fillStyle = 'rgba(200,230,200,0.8)';
     ctx.font = '20px Arial, sans-serif';
-    ctx.fillText('Apresente esta ficha para retirar sua camiseta', W / 2, 1030);
+    ctx.fillText('Apresente esta ficha para retirar sua camiseta', W / 2, 1035); // <- Corrigido (Desci)
 
     ctx.fillStyle = 'rgba(150,190,150,0.6)';
     ctx.font = '16px Arial, sans-serif';
-    ctx.fillText('Associação dos Seringueiros do Vale do Guaporé', W / 2, 1064);
+    ctx.fillText('Associação dos Seringueiros do Vale do Guaporé', W / 2, 1065); // <- Corrigido (Desci)
 
-    // Download — mobile usa Web Share API, desktop usa link.click()
     const nomeArq = `ficha_${ficha}_${nome.split(' ')[0]}.png`;
     const resetBtn = () => {
       if (btn) { btn.textContent = '📲 Salvar ficha no celular'; btn.disabled = false; }
@@ -812,7 +690,6 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
 
     canvas.toBlob(async (blob) => {
       try {
-        // Tenta Web Share API (iOS Safari, Android Chrome)
         if (blob && navigator.canShare) {
           const file = new File([blob], nomeArq, { type: 'image/png' });
           if (navigator.canShare({ files: [file] })) {
@@ -820,10 +697,9 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
               await navigator.share({ files: [file], title: 'Ficha Ciclismo 2026', text: `Ficha ${ficha}` });
               resetBtn();
               return;
-            } catch(e) { /* cancelou — cai no fallback */ }
+            } catch(e) { }
           }
         }
-        // Fallback: abre em nova aba ou link direto
         if (blob) {
           const url = URL.createObjectURL(blob);
           const nova = window.open(url, '_blank');
@@ -848,19 +724,22 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   };
 
   const desenharQRNoCanvas = (qrDataUrl) => {
-    const qrX = W / 2 - 155, qrY = 565;
+    // <- CORREÇÃO PRINCIPAL DO LAYOUT ->
+    const qrX = W / 2 - 155, qrY = 575; // Desci o ponto inicial do QR Code
 
-    // Fundo branco arredondado para o QR
+    // Fundo branco arredondado para o QR com a margem exata que respira (25px)
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(qrX - 30, qrY - 30, 370, 370, 16);
+    // A caixa começa em 550, exatamente 20px abaixo do texto de cima
+    ctx.roundRect(qrX - 25, qrY - 25, 360, 360, 16); 
     ctx.fill();
 
     const continuar = () => {
       ctx.fillStyle = 'rgba(125,207,138,0.7)';
       ctx.font = '18px Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Escaneie para verificar sua inscrição', W / 2, 920);
+      // A caixa termina em 910. O texto entra em 935, perfeitamente espaçado
+      ctx.fillText('Escaneie para verificar sua inscrição', W / 2, 935); 
       desenharRodape();
     };
 
@@ -868,7 +747,6 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
       const img = new Image();
       img.onload  = () => { ctx.drawImage(img, qrX, qrY, 310, 310); continuar(); };
       img.onerror = () => {
-        // QR falhou — escreve número como fallback dentro do quadrado
         ctx.fillStyle = '#0d2810';
         ctx.font = 'bold 24px Arial, sans-serif';
         ctx.textAlign = 'center';
@@ -877,7 +755,6 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
       };
       img.src = qrDataUrl;
     } else {
-      // Sem QR — escreve número como fallback dentro do quadrado
       ctx.fillStyle = '#0d2810';
       ctx.font = 'bold 24px Arial, sans-serif';
       ctx.textAlign = 'center';
@@ -886,7 +763,6 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
     }
   };
 
-  // Gera QR Code fresco em canvas isolado (sem cross-origin)
   _gerarQRDataURL(ficha, 310, desenharQRNoCanvas);
 }
 
@@ -990,7 +866,6 @@ function renderizarConsulta() {
   const podePagar = status === 'pendente_pagamento' || status === 'aguardando_boleto' || status === 'cancelado';
   const btnId     = `btn-pagar-consulta-${i?.id || 0}`;
 
-  // ── Dados do participante (sem botão — botão vai fora do card) ──
   el.innerHTML = `
     <div class="perfil-nome">${p.nome_completo}</div>
     <div class="perfil-info">📋 Ficha: <strong>${i?.numero_ficha || '—'}</strong></div>
@@ -1007,12 +882,9 @@ function renderizarConsulta() {
 
   document.getElementById('consulta-resultado').style.display = 'block';
 
-  // ── Remove botão anterior se existir ──────────────────────────
   const wrapAnterior = document.getElementById('consulta-pagar-wrap');
   if (wrapAnterior) wrapAnterior.remove();
 
-  // ── Botão de pagamento criado FORA do card via createElement ──
-  // (evita problema de clipping por backdrop-filter no Safari/iOS)
   if (podePagar && i?.id) {
     const wrap = document.createElement('div');
     wrap.id = 'consulta-pagar-wrap';
@@ -1048,16 +920,10 @@ function renderizarConsulta() {
     wrap.appendChild(btn);
     document.getElementById('consulta-resultado').appendChild(wrap);
 
-    // Rola até o botão (fix mobile)
-    setTimeout(() => {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 150);
+    setTimeout(() => { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
 
   } else if (status !== 'pago') {
-    setTimeout(() => {
-      document.getElementById('consulta-resultado')
-        .scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
+    setTimeout(() => { document.getElementById('consulta-resultado').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
   }
 }
 
@@ -1068,7 +934,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const el = document.getElementById('data-acesso');
   if (el) el.textContent = new Date().toLocaleDateString('pt-BR');
 
-  // ── Popular selects de data de nascimento ──────────────────
   const selDia = document.getElementById('nasc-dia');
   const selAno = document.getElementById('nasc-ano');
   if (selDia) {
@@ -1088,7 +953,6 @@ document.addEventListener('DOMContentLoaded', function() {
       selAno.appendChild(o);
     }
   }
-  // Sincroniza os 3 selects → campo hidden #nascimento
   function sincNascimento() {
     const dia = document.getElementById('nasc-dia')?.value;
     const mes = document.getElementById('nasc-mes')?.value;
