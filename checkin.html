@@ -1,1525 +1,727 @@
 <!DOCTYPE html>
 <!--
-  checkin.html — Credenciamento do Ciclismo Individual 2026
-  Leitura de QR Code via BarcodeDetector API (nativa) + jsQR (fallback)
-  © 2026 Ewerson Luiz de Oliveira — DTI / Prefeitura de Costa Marques/RO
+  checkin.html — Check-in Presencial V1.1
+  Ciclismo Individual 2026 — Turismo de Base Comunitária
+  Leitura de QR Code (BarcodeDetector + jsQR) · Busca por ficha/CPF/nome
+  Valida pagamento · Registra presença · Alerta se não pago
+  © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
 -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Credenciamento — Ciclismo Individual 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Check-in — Ciclismo 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: system-ui, sans-serif; background: #0f172a; min-height: 100vh; color: white; }
+:root{
+  --verde:#0d2810; --verde-m:#1a5c2a; --verde-c:#2d7a3a;
+  --verde-cl:#7dcf8a; --dourado:#c8920a; --dourado-c:#f0b429;
+  --creme:#f5ead0; --marrom:#3d1a0a;
+  --azul:#1d4ed8; --err:#ef4444; --ok:#22c55e; --warn:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--verde);color:var(--creme);overflow-x:hidden}
 
-  /* ── Login ── */
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .login-box  { background: #1e293b; border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 360px; border: 1px solid #334155; }
-  .login-logo { text-align: center; margin-bottom: 28px; }
-  .login-logo img { height: 64px; margin-bottom: 12px; }
-  .login-logo h1  { font-size: 20px; font-weight: 800; color: white; }
-  .login-logo p   { font-size: 13px; color: #64748b; margin-top: 4px; }
-  .login-box label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; margin-top: 16px; }
-  .login-box input { width: 100%; padding: 14px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; color: white; font-size: 16px; outline: none; }
-  .login-box input:focus { border-color: #3b82f6; }
-  .login-btn  { width: 100%; padding: 15px; background: #1a5c2a; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; }
-  .login-btn:active { background: #154794; }
-  .login-erro { color: #f87171; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+/* ── LOGIN ─────────────────────────────────────────── */
+#login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:rgba(13,40,16,.95);border:1px solid rgba(45,122,58,.4);border-radius:22px;padding:40px 30px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.login-logo{font-size:48px;margin-bottom:10px}
+.login-titulo{font-size:22px;font-weight:700;color:var(--dourado-c);margin-bottom:4px}
+.login-sub{font-size:12px;color:rgba(245,234,208,.4);margin-bottom:28px;line-height:1.5}
+.login-field{width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(45,122,58,.3);background:rgba(0,0,0,.3);color:var(--creme);font-size:15px;margin-bottom:12px;outline:none;transition:border .2s;-webkit-appearance:none}
+.login-field:focus{border-color:var(--verde-cl)}
+.login-field::placeholder{color:rgba(245,234,208,.3)}
+.btn-entrar{width:100%;padding:15px;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,var(--dourado),var(--dourado-c),var(--dourado));color:var(--marrom);font-size:16px;font-weight:700;margin-top:4px;transition:opacity .2s}
+.btn-entrar:hover{opacity:.9}
+.login-erro{font-size:13px;color:#f87171;margin-top:10px;padding:10px;background:rgba(239,68,68,.1);border-radius:8px;display:none}
 
-  /* ── App ── */
-  .app { display: none; }
-  .topbar { background: #1a5c2a; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
-  .topbar-titulo { font-size: 14px; font-weight: 700; }
-  .topbar-sub    { font-size: 11px; opacity: 0.75; margin-top: 1px; }
-  .sair-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 7px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+/* ── APP ────────────────────────────────────────────── */
+#app{display:none;min-height:100vh;flex-direction:column}
 
-  /* ── Contador de credenciados ── */
-  .contador-bar { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
-  .contador-num { font-size: 22px; font-weight: 800; color: #34d399; }
-  .contador-label { font-size: 11px; color: #64748b; line-height: 1.4; }
+/* Cabeçalho */
+.cabecalho{background:rgba(13,40,16,.95);border-bottom:1px solid rgba(45,122,58,.3);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+.cab-left{display:flex;align-items:center;gap:10px}
+.cab-logo{font-size:26px}
+.cab-info h1{font-size:15px;font-weight:700;color:var(--dourado-c)}
+.cab-info p{font-size:11px;color:rgba(245,234,208,.4)}
+.cab-contador{text-align:right}
+.cab-num{font-size:26px;font-weight:700;color:var(--verde-cl);line-height:1}
+.cab-num-lbl{font-size:10px;color:rgba(245,234,208,.4);text-transform:uppercase;letter-spacing:.8px}
+.btn-sair{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer}
 
-  /* ── Tabs ── */
-  .modo-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; }
-  .modo-tab  { flex: 1; padding: 13px; text-align: center; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; }
-  .modo-tab.ativo { color: #60a5fa; border-bottom-color: #60a5fa; background: #0f172a; }
+/* Container */
+.container{flex:1;padding:16px;max-width:500px;margin:0 auto;width:100%}
 
-  /* ── Painel QR ── */
-  .qr-panel { padding: 20px 16px; }
+/* Modos */
+.modo-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.modo-btn{padding:12px;border:1px solid rgba(45,122,58,.3);border-radius:12px;background:rgba(13,40,16,.5);color:rgba(245,234,208,.55);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.modo-btn.ativo{background:rgba(45,122,58,.3);border-color:rgba(45,122,58,.6);color:var(--verde-cl)}
+.modo-btn:hover{background:rgba(45,122,58,.2)}
 
-  /* Botão principal de escanear — grande, fácil de tocar */
-  .scan-btn-principal {
-    width: 100%; padding: 22px 16px;
-    background: linear-gradient(135deg, #1a5c2a 0%, #2d7a3a 100%);
-    color: white; border: none; border-radius: 18px;
-    font-size: 18px; font-weight: 800; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    box-shadow: 0 4px 20px rgba(26,86,160,0.4);
-    margin-bottom: 14px; letter-spacing: 0.01em;
-  }
-  .scan-btn-principal:active { transform: scale(0.98); }
-  .scan-btn-principal .icon { font-size: 32px; }
+/* Câmera */
+.camera-card{background:rgba(13,40,16,.7);border:1px solid rgba(45,122,58,.3);border-radius:16px;overflow:hidden;margin-bottom:14px}
+.camera-titulo{padding:14px 16px;font-size:13px;font-weight:600;color:rgba(245,234,208,.6);border-bottom:1px solid rgba(45,122,58,.2)}
+.camera-video-wrap{position:relative;background:#000;aspect-ratio:1;max-height:300px;overflow:hidden}
+#camera-video{width:100%;height:100%;object-fit:cover;display:block}
+.camera-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.camera-frame{width:200px;height:200px;border:3px solid var(--azul);border-radius:18px;position:relative}
+.camera-linha{position:absolute;left:8px;right:8px;height:2px;background:linear-gradient(90deg,transparent,var(--azul),transparent);animation:scan 2s ease-in-out infinite}
+@keyframes scan{0%,100%{top:8px;opacity:0}10%{opacity:1}90%{opacity:1}50%{top:calc(100% - 8px)}}
+.camera-status-box{padding:10px 14px;font-size:13px;font-weight:600;text-align:center;border-top:1px solid rgba(45,122,58,.2)}
+.camera-status-box.lendo{color:var(--azul)}
+.camera-status-box.ok{color:var(--ok);background:rgba(34,197,94,.1)}
+.camera-status-box.erro{color:var(--err);background:rgba(239,68,68,.1)}
+.btn-camera{width:100%;padding:14px;border:none;border-radius:12px;background:var(--azul);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:opacity .2s}
+.btn-camera:hover{opacity:.88}
+.btn-parar{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:12px;padding:10px;font-size:13px;cursor:pointer;width:100%;margin-bottom:10px}
 
-  .scan-btn-secundario {
-    width: 100%; padding: 14px 16px;
-    background: #1e293b; color: #cbd5e1;
-    border: 1px solid #334155; border-radius: 14px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    margin-bottom: 10px;
-  }
-  .scan-btn-secundario:active { background: #0f172a; }
+/* Busca manual */
+.busca-card{background:rgba(13,40,16,.7);border:1px solid rgba(45,122,58,.3);border-radius:16px;padding:18px;margin-bottom:14px}
+.busca-titulo{font-size:13px;font-weight:600;color:rgba(245,234,208,.6);margin-bottom:12px}
+.busca-row{display:flex;gap:8px}
+.busca-input{flex:1;padding:13px 14px;border-radius:10px;border:1px solid rgba(45,122,58,.3);background:rgba(0,0,0,.3);color:var(--creme);font-size:15px;outline:none;transition:border .2s;-webkit-appearance:none}
+.busca-input:focus{border-color:var(--verde-cl)}
+.busca-input::placeholder{color:rgba(245,234,208,.3)}
+.btn-buscar{padding:13px 18px;border:none;border-radius:10px;background:var(--verde-c);color:#fff;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+.btn-buscar:hover{opacity:.88}
+.busca-erro{margin-top:10px;padding:12px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;font-size:13px;color:#f87171;display:none}
 
-  .scan-dica { font-size: 12px; color: #475569; text-align: center; margin-top: 8px; line-height: 1.6; }
-  .scan-dica strong { color: #60a5fa; }
+/* Resultado */
+.resultado-card{border-radius:16px;overflow:hidden;margin-bottom:14px;display:none}
+.resultado-header{padding:18px 18px 14px;display:flex;align-items:flex-start;gap:12px}
+.resultado-icone{font-size:36px;flex-shrink:0;line-height:1}
+.resultado-nome{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:4px}
+.resultado-ficha{font-size:13px;opacity:.7}
+.resultado-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 18px 14px}
+.resultado-item{background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px}
+.resultado-item-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:4px}
+.resultado-item-val{font-size:16px;font-weight:700}
 
-  /* Câmera ao vivo */
-  .camera-wrap { position: relative; background: #000; border-radius: 16px; overflow: hidden; margin-bottom: 12px; }
-  #scanner-video { width: 100%; display: block; max-height: 62vh; object-fit: cover; }
-  .camera-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-  .camera-frame { width: 230px; height: 230px; border: 3px solid #60a5fa; border-radius: 20px;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); position: relative; }
-  .camera-linha { position: absolute; left: 10px; right: 10px; height: 2px;
-    background: #60a5fa; animation: scan 2s linear infinite; box-shadow: 0 0 8px #60a5fa; }
-  @keyframes scan { 0%{top:12px} 50%{top:calc(100% - 14px)} 100%{top:12px} }
-  .camera-fechar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6);
-    border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; z-index: 10; }
-  .camera-status { text-align: center; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 10px;
-    background: #1e293b; margin-bottom: 12px; }
-  .camera-status.lendo    { color: #60a5fa; }
-  .camera-status.encontrou { color: #34d399; }
-  .camera-status.erro     { color: #f87171; background: #1e0f0f; }
+/* Estado: PAGO */
+.resultado-card.pago{background:rgba(22,101,52,.4);border:1px solid rgba(34,197,94,.3)}
+.resultado-card.pago .resultado-header{background:rgba(22,101,52,.5)}
+.btn-confirmar{width:100%;padding:16px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--ok),#15803d);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin:0 18px 18px;width:calc(100% - 36px);transition:opacity .2s}
+.btn-confirmar:hover{opacity:.88}
+.btn-confirmar:disabled{opacity:.4;cursor:not-allowed}
 
-  /* Input oculto para foto */
-  #qr-file-input { display: none; }
+/* Estado: NAO PAGO */
+.resultado-card.nao-pago{background:rgba(154,52,18,.3);border:1px solid rgba(239,68,68,.3)}
+.resultado-card.nao-pago .resultado-header{background:rgba(154,52,18,.4)}
+.alerta-nao-pago{margin:0 18px 18px;padding:16px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:12px;font-size:13px;color:#fca5a5;line-height:1.7}
+.alerta-nao-pago strong{color:#f87171;font-size:15px;display:block;margin-bottom:6px}
 
-  /* ── Busca manual ── */
-  .busca-wrap { padding: 20px 16px; }
-  .busca-label { font-size: 13px; color: #94a3b8; margin-bottom: 8px; display: block; }
-  .busca-input { width: 100%; padding: 16px; background: #1e293b; border: 1px solid #334155;
-    border-radius: 14px; color: white; font-size: 17px; outline: none; margin-bottom: 12px;
-    text-transform: uppercase; letter-spacing: 0.05em; }
-  .busca-input:focus { border-color: #3b82f6; }
-  .busca-btn { width: 100%; padding: 15px; background: #1a5c2a; color: white; border: none;
-    border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
-  .busca-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+/* Estado: CANCELADO */
+.resultado-card.cancelado{background:rgba(55,65,81,.4);border:1px solid rgba(156,163,175,.3)}
+.resultado-card.cancelado .resultado-header{background:rgba(55,65,81,.5)}
 
-  /* ── Card de resultado ── */
-  .resultado { display: none; padding: 0 16px 24px; }
-  .resultado-card { background: #1e293b; border-radius: 18px; overflow: hidden; border: 1px solid #334155; }
+/* Estado: JÁ FEZ CHECK-IN */
+.resultado-card.ja-feito{background:rgba(22,101,52,.25);border:1px solid rgba(125,207,138,.4)}
+.badge-ci{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--verde-cl);margin:0 18px 14px}
 
-  .resultado-header { padding: 18px 16px; display: flex; align-items: center; gap: 14px; }
-  .resultado-header.confirmado  { background: #064e3b; border-bottom: 1px solid #065f46; }
-  .resultado-header.espera      { background: #78350f; border-bottom: 1px solid #92400e; }
-  .resultado-header.ja-presente { background: #1e3a5f; border-bottom: 1px solid #1a56a0; }
-  .resultado-icone { font-size: 40px; flex-shrink: 0; }
-  .resultado-status { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; margin-bottom: 3px; }
-  .resultado-nome   { font-size: 19px; font-weight: 800; line-height: 1.2; }
-  .resultado-ficha  { font-size: 12px; opacity: 0.65; margin-top: 4px; }
+/* Feedback fullscreen */
+.feedback{position:fixed;inset:0;background:rgba(22,101,52,.97);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:200}
+.feedback.visivel{display:flex}
+.feedback-icone{font-size:80px;margin-bottom:16px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(.5)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.feedback-nome{font-size:26px;font-weight:700;color:var(--creme);margin-bottom:6px}
+.feedback-ficha{font-size:18px;color:var(--verde-cl);margin-bottom:4px}
+.feedback-cam{font-size:16px;color:rgba(245,234,208,.7);margin-bottom:4px}
+.feedback-hora{font-size:14px;color:rgba(245,234,208,.4);margin-bottom:28px}
+.btn-proximo{padding:14px 36px;border:none;border-radius:50px;background:var(--dourado);color:var(--marrom);font-size:16px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.btn-proximo:hover{opacity:.9}
 
-  .resultado-body { padding: 16px; }
-  .detalhe-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #334155; font-size: 13px; }
-  .detalhe-row:last-child { border-bottom: none; }
-  .detalhe-label { color: #64748b; }
-  .detalhe-val   { color: white; font-weight: 500; text-align: right; max-width: 60%; }
-  .mod-badge { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 8px; margin: 2px; font-weight: 600; }
-  .mod-conf  { background: #064e3b; color: #34d399; }
-  .mod-esp   { background: #78350f; color: #fbbf24; }
+/* Spinner */
+.spin{width:30px;height:30px;border:3px solid rgba(45,122,58,.2);border-top-color:var(--verde-cl);border-radius:50%;animation:giro .7s linear infinite;margin:20px auto;display:block}
+@keyframes giro{to{transform:rotate(360deg)}}
 
-  .alerta-espera { background: #78350f; border: 1px solid #92400e; border-radius: 12px; padding: 14px; margin-top: 14px; font-size: 13px; color: #fde68a; line-height: 1.6; }
-
-  .confirmar-btn { width: 100%; padding: 18px; background: #16a34a; color: white; border: none;
-    border-radius: 14px; font-size: 17px; font-weight: 800; cursor: pointer; margin-top: 16px;
-    display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .confirmar-btn:active  { background: #15803d; }
-  .confirmar-btn:disabled { background: #1e3a5f; color: #60a5fa; cursor: default; }
-  .confirmar-btn.ja      { background: #1e3a5f; color: #60a5fa; }
-  .novo-btn { width: 100%; padding: 13px; background: #1e293b; color: #94a3b8;
-    border: 1px solid #334155; border-radius: 14px; font-size: 14px; cursor: pointer; margin-top: 10px; }
-
-  /* ── Modal Foto Alimento ── */
-  .foto-modal { display: none; position: fixed; inset: 0; background: #0f172a; z-index: 300; flex-direction: column; }
-  .foto-modal.show { display: flex; }
-  .foto-modal-header { background: #1a5c2a; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-  .foto-modal-titulo { font-size: 15px; font-weight: 700; flex: 1; }
-  .foto-modal-sub    { font-size: 11px; opacity: 0.75; margin-top: 2px; }
-  .foto-modal-fechar { background: rgba(255,255,255,0.15); border: none; color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
-  .foto-modal-body   { flex: 1; display: flex; flex-direction: column; padding: 16px; gap: 14px; overflow-y: auto; }
-  .foto-instrucao    { background: #1e293b; border-radius: 14px; padding: 16px; text-align: center; }
-  .foto-instrucao-icon { font-size: 48px; margin-bottom: 8px; }
-  .foto-instrucao-titulo { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-  .foto-instrucao-desc   { font-size: 13px; color: #94a3b8; line-height: 1.6; }
-  .foto-preview-wrap { display: none; position: relative; border-radius: 14px; overflow: hidden; background: #000; }
-  .foto-preview-wrap.show { display: block; }
-  .foto-preview-img  { width: 100%; max-height: 55vh; object-fit: contain; display: block; }
-  .foto-preview-badge { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); color: #34d399; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-  .foto-participante-label { background: #1e293b; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #94a3b8; }
-  .foto-participante-label strong { color: white; display: block; font-size: 15px; margin-top: 2px; }
-  .foto-btn-primario { width: 100%; padding: 18px; background: linear-gradient(135deg, #1a5c2a 0%, #2d7a3a 100%); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .foto-btn-primario:active { transform: scale(0.98); }
-  .foto-btn-secundario { width: 100%; padding: 14px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .foto-btn-confirmar { width: 100%; padding: 18px; background: #16a34a; color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .foto-btn-confirmar:disabled { background: #334155; color: #475569; cursor: not-allowed; }
-  .foto-progress { background: #1e293b; border-radius: 10px; padding: 14px; text-align: center; display: none; }
-  .foto-progress.show { display: block; }
-  .foto-progress-bar-wrap { background: #334155; border-radius: 6px; height: 6px; margin-top: 10px; overflow: hidden; }
-  .foto-progress-bar { height: 100%; background: #1a5c2a; width: 0%; border-radius: 6px; transition: width 0.3s; }
-  .foto-pular-link { text-align: center; font-size: 12px; color: #475569; cursor: pointer; padding: 4px; text-decoration: underline; }
-  /* Input oculto para captura de foto do alimento */
-  #foto-input { display: none; }
-
-  /* ── Feedback full-screen ── */
-  .feedback { display: none; position: fixed; inset: 0; background: #059669;
-    align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 200;
-    padding: 20px; }
-  .feedback.show { display: flex; }
-  .feedback-icone  { font-size: 90px; }
-  .feedback-nome   { font-size: 24px; font-weight: 800; text-align: center; line-height: 1.2; }
-  .feedback-ficha  { font-size: 15px; opacity: 0.9; }
-  .feedback-hora   { font-size: 14px; opacity: 0.75; }
-  .feedback-sub    { font-size: 13px; opacity: 0.8; text-align: center; margin-top: 4px; }
+canvas{display:none}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div class="login-wrap" id="login-wrap">
-  <div class="login-box">
-    <div class="login-logo">
-      <img src="logo.png" alt="Aguapé">
-      <h1>Credenciamento</h1>
-      <p>Ciclismo Individual 2026 — Aguapé</p>
-    </div>
-    <label>Usuário</label>
-    <input type="text" id="login-user" placeholder="admin ou seu login"
-           onkeydown="if(event.key==='Enter') document.getElementById('login-senha').focus()"
-           autocomplete="username">
-    <label>Senha</label>
-    <input type="password" id="login-senha" placeholder="••••••••"
-           onkeydown="if(event.key==='Enter') entrar()" autocomplete="current-password">
-    <button class="login-btn" onclick="entrar()">Entrar</button>
-    <div class="login-erro" id="login-erro">Usuário ou senha incorretos.</div>
+<div id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">🚴</div>
+    <div class="login-titulo">Check-in</div>
+    <div class="login-sub">Ciclismo Individual 2026<br>Assoc. Seringueiros do Vale do Guaporé</div>
+    <input class="login-field" type="text" id="login-user" placeholder="Usuário" autocomplete="username">
+    <input class="login-field" type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+    <button class="btn-entrar" onclick="entrar()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
   </div>
 </div>
 
-<!-- APP -->
-<div class="app" id="app">
+<!-- APP CHECK-IN -->
+<div id="app">
 
-  <div class="topbar">
-    <div>
-      <div class="topbar-titulo">📋 Credenciamento</div>
-      <div class="topbar-sub">Ciclismo Individual 2026 · Aguapé</div>
+  <!-- Cabeçalho -->
+  <header class="cabecalho">
+    <div class="cab-left">
+      <div class="cab-logo">🚴</div>
+      <div class="cab-info">
+        <h1>Check-in 2026</h1>
+        <p id="cab-operador">Operador: —</p>
+      </div>
     </div>
-    <button class="sair-btn" onclick="sair()">Sair</button>
-  </div>
-
-  <!-- Contador ao vivo -->
-  <div class="contador-bar">
-    <div class="contador-num" id="contador-num">0</div>
-    <div class="contador-label">
-      credenciados hoje<br>
-      <span style="color:#334155;" id="contador-total">de — inscritos</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="cab-contador">
+        <div class="cab-num" id="contador-num">—</div>
+        <div class="cab-num-lbl" id="contador-lbl">check-ins</div>
+      </div>
+      <button class="btn-sair" onclick="sair()">Sair</button>
     </div>
-  </div>
+  </header>
 
-  <!-- Tabs -->
-  <div class="modo-tabs">
-    <div class="modo-tab ativo" id="tab-qr"    onclick="mudarModo('qr')">📷 QR Code</div>
-    <div class="modo-tab"       id="tab-busca" onclick="mudarModo('busca')">🔍 Buscar</div>
-  </div>
+  <!-- Conteúdo -->
+  <div class="container">
 
-  <!-- Modo QR -->
-  <div id="modo-qr">
-    <!-- Canvas oculto para jsQR -->
-    <canvas id="qr-canvas" style="display:none;"></canvas>
-    <!-- Input oculto: abre câmera/galeria para foto -->
-    <input type="file" id="qr-file-input" accept="image/*" capture="environment"
-           onchange="lerFotoQR(this)">
+    <!-- Modo: câmera ou busca -->
+    <div class="modo-btns">
+      <button class="modo-btn ativo" id="btn-modo-camera" onclick="mudarModo('camera')">📷 Câmera QR</button>
+      <button class="modo-btn" id="btn-modo-busca" onclick="mudarModo('busca')">🔍 Busca manual</button>
+    </div>
 
-    <!-- Câmera ao vivo (fica oculta até ativação) -->
-    <div id="camera-vivo" style="display:none;padding:12px 16px 0;">
-      <div class="camera-wrap">
-        <video id="scanner-video" autoplay playsinline muted webkit-playsinline></video>
-        <button class="camera-fechar" onclick="pararCamera()">×</button>
-        <div class="camera-overlay">
-          <div class="camera-frame"><div class="camera-linha"></div></div>
+    <!-- MODO CÂMERA -->
+    <div id="modo-camera">
+      <div class="camera-card">
+        <div class="camera-titulo">📷 Leitura de QR Code da ficha</div>
+        <div id="camera-video-wrap" style="display:none">
+          <div class="camera-video-wrap">
+            <video id="camera-video" playsinline autoplay muted></video>
+            <div class="camera-overlay">
+              <div class="camera-frame"><div class="camera-linha"></div></div>
+            </div>
+          </div>
+          <div class="camera-status-box lendo" id="camera-status">Aponte para o QR Code da ficha…</div>
+        </div>
+        <div style="padding:14px">
+          <button class="btn-camera" id="btn-iniciar-camera" onclick="iniciarCamera()">📷 Iniciar câmera</button>
+          <button class="btn-parar" id="btn-parar-camera" style="display:none" onclick="pararCamera()">⏹ Parar câmera</button>
         </div>
       </div>
     </div>
 
-    <!-- Status (visível durante scanning) -->
-    <div class="camera-status lendo" id="camera-status" style="display:none;margin:8px 16px;"></div>
-
-    <!-- Painel de opções padrão -->
-    <div class="qr-panel" id="qr-opcoes">
-
-      <!-- BOTÃO 1: Foto (funciona em qualquer celular) -->
-      <button class="scan-btn-principal" onclick="document.getElementById('qr-file-input').click()">
-        <span class="icon">📸</span>
-        <div style="text-align:left;">
-          <div>Escanear QR Code</div>
-          <div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">Abre a câmera — funciona em todos os celulares</div>
+    <!-- MODO BUSCA MANUAL -->
+    <div id="modo-busca" style="display:none">
+      <div class="busca-card">
+        <div class="busca-titulo">🔍 Buscar por ficha, CPF ou nome</div>
+        <div class="busca-row">
+          <input class="busca-input" id="busca-input" type="text"
+            placeholder="CIC-1234 · 000.000.000-00 · nome"
+            onkeydown="if(event.key==='Enter')buscar()">
+          <button class="btn-buscar" onclick="buscar()">Buscar</button>
         </div>
-      </button>
-
-      <!-- BOTÃO 2: Câmera ao vivo (BarcodeDetector nativo ou jsQR) -->
-      <button class="scan-btn-secundario" onclick="iniciarCameraVivo()" id="btn-camera-vivo">
-        🎥 Câmera contínua (leitura automática)
-      </button>
-
-      <!-- BOTÃO 3: Ler da tela do celular do inscrito -->
-      <button class="scan-btn-secundario" onclick="iniciarCameraTelaInscrito()" id="btn-camera-tela" style="border-color:#60a5fa;color:#60a5fa;">
-        📱 Ler QR da tela do celular do inscrito
-      </button>
-
-      <div class="scan-dica">
-        💡 <strong>Dica:</strong> Para ler o QR da <strong>tela do celular do inscrito</strong>,<br>
-        peça para ele <strong>aumentar o brilho ao máximo</strong> e use<br>
-        o botão 📱 abaixo.<br><br>
-        Sem câmera? Use a aba <strong>🔍 Buscar</strong>.
+        <div class="busca-erro" id="busca-erro"></div>
       </div>
     </div>
-  </div>
 
-  <!-- Modo busca manual -->
-  <div id="modo-busca" style="display:none;">
-    <div class="busca-wrap">
-      <label class="busca-label">🔍 Digite o nome, ficha (CIC-XXXX) ou CPF</label>
-      <input type="text" id="busca-input" class="busca-input"
-             placeholder="Ex: João, CIC-1234 ou CPF..."
-             oninput="buscarLive(this)"
-             autocomplete="off"
-             autocorrect="off"
-             spellcheck="false"
-             onkeydown="if(event.key==='Enter') buscarEnter()">
-      <div id="busca-resultados" class="busca-resultados"></div>
-      <div class="busca-hint" id="busca-hint">Digite ao menos 2 letras para filtrar por nome</div>
-    </div>
-  </div>
+    <!-- RESULTADO -->
+    <div class="resultado-card" id="resultado-card">
 
-  <!-- Resultado -->
-  <div class="resultado" id="resultado">
-    <div class="resultado-card">
-      <div class="resultado-header" id="resultado-header">
-        <div class="resultado-icone" id="resultado-icone">✅</div>
+      <!-- Cabeçalho do resultado -->
+      <div class="resultado-header">
+        <div class="resultado-icone" id="res-icone">—</div>
         <div>
-          <div class="resultado-status" id="resultado-status">Confirmado</div>
-          <div class="resultado-nome"   id="resultado-nome">—</div>
-          <div class="resultado-ficha"  id="resultado-ficha">Ficha: —</div>
+          <div class="resultado-nome" id="res-nome">—</div>
+          <div class="resultado-ficha" id="res-ficha">—</div>
         </div>
       </div>
-      <div class="resultado-body">
-        <div id="resultado-detalhes"></div>
-        <div id="alerta-espera" class="alerta-espera" style="display:none;">
-          ⚠️ <strong>Lista de espera</strong> — este participante só entra se houver desistência confirmada pela organização.
+
+      <!-- Grid de informações -->
+      <div class="resultado-grid">
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Camiseta</div>
+          <div class="resultado-item-val" id="res-cam">—</div>
         </div>
-        <button class="confirmar-btn" id="confirmar-btn" onclick="confirmarPresenca()">
-          ✅ Confirmar presença
-        </button>
-        <button class="novo-btn" onclick="novaLeitura()">🔄 Novo credenciamento</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- INPUT oculto para foto do alimento -->
-<input type="file" id="foto-input" accept="image/*" capture="environment" onchange="fotoCapturada(this)">
-
-<!-- MODAL: Foto do Alimento -->
-<div class="foto-modal" id="foto-modal">
-  <div class="foto-modal-header">
-    <div>
-      <div class="foto-modal-titulo">📸 Foto do Alimento</div>
-      <div class="foto-modal-sub">Registre o 1kg de alimento entregue</div>
-    </div>
-    <button class="foto-modal-fechar" onclick="fecharModalFoto()">✕ Pular</button>
-  </div>
-  <div class="foto-modal-body">
-
-    <!-- Label com nome do participante -->
-    <div class="foto-participante-label" id="foto-participante-label">
-      Participante:
-      <strong id="foto-participante-nome">—</strong>
-    </div>
-
-    <!-- Instrução (antes de tirar foto) -->
-    <div class="foto-instrucao" id="foto-instrucao">
-      <div class="foto-instrucao-icon">🥫</div>
-      <div class="foto-instrucao-titulo">Fotografe o alimento</div>
-      <div class="foto-instrucao-desc">
-        Posicione o <strong>1kg de alimento não-perecível</strong><br>
-        em local visível e tire a foto para registro.<br><br>
-        Esta foto será vinculada ao cadastro do participante<br>
-        e usada na <strong>prestação de contas do evento</strong>.
-      </div>
-    </div>
-
-    <!-- Preview da foto -->
-    <div class="foto-preview-wrap" id="foto-preview-wrap">
-      <img id="foto-preview-img" class="foto-preview-img" src="" alt="Foto do alimento">
-      <div class="foto-preview-badge">✓ 1kg registrado</div>
-    </div>
-
-    <!-- Progresso de upload -->
-    <div class="foto-progress" id="foto-progress">
-      <div style="font-size:13px;color:#94a3b8;" id="foto-progress-texto">Enviando foto...</div>
-      <div class="foto-progress-bar-wrap">
-        <div class="foto-progress-bar" id="foto-progress-bar"></div>
-      </div>
-    </div>
-
-    <!-- Botões dinâmicos (trocam conforme estado) -->
-    <div id="foto-btns">
-      <!-- Estado 1: sem foto -->
-      <button class="foto-btn-primario" id="foto-btn-tirar" onclick="document.getElementById('foto-input').click()">
-        <span style="font-size:28px;">📷</span>
-        <div style="text-align:left;">
-          <div>Tirar foto do alimento</div>
-          <div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">Abre a câmera traseira</div>
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Categoria</div>
+          <div class="resultado-item-val" id="res-gen">—</div>
         </div>
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Cidade</div>
+          <div class="resultado-item-val" id="res-cid">—</div>
+        </div>
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Pagamento</div>
+          <div class="resultado-item-val" id="res-pgto">—</div>
+        </div>
+      </div>
+
+      <!-- Badge de check-in já realizado -->
+      <div class="badge-ci" id="badge-ja-feito" style="display:none">✅ Check-in já realizado às <span id="badge-hora">—</span></div>
+
+      <!-- PAGO: botão de confirmar -->
+      <button class="btn-confirmar" id="btn-confirmar" onclick="confirmarCheckin()">
+        ✅ Confirmar presença e entregar camiseta
       </button>
-    </div>
 
-    <!-- Link discreto para pular -->
-    <div class="foto-pular-link" onclick="fecharModalFoto()">
-      Não foi possível fotografar — pular esta etapa
-    </div>
+      <!-- NÃO PAGO: alerta -->
+      <div class="alerta-nao-pago" id="alerta-nao-pago" style="display:none">
+        <strong>⛔ Pagamento não confirmado</strong>
+        Não é possível realizar o check-in. O participante deve procurar a <strong>administração do evento</strong> para regularizar a situação antes de receber a camiseta.
+      </div>
+
+      <!-- CANCELADO: alerta -->
+      <div class="alerta-nao-pago" id="alerta-cancelado" style="display:none">
+        <strong>⛔ Inscrição cancelada</strong>
+        Esta inscrição foi cancelada. O participante deve procurar a <strong>administração do evento</strong>.
+      </div>
+
+      <!-- Nova leitura -->
+      <div style="padding:0 18px 18px">
+        <button onclick="novaLeitura()" style="width:100%;padding:11px;border:1px solid rgba(45,122,58,.3);border-radius:10px;background:transparent;color:rgba(245,234,208,.5);font-size:13px;cursor:pointer">
+          🔄 Nova leitura
+        </button>
+      </div>
+
+    </div><!-- /.resultado-card -->
 
   </div>
 </div>
 
-<!-- Feedback full-screen -->
+<!-- FEEDBACK FULLSCREEN -->
 <div class="feedback" id="feedback">
   <div class="feedback-icone">✅</div>
-  <div class="feedback-nome" id="feedback-nome"></div>
-  <div class="feedback-ficha" id="feedback-ficha"></div>
-  <div class="feedback-hora"  id="feedback-hora"></div>
-  <div class="feedback-sub">Credenciamento confirmado ✓</div>
+  <div class="feedback-nome" id="fb-nome">—</div>
+  <div class="feedback-ficha" id="fb-ficha">—</div>
+  <div class="feedback-cam" id="fb-cam">—</div>
+  <div class="feedback-hora" id="fb-hora">—</div>
+  <button class="btn-proximo" onclick="fecharFeedback()">🔄 Próximo check-in</button>
 </div>
+
+<!-- Canvas oculto para jsQR -->
+<canvas id="qr-canvas"></canvas>
 
 <script>
 // ================================================================
-// CONFIG
+// checkin.html — V1.0
+// © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
 // ================================================================
-const MODALIDADES = {
-  1:{nome:'Ciclismo',sub:'Masculino'},
-  2:{nome:'Ciclismo',sub:'Feminino'},
-};
 
-let modoAtual       = 'qr';
+let streamAtivo    = null;
+let animFrame      = null;
+let scanAtivo      = false;
+let scanBloqueado  = false;
+let barcodeDetector= null;
+let modoAtual      = 'camera';
 let participanteAtual = null;
-let inscricoesAtuais  = [];
-let streamAtivo       = null;
-let animFrame         = null;
-let scanBloqueado     = false;
-let barcodeDetector   = null;
-let fotoAlimentoUrl   = null;   // URL da foto do alimento após upload
+let inscricaoAtual    = null;
+let todosDados     = { inscricoes:[], participantes:[] };
+let totalCheckins  = 0;
 
-// Verifica suporte à BarcodeDetector API (nativa do navegador)
 if ('BarcodeDetector' in window) {
-  try {
-    barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-  } catch(e) { barcodeDetector = null; }
+  try { barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] }); } catch(e){}
 }
 
-// ================================================================
-// LOGIN
-// ================================================================
+// ════════════════════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════════════════════
 async function entrar() {
-  const userEl = document.getElementById('login-user');
-  const usuario = userEl ? userEl.value.trim() : 'admin';
+  const usuario = document.getElementById('login-user').value.trim();
   const senha   = document.getElementById('login-senha').value;
-  const erro    = document.getElementById('login-erro');
-  erro.style.display = 'none';
+  const erroEl  = document.getElementById('login-erro');
+  erroEl.style.display = 'none';
+
   if (!usuario || !senha) {
-    erro.textContent = 'Preencha usuário e senha.';
-    erro.style.display = 'block';
-    return;
+    erroEl.textContent = 'Preencha usuário e senha.';
+    erroEl.style.display = 'block'; return;
   }
   try {
     const r = await fetch('/api/admin-auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario, senha })
     });
     const d = await r.json();
     if (d.ok) {
-      localStorage.setItem('checkin_auth', '1');
-      localStorage.setItem('checkin_user', usuario);
-      localStorage.setItem('checkin_nome', d.nome || usuario);
-      mostrarApp();
+      sessionStorage.setItem('ci_token', d.token);
+      sessionStorage.setItem('ci_nome',  d.nome || usuario);
+      mostrarApp(d.nome || usuario);
     } else {
-      erro.textContent = 'Usuário ou senha incorretos.';
-      erro.style.display = 'block';
+      erroEl.textContent = d.erro || 'Usuário ou senha incorretos.';
+      erroEl.style.display = 'block';
     }
-  } catch(e) {
-    erro.textContent = 'Erro de conexão.';
-    erro.style.display = 'block';
+  } catch {
+    erroEl.textContent = 'Erro de conexão.';
+    erroEl.style.display = 'block';
   }
 }
 
-function mostrarApp() {
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if (e.key === 'Enter') entrar();
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const t = sessionStorage.getItem('ci_token');
+  const n = sessionStorage.getItem('ci_nome');
+  if (t) mostrarApp(n || 'Operador');
+});
+
+function mostrarApp(nome) {
   document.getElementById('login-wrap').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  carregarContador();
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('cab-operador').textContent = 'Operador: ' + nome;
+  carregarDados();
 }
 
 function sair() {
-  localStorage.removeItem('checkin_auth');
   pararCamera();
+  sessionStorage.removeItem('ci_token');
+  sessionStorage.removeItem('ci_nome');
   document.getElementById('login-wrap').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('resultado').style.display = 'none';
 }
 
-// Restaura sessão ao recarregar (F5)
-document.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('checkin_auth') === '1') mostrarApp();
-});
+// ════════════════════════════════════════════════════════════════
+// DADOS
+// ════════════════════════════════════════════════════════════════
+async function apiGet(tabela, query = '') {
+  const r = await fetch('/api/supabase', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao: 'buscar', tabela, query })
+  });
+  return r.json();
+}
 
-// ================================================================
-// CONTADOR AO VIVO
-// ================================================================
-async function carregarContador() {
+async function apiPatch(tabela, id, dados) {
+  const r = await fetch('/api/supabase', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao: 'atualizar', tabela, id, dados })
+  });
+  return r.json();
+}
+
+async function carregarDados() {
   try {
-    const [partic, insc] = await Promise.all([
-      apiGet('participantes', 'select=id'),
-      apiGet('inscricoes', 'select=participante_id&presenca=eq.true')
+    const [insc, part] = await Promise.all([
+      apiGet('inscricoes', 'select=*'),
+      apiGet('participantes', 'select=*')
     ]);
-    const credenciados = new Set((Array.isArray(insc) ? insc : []).map(i => i.participante_id)).size;
-    const total = Array.isArray(partic) ? partic.length : 0;
-    document.getElementById('contador-num').textContent   = credenciados;
-    document.getElementById('contador-total').textContent = `de ${total} inscritos`;
-  } catch(e) {}
+    todosDados.inscricoes    = Array.isArray(insc) ? insc : [];
+    todosDados.participantes = Array.isArray(part) ? part : [];
+    totalCheckins = todosDados.inscricoes.filter(i => i.checkin_realizado).length;
+    atualizarContador();
+  } catch (e) {
+    console.error('carregarDados:', e);
+  }
 }
 
-function atualizarContador(delta) {
-  const el = document.getElementById('contador-num');
-  el.textContent = Math.max(0, parseInt(el.textContent || '0') + delta);
+function atualizarContador() {
+  document.getElementById('contador-num').textContent = totalCheckins;
+  const total = todosDados.inscricoes.filter(i => i.status === 'pago').length;
+  document.getElementById('contador-lbl').textContent = `de ${total} pagos`;
 }
 
-// ================================================================
-// TABS
-// ================================================================
+const getP = pid => todosDados.participantes.find(p => p.id === pid) || {};
+
+// ════════════════════════════════════════════════════════════════
+// MODOS
+// ════════════════════════════════════════════════════════════════
 function mudarModo(modo) {
   modoAtual = modo;
-  document.getElementById('modo-qr').style.display    = modo === 'qr' ? 'block' : 'none';
-  document.getElementById('modo-busca').style.display = modo === 'busca' ? 'block' : 'none';
-  document.getElementById('tab-qr').classList.toggle('ativo', modo === 'qr');
-  document.getElementById('tab-busca').classList.toggle('ativo', modo === 'busca');
-  document.getElementById('resultado').style.display = 'none';
-  if (modo !== 'qr') pararCamera();
-  if (modo === 'busca') {
-    setTimeout(() => document.getElementById('busca-input').focus(), 100);
-    carregarCacheParticipantes(); // pré-carrega em background para busca instantânea
-  }
-  // Limpa resultados ao trocar de tab
-  const resDiv = document.getElementById('busca-resultados');
-  if (resDiv) resDiv.style.display = 'none';
-  const inp = document.getElementById('busca-input');
-  if (inp && modo !== 'busca') inp.value = '';
+  document.getElementById('modo-camera').style.display = modo === 'camera' ? 'block' : 'none';
+  document.getElementById('modo-busca').style.display  = modo === 'busca'  ? 'block' : 'none';
+  document.getElementById('btn-modo-camera').classList.toggle('ativo', modo === 'camera');
+  document.getElementById('btn-modo-busca').classList.toggle('ativo',  modo === 'busca');
+  if (modo !== 'camera') pararCamera();
+  else document.getElementById('busca-input').value = '';
 }
 
-// ================================================================
-// LEITURA POR FOTO — método principal, funciona em todos os celulares
-// ================================================================
-async function lerFotoQR(input) {
-  const file = input.files[0];
-  if (!file) return;
+// ════════════════════════════════════════════════════════════════
+// CÂMERA
+// ════════════════════════════════════════════════════════════════
+async function iniciarCamera() {
+  if (streamAtivo) return;
 
-  mostrarStatusFoto('⏳ Processando QR Code...', '#60a5fa');
+  // Checa HTTPS
+  if (!window.isSecureContext && location.hostname !== 'localhost') {
+    mostrarErroBusca('Câmera requer HTTPS. Use a busca manual ou acesse via https://');
+    mudarModo('busca'); return;
+  }
 
-  // ── Tenta BarcodeDetector nativo primeiro (muito mais rápido) ──
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }
+    });
+    streamAtivo = stream;
+    const video = document.getElementById('camera-video');
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('camera-video-wrap').style.display = 'block';
+    document.getElementById('btn-iniciar-camera').style.display = 'none';
+    document.getElementById('btn-parar-camera').style.display  = 'block';
+    document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+    document.getElementById('camera-status').className = 'camera-status-box lendo';
+    scanAtivo = true;
+    scanBloqueado = false;
+    requestAnimationFrame(scanFrame);
+  } catch (e) {
+    const msg = e.name === 'NotAllowedError'
+      ? 'Permissão negada. Libere a câmera nas configurações do navegador.'
+      : e.name === 'NotFoundError'
+      ? 'Nenhuma câmera encontrada neste dispositivo.'
+      : 'Erro ao abrir câmera: ' + e.message;
+    mostrarErroBusca(msg);
+    mudarModo('busca');
+  }
+}
+
+async function scanFrame() {
+  if (!scanAtivo) return;
+  const video = document.getElementById('camera-video');
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    animFrame = requestAnimationFrame(scanFrame); return;
+  }
+
+  let resultado = null;
+
+  // BarcodeDetector nativo (mais rápido)
   if (barcodeDetector) {
     try {
-      const bitmap = await createImageBitmap(file);
-      const codes  = await barcodeDetector.detect(bitmap);
-      bitmap.close();
-      if (codes.length > 0) {
-        input.value = '';
-        processarQR(codes[0].rawValue);
-        limparStatusFoto();
-        return;
-      }
-    } catch(e) { /* cai para jsQR */ }
+      const codes = await barcodeDetector.detect(video);
+      if (codes.length) resultado = codes[0].rawValue;
+    } catch(e) {}
   }
 
-  // ── Fallback: jsQR via canvas com imagem REDIMENSIONADA ──
-  // Fotos de câmera chegam com 8-12MP — jsQR trava nesse tamanho.
-  // Redimensionamos para max 800px antes de processar.
-  const MAX = 800;
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      // Calcula escala para caber em MAX x MAX
-      const escala  = Math.min(MAX / img.width, MAX / img.height, 1);
-      const largura = Math.round(img.width  * escala);
-      const altura  = Math.round(img.height * escala);
-
-      const canvas = document.getElementById('qr-canvas');
-      canvas.width  = largura;
-      canvas.height = altura;
+  // jsQR fallback
+  if (!resultado) {
+    const canvas = document.getElementById('qr-canvas');
+    const w = video.videoWidth, h = video.videoHeight;
+    if (w && h) {
+      canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, largura, altura);
-
-      const imageData = ctx.getImageData(0, 0, largura, altura);
-      const code = jsQR(imageData.data, largura, altura, {
-        inversionAttempts: 'attemptBoth'   // tenta normal e invertido
-      });
-
-      input.value = '';  // permite nova foto imediatamente
-
-      if (code && code.data) {
-        limparStatusFoto();
-        processarQR(code.data);
-      } else {
-        // Tenta uma segunda vez com imagem menor (às vezes melhora a leitura)
-        const canvas2 = document.getElementById('qr-canvas');
-        canvas2.width  = Math.round(largura * 0.5);
-        canvas2.height = Math.round(altura  * 0.5);
-        ctx.drawImage(img, 0, 0, canvas2.width, canvas2.height);
-        const imageData2 = ctx.getImageData(0, 0, canvas2.width, canvas2.height);
-        const code2 = jsQR(imageData2.data, canvas2.width, canvas2.height, {
-          inversionAttempts: 'attemptBoth'
-        });
-        if (code2 && code2.data) {
-          limparStatusFoto();
-          processarQR(code2.data);
-        } else {
-          mostrarStatusFoto('❌ QR não lido. Tente mais de perto e com boa luz.', '#f87171');
-          setTimeout(limparStatusFoto, 3500);
-        }
-      }
-    };
-    img.onerror = () => {
-      mostrarStatusFoto('❌ Erro ao carregar imagem. Tente novamente.', '#f87171');
-      setTimeout(limparStatusFoto, 3000);
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function mostrarStatusFoto(msg, cor) {
-  // Reutiliza o camera-status mas também cria um toast flutuante para o modo foto
-  let toast = document.getElementById('foto-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'foto-toast';
-    toast.style.cssText = `
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
-      padding: 12px 20px; font-size: 14px; font-weight: 600;
-      z-index: 999; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      transition: opacity 0.2s;
-    `;
-    document.body.appendChild(toast);
-  }
-  toast.style.color   = cor;
-  toast.style.opacity = '1';
-  toast.style.display = 'block';
-  toast.textContent   = msg;
-}
-
-function limparStatusFoto() {
-  const toast = document.getElementById('foto-toast');
-  if (toast) toast.style.display = 'none';
-}
-
-// ================================================================
-// ================================================================
-// CÂMERA — v5: verifica permissão, solicita, instrui se bloqueada
-// ================================================================
-
-async function _checarPermissaoCamera() {
-  try {
-    if (navigator.permissions && navigator.permissions.query) {
-      const r = await navigator.permissions.query({ name: 'camera' });
-      return r.state; // 'granted', 'denied', 'prompt'
-    }
-  } catch(e) {}
-  return 'unknown';
-}
-
-function _mostrarErroCamera(tipoErro, retryFn, errInfo) {
-  document.getElementById('qr-opcoes').style.display = 'none';
-  document.getElementById('camera-status').style.display = 'none';
-  const ant = document.getElementById('camera-erro-painel');
-  if (ant) ant.remove();
-
-  const painel = document.createElement('div');
-  painel.id = 'camera-erro-painel';
-  painel.style.cssText = 'margin:16px;background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;';
-
-  // Domínio atual (para não hard-codar festival-inverno.vercel.app)
-  const dominio = (typeof location !== 'undefined' && location.hostname) ? location.hostname : 'este site';
-
-  let html = '';
-  if (tipoErro === 'insecure') {
-    html = `
-      <div style="text-align:center;font-size:40px;margin-bottom:12px;">🔓</div>
-      <div style="color:white;font-size:15px;font-weight:700;text-align:center;margin-bottom:14px;">
-        Conexão não segura (HTTP)
-      </div>
-      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:14px;">
-        A câmera só funciona em sites com <strong>HTTPS</strong>. Acesse o site digitando
-        <strong style="color:#fbbf24;">https://</strong> no início do endereço, ou use o botão
-        <strong style="color:#34d399;">📸 Escanear QR Code</strong> (que abre a câmera do sistema e funciona sem HTTPS).
-      </div>`;
-  } else if (tipoErro === 'denied') {
-    html = `
-      <div style="text-align:center;font-size:40px;margin-bottom:12px;">🔒</div>
-      <div style="color:white;font-size:15px;font-weight:700;text-align:center;margin-bottom:14px;">
-        Permissão da câmera negada para <span style="color:#fbbf24;">${dominio}</span>
-      </div>
-      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:14px;">
-        A permissão precisa ser liberada <strong>especificamente para este site</strong>
-        (mesmo que o app do navegador já tenha acesso à câmera no Android).
-      </div>
-      <div style="background:#0f172a;border-radius:10px;padding:14px;margin-bottom:10px;">
-        <div style="color:#34d399;font-size:12px;font-weight:700;margin-bottom:8px;">✅ MÉTODO MAIS RÁPIDO (Chrome/Android):</div>
-        <div style="color:#cbd5e1;font-size:12px;line-height:2;">
-          1. Toque no <strong style="color:#fbbf24;">🔒 cadeado</strong> ou <strong style="color:#fbbf24;">ⓘ ícone</strong> ao lado do endereço acima<br>
-          2. Toque em <strong style="color:#fbbf24;">"Permissões"</strong> ou <strong style="color:#fbbf24;">"Configurações do site"</strong><br>
-          3. Em <strong style="color:#fbbf24;">Câmera</strong>, mude para <strong style="color:#34d399;">Permitir</strong><br>
-          4. <strong style="color:#fbbf24;">RECARREGUE A PÁGINA</strong> (toque no botão abaixo)
-        </div>
-      </div>
-      <div style="background:#0f172a;border-radius:10px;padding:14px;margin-bottom:10px;">
-        <div style="color:#60a5fa;font-size:12px;font-weight:700;margin-bottom:8px;">🍎 iPhone (Safari):</div>
-        <div style="color:#cbd5e1;font-size:12px;line-height:2;">
-          1. Toque em <strong style="color:#fbbf24;">"AA"</strong> à esquerda do endereço<br>
-          2. Toque em <strong style="color:#fbbf24;">"Configurações do site"</strong><br>
-          3. Em <strong style="color:#fbbf24;">Câmera</strong>, escolha <strong style="color:#34d399;">Permitir</strong><br>
-          4. <strong style="color:#fbbf24;">RECARREGUE A PÁGINA</strong>
-        </div>
-      </div>
-      <div style="background:#0f172a;border-radius:10px;padding:14px;margin-bottom:14px;border:1px dashed #475569;">
-        <div style="color:#a78bfa;font-size:12px;font-weight:700;margin-bottom:6px;">💡 Solução rápida que sempre funciona:</div>
-        <div style="color:#cbd5e1;font-size:12px;line-height:1.7;">
-          Use o botão <strong style="color:#34d399;">📸 Escanear QR Code</strong> da tela anterior — ele abre a câmera do sistema e <strong>não precisa de permissão de site</strong>.
-        </div>
-      </div>`;
-  } else if (tipoErro === 'notfound') {
-    html = `
-      <div style="text-align:center;font-size:40px;margin-bottom:12px;">📵</div>
-      <div style="color:white;font-size:15px;font-weight:700;text-align:center;margin-bottom:14px;">
-        Nenhuma câmera encontrada
-      </div>
-      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:16px;">
-        Este dispositivo não possui câmera disponível, ou nenhuma câmera foi detectada pelo navegador.
-        Use o botão <strong style="color:#34d399;">📸 Escanear QR Code</strong> ou a busca manual.
-      </div>`;
-  } else if (tipoErro === 'busy') {
-    html = `
-      <div style="text-align:center;font-size:40px;margin-bottom:12px;">📷</div>
-      <div style="color:white;font-size:15px;font-weight:700;text-align:center;margin-bottom:14px;">
-        Câmera em uso por outro app
-      </div>
-      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:16px;">
-        A câmera está sendo usada por outro aplicativo (WhatsApp, Zoom, etc.). Feche o outro app e tente novamente.
-      </div>`;
-  } else {
-    html = `
-      <div style="text-align:center;font-size:40px;margin-bottom:12px;">⚠️</div>
-      <div style="color:white;font-size:15px;font-weight:700;text-align:center;margin-bottom:14px;">
-        Erro ao acessar a câmera
-      </div>
-      <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:16px;">
-        Não foi possível abrir a câmera. Use o botão <strong style="color:#34d399;">📸 Escanear QR Code</strong> ou a busca manual abaixo.
-      </div>`;
-  }
-
-  // Botões — sempre incluem Recarregar (essencial após mudar permissão), Voltar, Buscar
-  let botoes = '';
-  if (tipoErro !== 'notfound') {
-    botoes += `<button id="btn-reload-page"
-      style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">
-      🔄 Recarregar página (após liberar permissão)
-    </button>`;
-  }
-  botoes += `<button id="btn-retry-camera"
-      style="width:100%;padding:12px;background:#1a56a0;color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">
-      🎥 Tentar abrir câmera novamente
-    </button>
-    <button id="btn-voltar-opcoes"
-      style="width:100%;padding:12px;background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:12px;font-size:13px;cursor:pointer;margin-bottom:8px;">
-      ← Voltar (usar 📸 Escanear ou outras opções)
-    </button>
-    <button id="btn-ir-busca"
-      style="width:100%;padding:12px;background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:12px;font-size:13px;cursor:pointer;">
-      🔍 Buscar por ficha ou CPF
-    </button>`;
-
-  // Detalhes técnicos (colapsado) — útil para o técnico diagnosticar
-  let detalhes = '';
-  if (errInfo && errInfo.name) {
-    detalhes = `
-      <details style="margin-top:12px;font-size:11px;color:#64748b;">
-        <summary style="cursor:pointer;padding:4px 0;">🔧 Detalhes técnicos</summary>
-        <div style="background:#0f172a;border-radius:8px;padding:8px;margin-top:6px;font-family:monospace;word-break:break-all;">
-          <div><strong>${errInfo.name}</strong></div>
-          ${errInfo.message ? `<div style="color:#94a3b8;margin-top:4px;">${errInfo.message}</div>` : ''}
-          ${errInfo.permState ? `<div style="color:#94a3b8;margin-top:4px;">permissions.query: ${errInfo.permState}</div>` : ''}
-          <div style="color:#94a3b8;margin-top:4px;">secureContext: ${window.isSecureContext ? 'sim' : 'NÃO'}</div>
-          <div style="color:#94a3b8;margin-top:2px;">protocolo: ${location.protocol}</div>
-        </div>
-      </details>`;
-  }
-
-  painel.innerHTML = html + botoes + detalhes;
-
-  document.getElementById('modo-qr').appendChild(painel);
-
-  const btnReload = document.getElementById('btn-reload-page');
-  if (btnReload) btnReload.onclick = () => location.reload();
-
-  document.getElementById('btn-retry-camera').onclick = () => {
-    painel.remove();
-    if (retryFn) retryFn();
-  };
-  document.getElementById('btn-voltar-opcoes').onclick = () => {
-    painel.remove();
-    document.getElementById('qr-opcoes').style.display = 'block';
-  };
-  document.getElementById('btn-ir-busca').onclick = () => {
-    painel.remove();
-    mudarModo('busca');
-  };
-
-  scanBloqueado = false;
-}
-
-async function _abrirCamera(mensagemStatus, retryFn) {
-  if (streamAtivo) return true;
-
-  const errAnt = document.getElementById('camera-erro-painel');
-  if (errAnt) errAnt.remove();
-  document.getElementById('qr-opcoes').style.display = 'none';
-
-  // 1. Verificar contexto seguro (HTTPS) — getUserMedia exige isso
-  if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    _mostrarErroCamera('insecure', retryFn, { name: 'SecurityError', message: 'Página servida via HTTP — HTTPS é obrigatório para getUserMedia.' });
-    return false;
-  }
-
-  // 2. Verificar suporte à API
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    _mostrarErroCamera('notfound', retryFn, { name: 'NotSupportedError', message: 'navigator.mediaDevices.getUserMedia indisponível neste navegador.' });
-    return false;
-  }
-
-  // 3. Pré-checagem de permissão: se já está 'denied' (sticky), não adianta chamar getUserMedia
-  //    — o navegador rejeitaria silenciosamente. Mostramos a UI de desbloqueio direto.
-  const permState = await _checarPermissaoCamera();
-  if (permState === 'denied') {
-    _mostrarErroCamera('denied', retryFn, {
-      name: 'NotAllowedError',
-      message: 'Permissão pré-bloqueada para este site (permissions.query=denied).',
-      permState
-    });
-    return false;
-  }
-
-  const statusEl = document.getElementById('camera-status');
-  statusEl.style.display = 'block';
-  statusEl.textContent = '⏳ Solicitando acesso à câmera...';
-  statusEl.className = 'camera-status lendo';
-
-  let stream = null;
-  let ultimoErro = null;
-
-  // 4. Tenta do mais específico (traseira) ao mais simples
-  //    A ordem foi invertida: a câmera traseira é a desejada para QR — pedir ela primeiro
-  //    aumenta a chance do prompt já vir orientado corretamente em iOS.
-  for (const constraints of [
-    { video: { facingMode: { ideal: 'environment' } } },
-    { video: true },
-    { video: { facingMode: 'user' } }
-  ]) {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-      break;
-    } catch (e) {
-      ultimoErro = e;
+      ctx.drawImage(video, 0, 0);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const code = jsQR(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
+      if (code) resultado = code.data;
     }
   }
 
-  if (!stream) {
-    statusEl.style.display = 'none';
-    const n = ultimoErro?.name || '';
-    const errInfo = { name: n, message: ultimoErro?.message || '' };
-
-    // Re-checa permissão APÓS falha — distingue "negou agora" de "está bloqueado fixo"
-    try { errInfo.permState = await _checarPermissaoCamera(); } catch(_) {}
-
-    if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || errInfo.permState === 'denied') {
-      _mostrarErroCamera('denied', retryFn, errInfo);
-    } else if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') {
-      _mostrarErroCamera('notfound', retryFn, errInfo);
-    } else if (n === 'NotReadableError' || n === 'TrackStartError' || n === 'AbortError') {
-      _mostrarErroCamera('busy', retryFn, errInfo);
-    } else if (n === 'SecurityError') {
-      _mostrarErroCamera('insecure', retryFn, errInfo);
-    } else {
-      _mostrarErroCamera('other', retryFn, errInfo);
-    }
-    return false;
+  if (resultado && !scanBloqueado) {
+    scanBloqueado = true;
+    document.getElementById('camera-status').textContent = '✅ QR Code lido!';
+    document.getElementById('camera-status').className = 'camera-status-box ok';
+    // Extrai ficha do QR — formato: "CIC-XXXX|Nome" ou só "CIC-XXXX"
+    const ficha = resultado.split('|')[0].trim();
+    setTimeout(() => processarEntrada(ficha), 300);
+    return;
   }
 
-  streamAtivo = stream;
-  const video = document.getElementById('scanner-video');
-  video.srcObject = stream;
-  document.getElementById('camera-vivo').style.display = 'block';
-  statusEl.textContent = mensagemStatus || '🔍 Aponte para o QR Code';
-  statusEl.className = 'camera-status lendo';
-  return true;
-}
-
-function _iniciarScan(video, modoCrop) {
-  video.addEventListener('loadedmetadata', () => video.play());
-  video.addEventListener('canplay', () => {
-    if (barcodeDetector) {
-      scanComBarcodeDetector(video);
-    } else {
-      const canvas = document.getElementById('qr-canvas');
-      canvas.width  = video.videoWidth  || 640;
-      canvas.height = video.videoHeight || 480;
-      modoCrop ? scanTelaJsQR(video, canvas) : scanComJsQR(video, canvas);
-    }
-  }, { once: true });
-}
-
-async function iniciarCameraVivo() {
-  const ok = await _abrirCamera('🔍 Aponte para o QR Code', iniciarCameraVivo);
-  if (!ok) return;
-  _iniciarScan(document.getElementById('scanner-video'), false);
-}
-
-// BarcodeDetector: muito mais rápido, usa hardware do celular
-async function scanComBarcodeDetector(video) {
-  if (!streamAtivo || scanBloqueado) return;
-  try {
-    const codes = await barcodeDetector.detect(video);
-    if (codes.length > 0) {
-      scanBloqueado = true;
-      processarQR(codes[0].rawValue);
-      return;
-    }
-  } catch(e) {}
-  animFrame = requestAnimationFrame(() => scanComBarcodeDetector(video));
-}
-
-// jsQR: fallback frame a frame
-function scanComJsQR(video, canvas) {
-  if (!streamAtivo || scanBloqueado) return;
-  if (video.readyState >= 2) {
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
-    if (code?.data) {
-      scanBloqueado = true;
-      processarQR(code.data);
-      return;
-    }
-  }
-  animFrame = requestAnimationFrame(() => scanComJsQR(video, canvas));
+  animFrame = requestAnimationFrame(scanFrame);
 }
 
 function pararCamera() {
-  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+  scanAtivo = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
   if (streamAtivo) { streamAtivo.getTracks().forEach(t => t.stop()); streamAtivo = null; }
-  const v = document.getElementById('scanner-video');
-  if (v) v.srcObject = null;
-  document.getElementById('camera-vivo').style.display = 'none';
-  document.getElementById('qr-opcoes').style.display   = 'block';
-  document.getElementById('camera-status').style.display = 'none';
-  scanBloqueado = false;
+  document.getElementById('camera-video-wrap').style.display = 'none';
+  document.getElementById('btn-iniciar-camera').style.display = 'block';
+  document.getElementById('btn-parar-camera').style.display  = 'none';
 }
 
-// ================================================================
-// PROCESSAR QR — normaliza e busca no banco
-// ================================================================
-function processarQR(texto) {
-  // Extrai o código CIC-XXXX do texto (pode vir como "CIC-1056" ou "CIC-1056 NOME")
-  const match = texto.trim().toUpperCase().match(/CIC-?(\d+)/);
-  const ficha = match ? 'CIC-' + match[1] : texto.trim().toUpperCase().replace(/\s/g,'');
-  if (/^CIC-\d+$/.test(ficha)) {
-    mostrarStatus(`✅ Código lido: ${ficha}`, 'encontrou');
-    if (navigator.vibrate) navigator.vibrate([80]);
-    buscarPorFicha(ficha);
-  } else {
-    mostrarStatus('⚠️ QR inválido. Tente novamente.', 'erro');
-    scanBloqueado = false;
-  }
+// ════════════════════════════════════════════════════════════════
+// BUSCA MANUAL
+// ════════════════════════════════════════════════════════════════
+function buscar() {
+  const inp = document.getElementById('busca-input').value.trim();
+  if (!inp) { mostrarErroBusca('Digite a ficha, CPF ou nome.'); return; }
+  processarEntrada(inp);
 }
 
-function mostrarStatus(msg, tipo) {
-  const el = document.getElementById('camera-status');
+function mostrarErroBusca(msg) {
+  const el = document.getElementById('busca-erro');
+  el.textContent = msg;
   el.style.display = 'block';
-  el.textContent   = msg;
-  el.className     = 'camera-status ' + tipo;
-  if (tipo === 'erro') setTimeout(() => { el.style.display = 'none'; scanBloqueado = false; }, 3500);
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-// ================================================================
-// BUSCA AO VIVO — por nome, ficha ou CPF
-// ================================================================
-let todosParticipantesCache = null;
-let buscaTimeout = null;
-
-// Pré-carrega todos participantes + inscrições em memória
-async function carregarCacheParticipantes() {
-  if (todosParticipantesCache) return todosParticipantesCache;
-  try {
-    const [partic, inscr] = await Promise.all([
-      apiGet('participantes', 'select=id,nome_completo,cpf,cidade,uf,telefone&order=nome_completo.asc'),
-      apiGet('inscricoes', 'select=participante_id,numero_ficha,modalidade_id,status,presenca')
-    ]);
-    if (!Array.isArray(partic)) return [];
-    const inscMap = {};
-    (Array.isArray(inscr) ? inscr : []).forEach(i => {
-      if (!inscMap[i.participante_id]) inscMap[i.participante_id] = [];
-      inscMap[i.participante_id].push(i);
-    });
-    todosParticipantesCache = partic.map(p => ({
-      ...p,
-      inscricoes: inscMap[p.id] || []
-    }));
-    return todosParticipantesCache;
-  } catch(e) {
-    return [];
-  }
-}
-
-// Remove acentos para busca
-function semAcentos(str) {
-  return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-async function buscarLive(input) {
-  const q = input.value.trim();
-  const resDiv  = document.getElementById('busca-resultados');
-  const hintDiv = document.getElementById('busca-hint');
-
-  if (!q) {
-    resDiv.style.display = 'none';
-    hintDiv.style.display = 'block';
-    return;
-  }
-
-  // CIC- → busca por ficha imediatamente
-  const fiMatch = q.toUpperCase().match(/^CIC-?(\d+)$/);
-  if (fiMatch) {
-    resDiv.style.display = 'none';
-    hintDiv.style.display = 'none';
-    buscarPorFicha('CIC-' + fiMatch[1]);
-    return;
-  }
-
-  // CPF (11+ dígitos) → busca por CPF
-  const digitos = q.replace(/\D/g, '');
-  if (digitos.length >= 11) {
-    resDiv.style.display = 'none';
-    hintDiv.style.display = 'none';
-    buscarPorCPF(q);
-    return;
-  }
-
-  // Mínimo 2 caracteres para busca por nome
-  if (q.length < 2) {
-    resDiv.style.display = 'none';
-    hintDiv.style.display = 'block';
-    return;
-  }
-
-  hintDiv.style.display = 'none';
-  resDiv.style.display = 'block';
-  resDiv.innerHTML = '<div class="busca-carregando">🔍 Buscando...</div>';
-
-  clearTimeout(buscaTimeout);
-  buscaTimeout = setTimeout(async () => {
-    const cache  = await carregarCacheParticipantes();
-    const termos = semAcentos(q).split(/\s+/).filter(Boolean);
-
-    const filtrados = cache.filter(p => {
-      const nome = semAcentos(p.nome_completo);
-      return termos.every(t => nome.includes(t));
-    }).slice(0, 10);
-
-    if (filtrados.length === 0) {
-      resDiv.innerHTML = '<div class="busca-vazio">Nenhum participante encontrado para "' + q + '"</div>';
-      return;
-    }
-
-    resDiv.innerHTML = filtrados.map(p => {
-      const insc   = p.inscricoes[0];
-      const ficha  = insc?.numero_ficha || '—';
-      const modId  = insc?.modalidade_id;
-      const mod    = modId ? MODALIDADES[modId] : null;
-      const modStr = mod ? mod.nome + ' ' + mod.sub : '—';
-      const cred   = p.inscricoes.some(i => i.presenca === true);
-      return '<div class="busca-item" onclick="selecionarDaBusca(\'' + p.id + '\')">' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="busca-item-nome">' + p.nome_completo + (cred ? ' <span class="busca-item-cred">✅</span>' : '') + '</div>' +
-          '<div class="busca-item-detalhe">' + (p.cidade || '—') + '/' + (p.uf || 'RO') + ' · ' + modStr + '</div>' +
-        '</div>' +
-        '<div class="busca-item-ficha">' + ficha + '</div>' +
-      '</div>';
-    }).join('');
-  }, 180);
-}
-
-async function selecionarDaBusca(participanteId) {
-  document.getElementById('busca-resultados').style.display = 'none';
-  document.getElementById('busca-input').value = '';
-  document.getElementById('busca-hint').style.display = 'block';
-  await buscarParticipante(participanteId);
-}
-
-function buscarEnter() {
-  const q = document.getElementById('busca-input').value.trim();
-  if (!q) return;
-  // Se é ficha ou CPF, busca direto
-  const fi = q.toUpperCase().match(/^CIC-?(\d+)$/);
-  if (fi) { buscarPorFicha('CIC-' + fi[1]); return; }
-  const d = q.replace(/\D/g,'');
-  if (d.length >= 11) { buscarPorCPF(q); return; }
-  // Nome: seleciona o primeiro resultado da lista se houver
-  const primeiro = document.querySelector('.busca-item');
-  if (primeiro) primeiro.click();
-}
-
-// Mantido para compatibilidade com QR
-async function buscar() {
-  buscarEnter();
-}
-
-async function buscarPorFicha(ficha) {
-  const r = await apiGet('inscricoes', `numero_ficha=eq.${encodeURIComponent(ficha)}&select=participante_id&limit=1`);
-  if (!Array.isArray(r) || r.length === 0) { mostrarNaoEncontrado(ficha); return; }
-  await buscarParticipante(r[0].participante_id);
-}
-
-async function buscarPorCPF(cpf) {
-  const fmt = cpf.replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  let r = await apiGet('participantes', `cpf=eq.${encodeURIComponent(fmt)}&select=id&limit=1`);
-  if (!Array.isArray(r) || r.length === 0)
-    r = await apiGet('participantes', `cpf=eq.${encodeURIComponent(cpf.replace(/\D/g,''))}&select=id&limit=1`);
-  if (!Array.isArray(r) || r.length === 0) { mostrarNaoEncontrado(cpf); return; }
-  await buscarParticipante(r[0].id);
-}
-
-async function buscarParticipante(pid) {
-  const [partic, inscr] = await Promise.all([
-    apiGet('participantes', `id=eq.${pid}&select=*`),
-    apiGet('inscricoes',    `participante_id=eq.${pid}&select=*`)
-  ]);
-  if (!Array.isArray(partic) || partic.length === 0) { mostrarNaoEncontrado('—'); return; }
-  mostrarResultado(partic[0], Array.isArray(inscr) ? inscr : []);
-}
-
-// ================================================================
-// EXIBIR RESULTADO
-// ================================================================
-function mostrarResultado(p, inscricoes) {
-  participanteAtual = p;
-  inscricoesAtuais  = inscricoes;
-
-  // Inscrições confirmadas (não espera)
-  const inscConf    = inscricoes.filter(i => i.status !== 'lista_espera');
-  const todasEspera = inscricoes.length > 0 && inscricoes.every(i => i.status === 'lista_espera');
-  const temEspera   = inscricoes.some(i => i.status === 'lista_espera');
-  const ficha       = inscricoes[0]?.numero_ficha || '—';
-
-  // CORRIGIDO: só bloqueia se TODAS as confirmadas já têm presença
-  const totalConf       = inscConf.length;
-  const totalCredConf   = inscConf.filter(i => i.presenca === true).length;
-  const todasPresentes  = totalConf > 0 && totalCredConf === totalConf;
-  const algumPresente   = totalCredConf > 0;            // parcialmente credenciado
-  const pendentes       = totalConf - totalCredConf;    // quantas ainda faltam
-
-  const header = document.getElementById('resultado-header');
-  const icone  = document.getElementById('resultado-icone');
-  const status = document.getElementById('resultado-status');
-
-  if (todasPresentes) {
-    header.className  = 'resultado-header ja-presente';
-    icone.textContent = '🔵';
-    const hora = inscricoes.find(i=>i.presenca_em)?.presenca_em;
-    status.textContent = 'Todas as modalidades credenciadas'
-      + (hora ? ' — ' + new Date(hora).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '');
-  } else if (algumPresente) {
-    header.className  = 'resultado-header confirmado';
-    icone.textContent = '🟡';
-    status.textContent = `Parcialmente credenciado — ${pendentes} modalidade${pendentes!==1?'s':''} pendente${pendentes!==1?'s':''}`;
-  } else if (todasEspera) {
-    header.className  = 'resultado-header espera';
-    icone.textContent = '⏳';
-    status.textContent = 'Lista de espera';
-  } else {
-    header.className  = 'resultado-header confirmado';
-    icone.textContent = '✅';
-    status.textContent = 'Inscrito — aguardando credenciamento';
-  }
-
-  document.getElementById('resultado-nome').textContent  = p.nome_completo;
-  document.getElementById('resultado-ficha').textContent = `Ficha ${ficha}`;
-
-  const nasc = p.data_nascimento
-    ? new Date(p.data_nascimento + 'T00:00').toLocaleDateString('pt-BR')
-    : '—';
-
-  // Badges com 3 estados: ⏳ espera | ✅ credenciado | 🎫 inscrito pendente
-  const badges = inscricoes.map(i => {
-    const m = MODALIDADES[i.modalidade_id];
-    let cls, pre;
-    if (i.status === 'lista_espera') {
-      cls = 'mod-esp'; pre = '⏳ ';
-    } else if (i.presenca === true) {
-      cls = 'mod-conf'; pre = '✅ ';
-    } else {
-      cls = 'mod-conf'; pre = '🎫 ';
-    }
-    return `<span class="mod-badge ${cls}">${pre}${m ? m.nome + ' ' + m.sub : '—'}</span>`;
-  }).join('');
-
-  document.getElementById('resultado-detalhes').innerHTML = `
-    <div class="detalhe-row"><span class="detalhe-label">Cidade/UF</span><span class="detalhe-val">${p.cidade || '—'} / ${p.uf || '—'}</span></div>
-    <div class="detalhe-row"><span class="detalhe-label">Nascimento</span><span class="detalhe-val">${nasc}</span></div>
-    <div class="detalhe-row"><span class="detalhe-label">Telefone</span><span class="detalhe-val">${p.telefone || '—'}</span></div>
-    <div class="detalhe-row"><span class="detalhe-label">Modalidades</span><span class="detalhe-val">${badges}</span></div>
-    <div class="detalhe-row"><span class="detalhe-label">Uso de imagem</span><span class="detalhe-val">${p.autorizacao_imagem ? '✅ Sim' : '❌ Não'}</span></div>
-  `;
-
-  document.getElementById('alerta-espera').style.display = temEspera ? 'block' : 'none';
-
-  const btn = document.getElementById('confirmar-btn');
-  btn.style.background = '';
-  if (todasPresentes) {
-    btn.textContent = '🔵 Todas as modalidades já credenciadas';
-    btn.disabled    = true;
-    btn.className   = 'confirmar-btn ja';
-  } else if (todasEspera) {
-    btn.textContent      = '⚠️ Lista de espera — não credenciar';
-    btn.disabled         = true;
-    btn.style.background = '#92400e';
-  } else if (algumPresente) {
-    btn.textContent = `🟡 Credenciar modalidades pendentes (${pendentes} restante${pendentes!==1?'s':''})`;
-    btn.disabled    = false;
-    btn.className   = 'confirmar-btn';
-    btn.style.background = '#d97706';
-  } else {
-    btn.textContent = '✅ Confirmar presença';
-    btn.disabled    = false;
-    btn.className   = 'confirmar-btn';
-  }
-
-  document.getElementById('resultado').style.display = 'block';
-  document.getElementById('resultado').scrollIntoView({ behavior: 'smooth' });
-}
-
-function mostrarNaoEncontrado(ref) {
-  mostrarStatus(`❌ "${ref}" não encontrado`, 'erro');
-  scanBloqueado = false;
-}
-
-// ================================================================
-// CONFIRMAR PRESENÇA — grava presenca=true e presenca_em no banco
-// ================================================================
-async function confirmarPresenca() {
-  if (!participanteAtual) return;
-  const btn = document.getElementById('confirmar-btn');
-
-  // Se já foi credenciado, não faz nada
-  if (btn.classList.contains('ja')) return;
-
-  // Ciclismo: sem modal de foto, vai direto para confirmar
-  _executarConfirmacao(null);
-}
-
-// ================================================================
-// MODAL DE FOTO DO ALIMENTO
-// ================================================================
-function abrirModalFoto() {
-  fotoAlimentoUrl = null;
-  document.getElementById('foto-participante-nome').textContent = participanteAtual?.nome_completo || '—';
-
-  // Resetar estado visual do modal
-  document.getElementById('foto-instrucao').style.display   = '';
-  document.getElementById('foto-preview-wrap').classList.remove('show');
-  document.getElementById('foto-progress').classList.remove('show');
-  document.getElementById('foto-input').value = '';
-
-  document.getElementById('foto-btns').innerHTML = `
-    <button class="foto-btn-primario" id="foto-btn-tirar"
-      onclick="document.getElementById('foto-input').click()">
-      <span style="font-size:28px;">📷</span>
-      <div style="text-align:left;">
-        <div>Tirar foto do alimento</div>
-        <div style="font-size:12px;font-weight:400;opacity:0.8;margin-top:2px;">Abre a câmera traseira</div>
-      </div>
-    </button>`;
-
-  document.getElementById('foto-modal').classList.add('show');
-}
-
-function fecharModalFoto() {
-  document.getElementById('foto-modal').classList.remove('show');
-  _executarConfirmacao(null);
-}
-
-async function fotoCapturada(input) {
-  const file = input.files[0];
-  if (!file) return;
-
-  // Mostrar preview imediato
-  const leitor = new FileReader();
-  leitor.onload = async (e) => {
-    document.getElementById('foto-instrucao').style.display = 'none';
-    const preview = document.getElementById('foto-preview-wrap');
-    const img     = document.getElementById('foto-preview-img');
-    img.src = e.target.result;
-    preview.classList.add('show');
-
-    // Botões de retake + confirmar
-    document.getElementById('foto-btns').innerHTML = `
-      <button class="foto-btn-confirmar" id="foto-btn-confirmar" onclick="uploadEConfirmar()">
-        ✅ Confirmar com esta foto
-      </button>
-      <button class="foto-btn-secundario" style="margin-top:8px;"
-        onclick="document.getElementById('foto-input').click()">
-        🔄 Tirar outra foto
-      </button>`;
-  };
-  leitor.readAsDataURL(file);
-}
-
-async function uploadEConfirmar() {
-  const btn = document.getElementById('foto-btn-confirmar');
-  if (btn) btn.disabled = true;
-
-  const input = document.getElementById('foto-input');
-  const file  = input.files[0];
-  if (!file) { fecharModalFoto(); return; }
-
-  // Mostrar barra de progresso
-  const prog      = document.getElementById('foto-progress');
-  const progBar   = document.getElementById('foto-progress-bar');
-  const progTexto = document.getElementById('foto-progress-texto');
-  prog.classList.add('show');
-  progTexto.textContent = 'Comprimindo imagem...';
-  progBar.style.width   = '20%';
-
-  try {
-    // Comprimir imagem via canvas (max 600px, JPEG 60%)
-    const base64Comprimida = await comprimirImagem(file, 600, 0.60);
-    progTexto.textContent = 'Salvando foto...';
-    progBar.style.width   = '80%';
-
-    // Salva base64 direto no banco — sem Storage, sem bucket, sem policy
-    const dataUrl = 'data:image/jpeg;base64,' + base64Comprimida;
-
-    fotoAlimentoUrl = dataUrl;
-    progTexto.textContent = '✓ Foto salva com sucesso!';
-    progBar.style.width = '100%';
-    progBar.style.background = '#16a34a';
-    setTimeout(() => {
-      document.getElementById('foto-modal').classList.remove('show');
-      _executarConfirmacao(fotoAlimentoUrl);
-    }, 700);
-
-  } catch (err) {
-    console.error('Erro ao processar foto:', err);
-    progTexto.textContent = '⚠️ Falha no envio — prosseguindo sem foto';
-    progBar.style.background = '#f59e0b';
-    setTimeout(() => {
-      document.getElementById('foto-modal').classList.remove('show');
-      _executarConfirmacao(null);
-    }, 1200);
-  }
-}
-
-// Comprime imagem usando canvas (retorna base64 sem prefixo data:...)
-function comprimirImagem(file, maxDim, qualidade) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-        else                 { width  = Math.round(width  * maxDim / height); height = maxDim; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      const dataUrl = canvas.toDataURL('image/jpeg', qualidade);
-      resolve(dataUrl.split(',')[1]); // só o base64
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
-
-// Executa o check-in de fato (com ou sem foto)
-async function _executarConfirmacao(urlFoto) {
-  if (!participanteAtual) return;
-  const btn = document.getElementById('confirmar-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
-
-  const agora    = new Date().toISOString();
-  // Só processa inscrições confirmadas que AINDA NÃO estão credenciadas
-  const inscConf = inscricoesAtuais.filter(i => i.status !== 'lista_espera' && !i.presenca);
-  let ok = true;
-
-  for (const i of inscConf) {
-    const r = await fetch('/api/supabase', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        acao: 'atualizar',
-        tabela: 'inscricoes',
-        id: i.id,
-        dados: { presenca: true, presenca_em: agora }
-      })
-    });
-    const d = await r.json();
-    if (!Array.isArray(d) || d.length === 0) { ok = false; }
-  }
-
-  // Salvar URL da foto no participante (se houver)
-  if (urlFoto && participanteAtual?.id) {
-    await fetch('/api/supabase', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        acao:   'atualizar',
-        tabela: 'participantes',
-        id:     participanteAtual.id,
-        dados:  { foto_alimento: urlFoto, foto_alimento_em: agora }
-      })
-    });
-  }
-
-  if (ok) {
-    atualizarContador(1);
-    const ficha  = inscricoesAtuais[0]?.numero_ficha || '—';
-    const horaBR = new Date(agora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-    document.getElementById('feedback-nome').textContent  = participanteAtual.nome_completo;
-    document.getElementById('feedback-ficha').textContent = `Ficha ${ficha}`;
-    document.getElementById('feedback-hora').textContent  = `Credenciado às ${horaBR}`;
-
-    // Ícone diferente se tem foto
-    const fbSub = document.querySelector('.feedback-sub');
-    if (fbSub) fbSub.textContent = urlFoto ? 'Credenciamento confirmado ✓' : 'Credenciamento confirmado ✓';
-
-    const fb = document.getElementById('feedback');
-    fb.classList.add('show');
-    setTimeout(() => {
-      fb.classList.remove('show');
-      novaLeitura();
-    }, 2800);
-  } else {
-    if (btn) { btn.textContent = '❌ Erro — tente novamente'; btn.disabled = false; }
-  }
-}
-
-// ================================================================
-// NOVA LEITURA
-// ================================================================
-function novaLeitura() {
+// ════════════════════════════════════════════════════════════════
+// PROCESSAR ENTRADA (câmera ou busca)
+// ════════════════════════════════════════════════════════════════
+function processarEntrada(entrada) {
+  document.getElementById('busca-erro').style.display = 'none';
   participanteAtual = null;
-  inscricoesAtuais  = [];
-  fotoAlimentoUrl   = null;
-  scanBloqueado     = false;
-  document.getElementById('resultado').style.display = 'none';
-  document.getElementById('camera-status').style.display = 'none';
+  inscricaoAtual    = null;
 
-  if (modoAtual === 'qr') {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    // Se câmera ao vivo ativa, continua; senão mostra opções
-    if (!streamAtivo) {
-      document.getElementById('qr-opcoes').style.display = 'block';
-    } else {
-      // Reativa scan na câmera ao vivo
-      const video  = document.getElementById('scanner-video');
-      const canvas = document.getElementById('qr-canvas');
-      if (barcodeDetector) scanComBarcodeDetector(video);
-      else scanComJsQR(video, canvas);
+  const norm = entrada.toUpperCase().replace(/\s/g, '');
+  let insc = null, part = null;
+
+  // Busca por ficha CIC-XXXX
+  if (/^CIC-?\d+$/.test(norm)) {
+    const ficha = 'CIC-' + norm.replace(/^CIC-?/, '');
+    insc = todosDados.inscricoes.find(i => i.numero_ficha === ficha);
+  }
+
+  // Busca por CPF
+  if (!insc) {
+    const digitos = entrada.replace(/\D/g, '');
+    if (digitos.length === 11) {
+      const cpfFmt = digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      part = todosDados.participantes.find(p => p.cpf === cpfFmt || p.cpf === digitos);
+      if (part) insc = todosDados.inscricoes.find(i => i.participante_id === part.id);
     }
+  }
+
+  // Busca por nome
+  if (!insc) {
+    part = todosDados.participantes.find(p =>
+      (p.nome_completo || '').toLowerCase().includes(entrada.toLowerCase())
+    );
+    if (part) insc = todosDados.inscricoes.find(i => i.participante_id === part.id);
+  }
+
+  if (!insc) {
+    mostrarErroBusca('Nenhuma inscrição encontrada para: ' + entrada);
+    document.getElementById('camera-status').textContent = '❌ Não encontrado — tente novamente';
+    document.getElementById('camera-status').className = 'camera-status-box erro';
+    setTimeout(() => {
+      if (modoAtual === 'camera') {
+        document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+        document.getElementById('camera-status').className = 'camera-status-box lendo';
+        scanBloqueado = false;
+        if (!streamAtivo) return;
+        requestAnimationFrame(scanFrame);
+      }
+    }, 2500);
+    return;
+  }
+
+  part = part || getP(insc.participante_id);
+  participanteAtual = part;
+  inscricaoAtual    = insc;
+  exibirResultado(insc, part);
+}
+
+// ════════════════════════════════════════════════════════════════
+// EXIBIR RESULTADO
+// ════════════════════════════════════════════════════════════════
+function exibirResultado(insc, part) {
+  const card = document.getElementById('resultado-card');
+  const status = insc.status;
+  const jaMarca = insc.checkin_realizado;
+
+  // Reset classes
+  card.className = 'resultado-card';
+  card.style.display = 'block';
+
+  // Ícone e classe por status
+  let icone = '—', classe = '';
+  if (status === 'pago')      { icone = jaMarca ? '✅' : '✅'; classe = 'pago'; }
+  else if (status === 'cancelado') { icone = '⛔'; classe = 'cancelado'; }
+  else                        { icone = '⛔'; classe = 'nao-pago'; }
+
+  card.classList.add(classe);
+
+  document.getElementById('res-icone').textContent = icone;
+  document.getElementById('res-nome').textContent  = part.nome_completo || '—';
+  document.getElementById('res-ficha').textContent = `Ficha: ${insc.numero_ficha} · ${part.cidade}`;
+  document.getElementById('res-cam').textContent   = part.tamanho_camiseta || '—';
+  document.getElementById('res-gen').textContent   = part.sexo === 'M' ? 'Masculino' : 'Feminino';
+  document.getElementById('res-cid').textContent   = part.cidade || '—';
+  document.getElementById('res-pgto').textContent  = status === 'pago' ? 'Confirmado' : status === 'cancelado' ? 'Cancelado' : 'Pendente';
+
+  // Badge check-in já feito
+  const badge = document.getElementById('badge-ja-feito');
+  const btnCI = document.getElementById('btn-confirmar');
+  const alertaNP = document.getElementById('alerta-nao-pago');
+  const alertaCanc = document.getElementById('alerta-cancelado');
+
+  badge.style.display    = 'none';
+  btnCI.style.display    = 'none';
+  alertaNP.style.display = 'none';
+  alertaCanc.style.display = 'none';
+
+  if (status === 'pago') {
+    if (jaMarca) {
+      const hora = insc.checkin_data
+        ? new Date(insc.checkin_data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : '—';
+      document.getElementById('badge-hora').textContent = hora;
+      badge.style.display = 'flex';
+      btnCI.style.display = 'block';
+      btnCI.textContent = '✅ Fazer check-in novamente';
+      btnCI.disabled = false;
+    } else {
+      btnCI.style.display = 'block';
+      btnCI.textContent = '✅ Confirmar presença e entregar camiseta';
+      btnCI.disabled = false;
+    }
+  } else if (status === 'cancelado') {
+    alertaCanc.style.display = 'block';
+  } else {
+    alertaNP.style.display = 'block';
+  }
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONFIRMAR CHECK-IN
+// ════════════════════════════════════════════════════════════════
+async function confirmarCheckin() {
+  if (!inscricaoAtual || !participanteAtual) return;
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Registrando…';
+
+  try {
+    await apiPatch('inscricoes', inscricaoAtual.id, {
+      checkin_realizado: true,
+      checkin_data: new Date().toISOString()
+    });
+
+    // Atualiza local
+    inscricaoAtual.checkin_realizado = true;
+    inscricaoAtual.checkin_data = new Date().toISOString();
+    totalCheckins++;
+    atualizarContador();
+
+    mostrarFeedback(participanteAtual, inscricaoAtual);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ Confirmar presença e entregar camiseta';
+    mostrarErroBusca('Erro ao registrar check-in. Tente novamente.');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// FEEDBACK FULLSCREEN
+// ════════════════════════════════════════════════════════════════
+function mostrarFeedback(part, insc) {
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('fb-nome').textContent  = part.nome_completo || '—';
+  document.getElementById('fb-ficha').textContent = `Ficha: ${insc.numero_ficha}`;
+  document.getElementById('fb-cam').textContent   = `Camiseta: ${part.tamanho_camiseta} · ${part.sexo === 'M' ? 'Masculino' : 'Feminino'}`;
+  document.getElementById('fb-hora').textContent  = `Check-in registrado às ${hora}`;
+  document.getElementById('feedback').classList.add('visivel');
+  // Auto-fecha em 8 segundos
+  setTimeout(fecharFeedback, 8000);
+}
+
+function fecharFeedback() {
+  document.getElementById('feedback').classList.remove('visivel');
+  novaLeitura();
+}
+
+// ════════════════════════════════════════════════════════════════
+// NOVA LEITURA
+// ════════════════════════════════════════════════════════════════
+function novaLeitura() {
+  document.getElementById('resultado-card').style.display = 'none';
+  document.getElementById('busca-erro').style.display = 'none';
+  participanteAtual = null;
+  inscricaoAtual = null;
+
+  if (modoAtual === 'camera') {
+    document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+    document.getElementById('camera-status').className = 'camera-status-box lendo';
+    scanBloqueado = false;
+    if (streamAtivo) requestAnimationFrame(scanFrame);
   } else {
     document.getElementById('busca-input').value = '';
     document.getElementById('busca-input').focus();
   }
 }
-
-// ================================================================
-// API
-// ================================================================
-async function apiGet(tabela, query) {
-  const r = await fetch('/api/supabase', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acao: 'buscar', tabela, query: query || 'select=*' })
-  });
-  return r.json();
-}
-
-// ================================================================
-// MODO TELA DO CELULAR — câmera otimizada para ler QR em telas
-// Sem advanced constraints (causam erro no iOS)
-// ================================================================
-async function iniciarCameraTelaInscrito() {
-  // Banner instrução
-  const bAnt = document.getElementById('banner-tela');
-  if (bAnt) bAnt.remove();
-  const banner = document.createElement('div');
-  banner.id = 'banner-tela';
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999;background:#1a56a0;color:white;padding:14px 20px;font-size:14px;font-weight:600;text-align:center;line-height:1.6;';
-  banner.innerHTML = '📱 Peça ao inscrito para <strong>maximizar o brilho da tela</strong> e segurar o celular parado';
-  document.body.appendChild(banner);
-  setTimeout(() => { const b = document.getElementById('banner-tela'); if (b) b.remove(); }, 4500);
-
-  const ok = await _abrirCamera(
-    '📱 Aponte para o QR Code na tela do celular do inscrito',
-    iniciarCameraTelaInscrito
-  );
-  if (!ok) return;
-  _iniciarScan(document.getElementById('scanner-video'), true);
-}
-
-// Scan otimizado para tela: tenta normal + crop central
-function scanTelaJsQR(video, canvas) {
-  if (!streamAtivo || scanBloqueado) return;
-  if (video.readyState >= 2) {
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Tentativa 1: frame completo, ambas inversões
-    const img1  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code1 = jsQR(img1.data, img1.width, img1.height, { inversionAttempts: 'attemptBoth' });
-    if (code1?.data) { scanBloqueado = true; processarQR(code1.data); return; }
-
-    // Tentativa 2: crop 65% central (QR costuma estar no meio da tela)
-    const cw = Math.round(canvas.width * 0.65);
-    const ch = Math.round(canvas.height * 0.65);
-    const cx = Math.round((canvas.width - cw) / 2);
-    const cy = Math.round((canvas.height - ch) / 2);
-    const img2  = ctx.getImageData(cx, cy, cw, ch);
-    const code2 = jsQR(img2.data, cw, ch, { inversionAttempts: 'attemptBoth' });
-    if (code2?.data) { scanBloqueado = true; processarQR(code2.data); return; }
-  }
-  animFrame = requestAnimationFrame(() => scanTelaJsQR(video, canvas));
-}
-
 </script>
 </body>
 </html>
