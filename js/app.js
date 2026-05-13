@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V3.8 — Lógica principal do formulário de inscrições
+// app.js — V3.9 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -12,6 +12,7 @@
 //         img.onerror adicionado · fallback canvas tainted · desenharSemQR centralizado
 // V3.8 — QR Code gerado em canvas isolado (_gerarQRDataURL) — sem cross-origin
 //         QR Code aparece corretamente na ficha salva no celular
+// V3.9 — Correção de cor (preto) e margem (quiet zone) do QR Code para leitura em web/celular
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -395,7 +396,6 @@ function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
 
       <div class="modal-opcoes">
 
-        <!-- PIX -->
         <button class="modal-opcao" id="btn-modal-pix" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','pix')">
           <div class="opcao-icone opcao-icone-pix">⚡</div>
           <div class="opcao-info">
@@ -405,7 +405,6 @@ function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
           <div class="opcao-seta">→</div>
         </button>
 
-        <!-- Cartão -->
         <button class="modal-opcao" id="btn-modal-cartao" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','cartao')">
           <div class="opcao-icone opcao-icone-cartao">💳</div>
           <div class="opcao-info">
@@ -628,7 +627,7 @@ function gerarQRCode(ficha, nome, camiseta, sexo) {
     text:         ficha,
     width:        160,
     height:       160,
-    colorDark:    '#0d2810',
+    colorDark:    '#000000',
     colorLight:   '#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
@@ -682,7 +681,7 @@ function _gerarQRDataURL(texto, tamanho, callback) {
       text:         texto,
       width:        tamanho,
       height:       tamanho,
-      colorDark:    '#0d2810',
+      colorDark:    '#000000',
       colorLight:   '#ffffff',
       correctLevel: QRCode.CorrectLevel.M
     });
@@ -854,7 +853,7 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
     // Fundo branco arredondado para o QR
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(qrX - 10, qrY - 10, 330, 330, 14);
+    ctx.roundRect(qrX - 30, qrY - 30, 370, 370, 16);
     ctx.fill();
 
     const continuar = () => {
