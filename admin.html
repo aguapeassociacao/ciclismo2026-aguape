@@ -3,7 +3,8 @@
   admin.html — Painel Administrativo
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
-  V1.0 — Dashboard · Inscritos · Camisetas · Financeiro · Check-in · Config
+  V1.1 — Dashboard · Inscritos · Camisetas · Financeiro · Check-in · Config
+  V1.1 — Segurança: validação de sessão no servidor · expiração 8h · sem fallback
 -->
 <html lang="pt-BR">
 <head>
@@ -546,8 +547,10 @@ async function fazerLogin() {
     sessionStorage.setItem('admin_token',  adminToken);
     sessionStorage.setItem('admin_perfil', adminPerfil);
     sessionStorage.setItem('admin_nome',   adminNome);
+    if (d.expira_em) sessionStorage.setItem('admin_expira', d.expira_em);
 
     iniciarApp();
+    iniciarAvisoExpiracao(d.expira_em);
   } catch { erro.textContent = 'Erro de conexão. Tente novamente.'; }
 }
 
@@ -567,18 +570,78 @@ document.getElementById('login-senha').addEventListener('keydown', e => {
 window.addEventListener('DOMContentLoaded', () => {
   const t = sessionStorage.getItem('admin_token');
   if (t) {
-    adminToken  = t;
-    adminPerfil = sessionStorage.getItem('admin_perfil') || '';
-    adminNome   = sessionStorage.getItem('admin_nome') || '';
-    iniciarApp();
+    // Valida token no servidor antes de abrir o painel
+    validarSessaoAtiva(t);
   }
 });
+
+async function validarSessaoAtiva(t) {
+  try {
+    const r = await fetch('/api/admin-auth', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ acao: 'validarSessao', token: t })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      adminToken  = t;
+      adminPerfil = sessionStorage.getItem('admin_perfil') || d.perfil;
+      adminNome   = sessionStorage.getItem('admin_nome')   || d.usuario;
+      iniciarApp();
+    } else {
+      // Sessão expirada — limpa e mostra login
+      sessionStorage.clear();
+      mostrarMsgLogin('Sua sessão expirou. Faça login novamente.');
+    }
+  } catch {
+    // Sem conexão — tenta abrir mesmo assim com dados locais
+    adminToken  = t;
+    adminPerfil = sessionStorage.getItem('admin_perfil') || '';
+    adminNome   = sessionStorage.getItem('admin_nome')   || '';
+    iniciarApp();
+  }
+}
+
+function mostrarMsgLogin(msg) {
+  document.getElementById('login-erro').textContent = msg;
+}
 
 function iniciarApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').classList.add('visivel');
   document.getElementById('sb-nome').textContent = adminNome + ' (' + adminPerfil + ')';
+
+  // Retoma aviso de expiração se já havia sessão salva
+  const exp = parseInt(sessionStorage.getItem('admin_expira') || '0');
+  if (exp) iniciarAvisoExpiracao(exp);
+
   carregarTudo();
+}
+
+// Avisa 10 min antes de expirar e desloga automaticamente
+function iniciarAvisoExpiracao(expiraEm) {
+  if (!expiraEm) return;
+  const agora     = Date.now();
+  const restante  = expiraEm - agora;
+  const avisoEm   = restante - (10 * 60 * 1000); // 10 min antes
+
+  if (restante <= 0) { logout(); return; }
+
+  // Aviso 10 min antes
+  if (avisoEm > 0) {
+    setTimeout(() => {
+      if (confirm('⚠️ Sua sessão expira em 10 minutos. Deseja continuar conectado?')) {
+        // Re-autentica silenciosamente não é possível sem senha — apenas avisa
+        alert('Para renovar a sessão, faça logout e login novamente.');
+      }
+    }, avisoEm);
+  }
+
+  // Auto-logout ao expirar
+  setTimeout(() => {
+    alert('⏱️ Sessão expirada. Você será redirecionado para o login.');
+    logout();
+  }, restante);
 }
 
 // ── Dados ─────────────────────────────────────────────────────────
