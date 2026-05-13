@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V3.3Lógica principal do formulário de inscrições
+// app.js — V3.4 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -646,7 +646,11 @@ function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
     'gap:10px','margin-top:10px','transition:opacity .2s'
   ].join(';');
   btn.innerHTML = '📲 Salvar ficha no celular';
-  btn.onclick = () => baixarFichaImagem(ficha, nome, camiseta, sexo);
+  btn.onclick = () => {
+    btn.textContent = '⏳ Gerando ficha…';
+    btn.disabled = true;
+    baixarFichaImagem(ficha, nome, camiseta, sexo, btn);
+  };
   wrap.appendChild(btn);
 
   const dica = document.createElement('p');
@@ -656,7 +660,7 @@ function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
 }
 
 // ── Gera imagem da ficha via Canvas e faz download ─────────────
-function baixarFichaImagem(ficha, nome, camiseta, sexo) {
+function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   // Tamanho: 800×1100px (proporção A5 vertical)
   const W = 800, H = 1100;
   const canvas = document.createElement('canvas');
@@ -751,11 +755,32 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo) {
     ctx.font = '16px Arial, sans-serif';
     ctx.fillText('Associação dos Seringueiros do Vale do Guaporé', W / 2, 1064);
 
-    // Download
-    const link = document.createElement('a');
-    link.download = `ficha_${ficha}_${nome.split(' ')[0]}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Download — mobile usa Web Share API, desktop usa link.click()
+    const nomeArq = `ficha_${ficha}_${nome.split(' ')[0]}.png`;
+    canvas.toBlob(async (blob) => {
+      // Tenta Web Share API (iOS Safari, Android Chrome)
+      if (navigator.canShare && blob) {
+        const file = new File([blob], nomeArq, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: 'Ficha Ciclismo 2026', text: `Ficha ${ficha}` });
+            return;
+          } catch(e) { /* usuário cancelou o share — cai no fallback */ }
+        }
+      }
+      // Fallback mobile: abre imagem em nova aba (usuário segura para salvar)
+      const url = URL.createObjectURL(blob || new Blob([canvas.toDataURL()], {type:'image/png'}));
+      const nova = window.open(url, '_blank');
+      if (!nova) {
+        // Último recurso: link direto
+        const link = document.createElement('a');
+        link.download = nomeArq;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+      btn.textContent = '📲 Salvar ficha no celular';
+      btn.disabled = false;
+    }, 'image/png');
   };
 
   if (qrImg) {
