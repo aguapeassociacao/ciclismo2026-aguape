@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V2.2
+  admin.html — Painel Administrativo V2.3
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
@@ -8,7 +8,9 @@
   V2.1 — Mobile: bottom navigation bar + card acesso rápido check-in no dashboard
   V2.2 — Logo aguape.png: login, sidebar, topbar, relatórios PDF e ficha individual
          Topbar fixa no painel desktop com nome do usuário e botão atualizar
-         Relatórios PDF: cabeçalho com logo, linha dourada, rodapé profissional
+  V2.3 — Correção ficha PDF (img element, sem fetch bloqueado em produção)
+         Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
+         Seção Gestão de Operadores na aba Configurações
 -->
 <html lang="pt-BR">
 <head>
@@ -397,7 +399,7 @@ tr:hover td{background:#fafafa}
       <div class="sb-logo"><img src="aguape.png" alt="Aguapé"></div>
       <div>
         <div class="sb-titulo">Ciclismo 2026</div>
-        <div class="sb-sub">Painel Administrativo · V2.2</div>
+        <div class="sb-sub">Painel Administrativo · V2.3</div>
       </div>
     </div>
     <div class="sb-nav">
@@ -429,7 +431,7 @@ tr:hover td{background:#fafafa}
         <img class="topbar-logo" src="aguape.png" alt="Aguapé">
         <div>
           <div class="topbar-titulo">Ciclismo Individual 2026</div>
-          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.2</div>
+          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.3</div>
         </div>
       </div>
       <div class="topbar-dir">
@@ -649,6 +651,15 @@ tr:hover td{background:#fafafa}
       <div class="page-titulo">Check-in Presencial</div>
       <div class="page-sub">Valida pagamento e registra presença no evento</div>
 
+      <!-- Banner: abrir checkin.html para a equipe -->
+      <div style="background:linear-gradient(135deg,var(--verde-escuro),#1a4d24);border-radius:14px;padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid rgba(45,122,58,.4);box-shadow:0 4px 14px rgba(0,0,0,.12)">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--dourado-claro);font-family:'Georgia',serif;margin-bottom:3px">📱 Página de Check-in para a Equipe</div>
+          <div style="font-size:12px;color:rgba(245,234,208,.55);line-height:1.5">Abra <strong style="color:var(--verde-claro)">checkin.html</strong> no celular dos operadores de pista.<br>Leitura de QR Code · Busca por nome, ficha ou CPF · Funciona offline.</div>
+        </div>
+        <a href="checkin.html" target="_blank" style="background:linear-gradient(135deg,var(--dourado),var(--dourado-claro));color:var(--marrom);border:none;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;flex-shrink:0;box-shadow:0 3px 10px rgba(200,146,10,.35)">Abrir Check-in →</a>
+      </div>
+
       <div class="ci-stats">
         <div class="ci-stat"><div class="ci-num" id="ci-total-pagos">—</div><div class="ci-lbl">Inscritos pagos</div></div>
         <div class="ci-stat"><div class="ci-num" id="ci-total-ci">—</div><div class="ci-lbl">Check-ins realizados</div><div class="ci-pct" id="ci-pct">—</div></div>
@@ -756,6 +767,33 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
       <div class="page-titulo">Configurações</div>
       <div class="page-sub">Controles do sistema, versões e logs</div>
 
+      <!-- ── Gestão de Operadores ─────────────────────────────── -->
+      <div class="config-card">
+        <div class="config-titulo">👥 Operadores do sistema</div>
+        <div class="config-sub">Usuários com acesso ao painel admin e ao check-in da equipe. Cadastrados como variáveis de ambiente no Vercel.</div>
+
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px">📋 Formato para cadastrar um operador no Vercel</div>
+          <div style="font-family:monospace;font-size:12px;color:#166534;background:#dcfce7;border-radius:6px;padding:10px;line-height:2">
+            <strong>Nome da variável:</strong> OPERADOR_1, OPERADOR_2 … OPERADOR_20<br>
+            <strong>Valor:</strong> usuario:senha:Nome Completo:podeExcluir<br>
+            <strong>Exemplo:</strong> joao:senha123:João Silva:false
+          </div>
+          <div style="font-size:11px;color:#15803d;margin-top:8px">• <strong>podeExcluir:</strong> <code>true</code> ou <code>false</code> — controla se o operador pode cancelar inscrições<br>• Operadores têm acesso ao painel admin e ao <strong>checkin.html</strong><br>• O admin master é configurado via <code>ADMIN_USER</code> e <code>ADMIN_SENHA</code></div>
+        </div>
+
+        <div id="operadores-lista">
+          <div style="font-size:12px;color:#6b7280;font-style:italic">Carregando operadores ativos…</div>
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://vercel.com/dashboard" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--verde-escuro);color:var(--creme);border-radius:8px;font-size:12px;font-weight:600;text-decoration:none">
+            ⚙️ Abrir Vercel Dashboard
+          </a>
+          <button onclick="carregarOperadores()" style="padding:8px 16px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:#374151">🔄 Recarregar</button>
+        </div>
+      </div>
+
       <div class="config-card">
         <div class="config-titulo">⏱ Status das inscrições</div>
         <div class="config-sub">Controla se o formulário está aberto ao público.</div>
@@ -771,7 +809,7 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>admin.html</td><td>V2.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V2.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>js/app.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/criar-pagamento.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
@@ -827,7 +865,7 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
 
 <script>
 // ================================================================
-// admin.html — Script V2.2
+// admin.html — Script V2.3
 // © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
 
@@ -985,6 +1023,7 @@ function abrirTab(nome){
   const mapa={dashboard:0,inscritos:1,pendentes:2,camisetas:3,financeiro:4,checkin:5,comunicacao:6,config:7};
   document.querySelectorAll('.sb-item')[mapa[nome]]?.classList.add('ativo');
   if(nome!=='checkin') pararCamera();
+  if(nome==='config') carregarOperadores();
 }
 
 function navMobile(nome){
@@ -1469,6 +1508,39 @@ function verificarStatusInscricoes(){
   document.getElementById('toggle-inscricoes').checked=aberto;
   document.getElementById('toggle-label').textContent=aberto?'🟢 Inscrições abertas':'🔴 Inscrições encerradas';
 }
+// ═══════════════════════════════════════════════════════════════
+// GESTÃO DE OPERADORES
+// ═══════════════════════════════════════════════════════════════
+async function carregarOperadores(){
+  const el=document.getElementById('operadores-lista'); if(!el) return;
+  el.innerHTML='<div style="font-size:12px;color:#6b7280;font-style:italic">Verificando operadores ativos…</div>';
+  try{
+    const r=await fetch('/api/admin-auth',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'listarOperadores',token:adminToken})});
+    const d=await r.json();
+    if(d.ok && d.operadores && d.operadores.length>0){
+      const rows=d.operadores.map((op,idx)=>`
+        <tr>
+          <td><strong>${idx+1}</strong></td>
+          <td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">${op.usuario}</code></td>
+          <td>${op.nome}</td>
+          <td>${op.perfil==='admin'?'<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">Admin</span>':'<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">Operador</span>'}</td>
+          <td>${op.podeExcluir?'<span style="color:#15803d">✅ Sim</span>':'<span style="color:#9ca3af">— Não</span>'}</td>
+        </tr>`).join('');
+      el.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Pode excluir</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:8px">${d.operadores.length} usuário(s) ativo(s) · Admin master incluído</div>`;
+    } else {
+      // API não suporta listagem — mostra instrução manual
+      el.innerHTML=`<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e">
+        <strong>⚠️ Listagem automática não disponível</strong><br>
+        Para ver os operadores cadastrados, acesse o <strong>Vercel Dashboard → Settings → Environment Variables</strong> e procure pelas variáveis <code>OPERADOR_1</code>, <code>OPERADOR_2</code> etc.
+      </div>`;
+    }
+  }catch(e){
+    el.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;font-size:12px;color:#991b1b">Erro ao consultar operadores. Verifique no Vercel Dashboard.</div>`;
+  }
+}
+
 function alterarInscricoes(){
   const aberto=document.getElementById('toggle-inscricoes').checked;
   const label=document.getElementById('toggle-label');
@@ -1623,22 +1695,29 @@ function exportarPDF(tipo){
     doc.save(`${tipo}_ciclismo2026_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
   }
 
-  // Carrega logo do arquivo local (sem base64 hardcoded)
-  fetch('aguape.png')
-    .then(r=>r.blob())
-    .then(blob=>{const fr=new FileReader();fr.onload=e=>_gerarPDFComLogo(e.target.result);fr.readAsDataURL(blob);})
-    .catch(()=>_gerarPDFComLogo(null));
+  // Carrega logo via elemento <img> — evita bloqueio de fetch em produção
+  const _imgLogo=document.createElement('img');
+  _imgLogo.crossOrigin='anonymous';
+  _imgLogo.onload=function(){
+    try{
+      const cv=document.createElement('canvas'); cv.width=_imgLogo.naturalWidth; cv.height=_imgLogo.naturalHeight;
+      cv.getContext('2d').drawImage(_imgLogo,0,0);
+      _gerarPDFComLogo(cv.toDataURL('image/png'));
+    }catch(e){_gerarPDFComLogo(null);}
+  };
+  _imgLogo.onerror=function(){_gerarPDFComLogo(null);};
+  _imgLogo.src='aguape.png?v='+Date.now();
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FICHA INDIVIDUAL PDF — V2.2 (com logo Aguapé)
+// FICHA INDIVIDUAL PDF — V2.3 (com logo Aguapé via img element)
 // ═══════════════════════════════════════════════════════════════
 function baixarFichaIndividual(inscId){
   const i=todosDados.inscricoes.find(x=>x.id===inscId); if(!i)return;
   const p=gP(i.participante_id);
+  if(!window.jspdf){alert('jsPDF não carregado. Verifique a conexão e tente novamente.');return;}
   const {jsPDF}=window.jspdf;
 
-  // Formato A6 paisagem (148 x 105 mm) — tamanho de crachá
   const doc=new jsPDF({unit:'mm',format:'a6',orientation:'portrait'});
   const W=105, H=148;
   const corVerde=[13,40,16];
@@ -1649,126 +1728,65 @@ function baixarFichaIndividual(inscId){
   const corVerdeClaro=[125,207,138];
 
   function _desenharFicha(logoDataUrl){
-    // ── Fundo inteiro verde ──────────────────────────────────────
-    doc.setFillColor(...corVerde);
-    doc.rect(0,0,W,H,'F');
-
-    // ── Borda dupla dourada ──────────────────────────────────────
-    doc.setDrawColor(...corDourado);
-    doc.setLineWidth(2);
-    doc.rect(4,4,W-8,H-8);
-    doc.setLineWidth(0.4);
-    doc.rect(6.5,6.5,W-13,H-13);
-
-    // ── Cabeçalho: faixa verde-medio ─────────────────────────────
-    doc.setFillColor(...corVerdeMedio);
-    doc.rect(4,4,W-8,24,'F');
-
-    // Logo no canto esquerdo do cabeçalho
-    if(logoDataUrl){
-      doc.addImage(logoDataUrl,'PNG',7,5.5,20,20);
-    }
-
-    // Título do evento
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...corDouradoClaro);
-    doc.text('CICLISMO INDIVIDUAL 2026', logoDataUrl ? W/2+5 : W/2, 13, {align:'center'});
-
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(6.5);
-    doc.setTextColor(200,230,200);
-    doc.text('Turismo de Base Comunitaria  |  Aguape  |  Costa Marques, RO', logoDataUrl ? W/2+5 : W/2, 19, {align:'center'});
-
-    // ── Número da ficha (destaque máximo) ───────────────────────
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(36);
-    doc.setTextColor(...corDouradoClaro);
+    doc.setFillColor(...corVerde); doc.rect(0,0,W,H,'F');
+    doc.setDrawColor(...corDourado); doc.setLineWidth(2); doc.rect(4,4,W-8,H-8);
+    doc.setLineWidth(0.4); doc.rect(6.5,6.5,W-13,H-13);
+    doc.setFillColor(...corVerdeMedio); doc.rect(4,4,W-8,24,'F');
+    if(logoDataUrl){ try{doc.addImage(logoDataUrl,'PNG',7,5.5,20,20);}catch(e){} }
+    const txX = logoDataUrl ? W/2+5 : W/2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...corDouradoClaro);
+    doc.text('CICLISMO INDIVIDUAL 2026',txX,13,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(200,230,200);
+    doc.text('Turismo de Base Comunitaria  |  Aguape  |  Costa Marques, RO',txX,19,{align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(36); doc.setTextColor(...corDouradoClaro);
     doc.text(i.numero_ficha||'---',W/2,48,{align:'center'});
-
-    // Linha dourada fina abaixo do número
-    doc.setDrawColor(...corDourado);
-    doc.setLineWidth(0.6);
-    doc.line(14,52,W-14,52);
-
-    // ── Nome do participante ─────────────────────────────────────
+    doc.setDrawColor(...corDourado); doc.setLineWidth(0.6); doc.line(14,52,W-14,52);
     const nome=(p.nome_completo||'---').toUpperCase();
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(nome.length>25?9:11);
-    doc.setTextColor(...corCreme);
+    doc.setFont('helvetica','bold'); doc.setFontSize(nome.length>25?9:11); doc.setTextColor(...corCreme);
     doc.text(nome,W/2,61,{align:'center',maxWidth:86});
-
-    // ── Linha de detalhes ─────────────────────────────────────────
-    const genero=p.sexo==='M'?'MASCULINO':'FEMININO';
-    const cam=p.tamanho_camiseta||'--';
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...corVerdeClaro);
+    const genero=p.sexo==='M'?'MASCULINO':'FEMININO'; const cam=p.tamanho_camiseta||'--';
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...corVerdeClaro);
     doc.text(`${genero}   |   CAMISETA ${cam}`,W/2,69,{align:'center'});
-
-    doc.setFontSize(7.5);
-    doc.setTextColor(170,210,170);
+    doc.setFontSize(7.5); doc.setTextColor(170,210,170);
     doc.text(`${p.cidade||'---'} / ${p.uf||'RO'}`,W/2,75,{align:'center'});
+    doc.setDrawColor(...corVerdeMedio); doc.setLineWidth(0.4); doc.line(14,79,W-14,79);
 
-    // ── Separador central ─────────────────────────────────────────
-    doc.setDrawColor(...corVerdeMedio);
-    doc.setLineWidth(0.4);
-    doc.line(14,79,W-14,79);
-
-    // ── QR Code (gerado em div oculta) ───────────────────────────
-    const qrDiv=document.createElement('div');
-    qrDiv.style.display='none';
+    // QR Code
+    const qrDiv=document.createElement('div'); qrDiv.style.cssText='position:fixed;left:-9999px;top:0';
     document.body.appendChild(qrDiv);
-
-    new QRCode(qrDiv,{
-      text:`${i.numero_ficha}|${p.nome_completo}`,
-      width:160,height:160,
-      colorDark:'#0d2810',colorLight:'#ffffff',
-      correctLevel:QRCode.CorrectLevel.M
-    });
-
+    new QRCode(qrDiv,{text:`${i.numero_ficha}|${p.nome_completo}`,width:160,height:160,colorDark:'#0d2810',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
     setTimeout(()=>{
       const imgEl=qrDiv.querySelector('img')||qrDiv.querySelector('canvas');
       if(imgEl){
-        doc.setFillColor(255,255,255);
-        doc.roundedRect(W/2-20,82,40,40,2,2,'F');
-        const dataUrl=imgEl.tagName==='IMG'?imgEl.src:imgEl.toDataURL();
-        doc.addImage(dataUrl,'PNG',W/2-19,83,38,38);
+        doc.setFillColor(255,255,255); doc.roundedRect(W/2-20,82,40,40,2,2,'F');
+        try{doc.addImage(imgEl.tagName==='IMG'?imgEl.src:imgEl.toDataURL(),'PNG',W/2-19,83,38,38);}catch(e){}
       }
       document.body.removeChild(qrDiv);
-
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(6);
-      doc.setTextColor(120,160,120);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(120,160,120);
       doc.text('Escaneie para verificar a inscricao',W/2,125,{align:'center'});
-
-      // ── Rodapé ───────────────────────────────────────────────
-      doc.setFillColor(...corVerdeMedio);
-      doc.rect(4,H-22,W-8,18,'F');
-
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...corDouradoClaro);
+      doc.setFillColor(...corVerdeMedio); doc.rect(4,H-22,W-8,18,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...corDouradoClaro);
       doc.text('09 DE AGOSTO DE 2026',W/2,H-15,{align:'center'});
-
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(6.5);
-      doc.setTextColor(200,230,200);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(200,230,200);
       doc.text('Apresente esta ficha para retirar a camiseta',W/2,H-10,{align:'center'});
-
-      doc.setFontSize(5.5);
-      doc.setTextColor(150,190,150);
+      doc.setFontSize(5.5); doc.setTextColor(150,190,150);
       doc.text('Assoc. dos Seringueiros do Vale do Guapore',W/2,H-6,{align:'center'});
-
       doc.save(`ficha_${i.numero_ficha}_${(p.nome_completo||'').split(' ')[0]}.pdf`);
-    },500);
+    },600);
   }
 
-  // Carrega logo do arquivo local
-  fetch('aguape.png')
-    .then(r=>r.blob())
-    .then(blob=>{const fr=new FileReader();fr.onload=e=>_desenharFicha(e.target.result);fr.readAsDataURL(blob);})
-    .catch(()=>_desenharFicha(null));
+  // Carrega logo via elemento <img> no DOM — evita bloqueio de fetch em produção
+  const imgLogo=document.createElement('img');
+  imgLogo.crossOrigin='anonymous';
+  imgLogo.onload=function(){
+    try{
+      const cv=document.createElement('canvas'); cv.width=imgLogo.naturalWidth; cv.height=imgLogo.naturalHeight;
+      cv.getContext('2d').drawImage(imgLogo,0,0);
+      _desenharFicha(cv.toDataURL('image/png'));
+    }catch(e){_desenharFicha(null);}
+  };
+  imgLogo.onerror=function(){_desenharFicha(null);};
+  imgLogo.src='aguape.png?v='+Date.now();
 }
 </script>
 </body>
