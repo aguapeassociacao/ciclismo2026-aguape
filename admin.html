@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V2.0
+  admin.html — Painel Administrativo V2.1
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
          Check-in com câmera · Relatório pendentes · Export Excel/PDF · Comunicação
+  V2.1 — Mobile: bottom navigation bar + card acesso rápido check-in no dashboard
 -->
 <html lang="pt-BR">
 <head>
@@ -277,7 +278,10 @@ tr:hover td{background:#fafafa}
 .alerta-verde{background:#dcfce7;border:1px solid #86efac;color:#15803d}
 .alerta-azul{background:#eff6ff;border:1px solid #93c5fd;color:#1d4ed8}
 
-/* ── Responsivo ──────────────────────────────────────────────── */
+/* ── Bottom Nav Mobile ───────────────────────────────────────── */
+.bottom-nav{display:none}
+.checkin-rapido-card{display:none}
+
 @media(max-width:900px){
   .sidebar{display:none}
   .stats-grid{grid-template-columns:1fr 1fr}
@@ -287,7 +291,62 @@ tr:hover td{background:#fafafa}
   .fin-grid{grid-template-columns:1fr}
   .ci-stats{grid-template-columns:1fr 1fr}
   .ci-info-grid{grid-template-columns:1fr}
-  .conteudo{padding:14px}
+  .conteudo{padding:14px 14px 90px}
+
+  /* Bottom navigation bar */
+  .bottom-nav{
+    display:flex;
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--verde-escuro);
+    border-top:1px solid rgba(255,255,255,.1);
+    z-index:1000;
+    padding:0;
+    height:64px;
+    box-shadow:0 -4px 20px rgba(0,0,0,.35);
+  }
+  .bn-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;cursor:pointer;
+    color:rgba(245,234,208,.4);
+    font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+    padding:8px 2px;
+    transition:color .15s, background .15s;
+    position:relative;
+    border:none;background:transparent;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bn-item:active{background:rgba(255,255,255,.06)}
+  .bn-item.ativo{color:var(--verde-claro)}
+  .bn-item.ativo .bn-icon{transform:translateY(-2px)}
+  .bn-icon{font-size:20px;transition:transform .15s;line-height:1}
+  .bn-badge{
+    position:absolute;top:6px;right:calc(50% - 18px);
+    background:var(--err);color:#fff;font-size:9px;font-weight:700;
+    padding:1px 5px;border-radius:20px;min-width:16px;text-align:center;
+    line-height:16px;height:16px;
+  }
+
+  /* Card check-in rápido no dashboard */
+  .checkin-rapido-card{
+    background:linear-gradient(135deg,var(--verde-escuro) 0%,#1a4d24 100%);
+    border-radius:16px;padding:20px;margin-bottom:20px;
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    border:1px solid rgba(45,122,58,.4);
+    box-shadow:0 4px 16px rgba(0,0,0,.15);
+  }
+  .checkin-rapido-info{flex:1}
+  .checkin-rapido-titulo{font-size:15px;font-weight:700;color:var(--dourado-claro);font-family:'Georgia',serif;margin-bottom:3px}
+  .checkin-rapido-sub{font-size:12px;color:rgba(245,234,208,.55);line-height:1.4}
+  .btn-checkin-rapido{
+    background:linear-gradient(135deg,var(--dourado),var(--dourado-claro));
+    color:var(--marrom);border:none;border-radius:12px;
+    padding:12px 18px;font-size:13px;font-weight:700;
+    cursor:pointer;white-space:nowrap;flex-shrink:0;
+    box-shadow:0 3px 10px rgba(200,146,10,.35);
+    transition:opacity .15s,transform .1s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-checkin-rapido:active{opacity:.85;transform:scale(.97)}
 }
 </style>
 </head>
@@ -323,7 +382,7 @@ tr:hover td{background:#fafafa}
     <div class="sb-topo">
       <div class="sb-logo">🚴</div>
       <div class="sb-titulo">Ciclismo 2026</div>
-      <div class="sb-sub">Painel Administrativo · V2.0</div>
+      <div class="sb-sub">Painel Administrativo · V2.1</div>
     </div>
     <div class="sb-nav">
       <div class="sb-secao">Visão Geral</div>
@@ -364,6 +423,15 @@ tr:hover td{background:#fafafa}
           <div class="countdown-item"><div class="countdown-num" id="cd-horas">—</div><div class="countdown-unit">horas</div></div>
           <div class="countdown-item"><div class="countdown-num" id="cd-min">—</div><div class="countdown-unit">min</div></div>
         </div>
+      </div>
+
+      <!-- Card check-in rápido (visível só no mobile via CSS) -->
+      <div class="checkin-rapido-card">
+        <div class="checkin-rapido-info">
+          <div class="checkin-rapido-titulo">✅ Check-in do Evento</div>
+          <div class="checkin-rapido-sub">Abrir painel de check-in<br>com leitura de QR Code</div>
+        </div>
+        <button class="btn-checkin-rapido" onclick="abrirTab('checkin')">Fazer Check-in →</button>
       </div>
 
       <!-- Stats -->
@@ -670,7 +738,7 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>admin.html</td><td>V2.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V2.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>js/app.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/criar-pagamento.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
@@ -694,11 +762,37 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
     </div>
 
   </main>
+
+  <!-- ═══ BOTTOM NAV (mobile) ════════════════════════════════ -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bn-item ativo" onclick="navMobile('dashboard')" id="bn-dashboard">
+      <span class="bn-icon">📊</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('inscritos')" id="bn-inscritos">
+      <span class="bn-icon">👥</span>
+      <span>Inscritos</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('checkin')" id="bn-checkin">
+      <span class="bn-icon">✅</span>
+      <span>Check-in</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('pendentes')" id="bn-pendentes">
+      <span class="bn-icon">⏳</span>
+      <span>Pendentes</span>
+      <span class="bn-badge" id="bn-badge-pendentes" style="display:none">0</span>
+    </button>
+    <button class="bn-item" onclick="navMobile('financeiro')" id="bn-financeiro">
+      <span class="bn-icon">💰</span>
+      <span>Financeiro</span>
+    </button>
+  </nav>
+
 </div>
 
 <script>
 // ================================================================
-// admin.html — Script V2.0
+// admin.html — Script V2.1
 // © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
 
@@ -812,6 +906,9 @@ async function carregarTudo(){
   inscFiltrados=[...todosDados.inscricoes];
   pendFiltrados=todosDados.inscricoes.filter(i=>i.status==='pendente_pagamento'||i.status==='aguardando_boleto');
   document.getElementById('badge-pendentes').textContent=pendFiltrados.length;
+  // Sincroniza badge da bottom nav
+  const bnBadge=document.getElementById('bn-badge-pendentes');
+  if(bnBadge){bnBadge.textContent=pendFiltrados.length;bnBadge.style.display=pendFiltrados.length>0?'block':'none';}
   renderizarDashboard();
   renderizarInscritos();
   renderizarPendentes();
@@ -851,6 +948,16 @@ function abrirTab(nome){
   const mapa={dashboard:0,inscritos:1,pendentes:2,camisetas:3,financeiro:4,checkin:5,comunicacao:6,config:7};
   document.querySelectorAll('.sb-item')[mapa[nome]]?.classList.add('ativo');
   if(nome!=='checkin') pararCamera();
+}
+
+function navMobile(nome){
+  abrirTab(nome);
+  // Atualiza estado ativo na bottom nav
+  document.querySelectorAll('.bn-item').forEach(el=>el.classList.remove('ativo'));
+  const el=document.getElementById('bn-'+nome);
+  if(el) el.classList.add('ativo');
+  // Scroll ao topo do conteúdo
+  document.querySelector('.conteudo')?.scrollTo({top:0,behavior:'smooth'});
 }
 
 function fecharModal(id){document.getElementById(id).classList.remove('aberto');}
