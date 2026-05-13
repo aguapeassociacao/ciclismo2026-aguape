@@ -82,3 +82,29 @@ ALTER TABLE pagamentos    ENABLE ROW LEVEL SECURITY;
 SELECT table_name FROM information_schema.tables
 WHERE table_schema = 'public'
 ORDER BY table_name;
+
+-- ── 8. Tabela de operadores do sistema ────────────────────────
+-- Gerenciada pelo admin master via painel. Sem necessidade de
+-- acessar Vercel Dashboard para cadastrar operadores.
+CREATE TABLE IF NOT EXISTS admin_operadores (
+  id           SERIAL PRIMARY KEY,
+  usuario      TEXT    NOT NULL UNIQUE,
+  senha        TEXT    NOT NULL,
+  nome         TEXT    NOT NULL,
+  pode_excluir BOOLEAN NOT NULL DEFAULT FALSE,
+  ativo        BOOLEAN NOT NULL DEFAULT TRUE,
+  criado_em    TIMESTAMPTZ DEFAULT NOW(),
+  atualizado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_operadores_usuario ON admin_operadores(usuario);
+CREATE INDEX IF NOT EXISTS idx_operadores_ativo   ON admin_operadores(ativo);
+
+ALTER TABLE admin_operadores ENABLE ROW LEVEL SECURITY;
+
+-- Verificação
+SELECT 'admin_operadores criada' AS status
+WHERE EXISTS (
+  SELECT 1 FROM information_schema.tables
+  WHERE table_name = 'admin_operadores'
+);
