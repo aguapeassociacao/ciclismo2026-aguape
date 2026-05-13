@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V3.6 — Lógica principal do formulário de inscrições
+// app.js — V3.8 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -8,6 +8,8 @@
 // V3.4 — Web Share API para salvar ficha no celular (iOS/Android)
 // V3.5 — Data de nascimento: 3 selects (dia/mês/ano) no lugar do calendário nativo
 // V3.6 — Scroll para tela de sucesso após inscrição · botão salvar ficha não trava mais
+// V3.7 — Salvar ficha: remove crossOrigin e toBlob · usa toDataURL síncrono · sem travamento
+// V3.8 — Portado impl. Festival de Inverno: QR em div oculto · modal na página · rrect polyfill · iOS/Android
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -634,11 +636,228 @@ function gerarQRCode(ficha, nome, camiseta, sexo) {
 }
 
 // ── Insere botão "Salvar ficha no celular" na tela de sucesso ──
+// QR CODE + FICHA PARA DOWNLOAD (portado do Festival de Inverno — v4)
+// ══════════════════════════════════════════════════════════════
+
+// Variáveis do participante atual (salvas ao gerar o QR)
+let _fichaAtual = '', _fichaAtualNome = '', _fichaAtualCamiseta = '', _fichaAtualSexo = '';
+
+// Polyfill roundRect — ctx.roundRect() não existe em Safari antigo
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// Gera QR Code num div oculto e retorna dataURL via callback
+// Evita taint de canvas — nunca usa o QR que está no DOM
+function _gerarQRDataURL(texto, tamanho, callback) {
+  if (typeof QRCode === 'undefined') { callback(null); return; }
+
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+  document.body.appendChild(div);
+
+  try {
+    new QRCode(div, {
+      text:         texto,
+      width:        tamanho,
+      height:       tamanho,
+      colorDark:    '#0d2810',
+      colorLight:   '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    document.body.removeChild(div);
+    callback(null);
+    return;
+  }
+
+  // QRCode.js precisa de um tick para renderizar
+  setTimeout(() => {
+    const qrCanvas = div.querySelector('canvas');
+    const qrImg    = div.querySelector('img');
+    let dataUrl    = null;
+
+    if (qrCanvas) {
+      try { dataUrl = qrCanvas.toDataURL('image/png'); } catch(e) {}
+    }
+    if (!dataUrl && qrImg && qrImg.src) {
+      dataUrl = qrImg.src; // já é data URL no QRCode.js
+    }
+
+    document.body.removeChild(div);
+    callback(dataUrl);
+  }, 150);
+}
+
+// Modal exibido dentro da página — funciona em iOS e Android
+function _mostrarModalFicha(dataUrl, nomeArquivo) {
+  const antigo = document.getElementById('modal-ficha-cic');
+  if (antigo) antigo.remove();
+
+  const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-ficha-cic';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+
+  modal.innerHTML =
+    '<div style="width:100%;max-width:400px;margin:0 auto;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+        '<div style="color:white;font-weight:700;font-size:16px;">📄 Sua ficha de inscrição</div>' +
+        '<button onclick="document.getElementById('modal-ficha-cic').remove()" ' +
+          'style="background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0;">✕</button>' +
+      '</div>' +
+      '<img src="' + dataUrl + '" style="width:100%;border-radius:12px;display:block;box-shadow:0 4px 20px rgba(0,0,0,0.5);">' +
+      (isIOS
+        ? '<div style="margin-top:12px;background:#1e293b;border-radius:12px;padding:14px 16px;color:#94a3b8;font-size:13px;text-align:center;line-height:1.7;">' +
+            '📱 <strong style="color:white;">iPhone / iPad:</strong><br>' +
+            'Pressione e segure a imagem acima<br>e toque em <strong style="color:#7dcf8a;">"Adicionar à Fotos"</strong>' +
+          '</div>'
+        : '<a href="' + dataUrl + '" download="' + nomeArquivo + '" ' +
+            'style="display:block;margin-top:12px;width:100%;padding:15px;background:linear-gradient(135deg,#1a5c2a,#2d7a3a);color:#f5ead0;border:none;border-radius:12px;font-size:15px;font-weight:700;text-align:center;text-decoration:none;box-sizing:border-box;">' +
+            '⬇️ Baixar imagem no dispositivo' +
+          '</a>'
+      ) +
+      '<button onclick="document.getElementById('modal-ficha-cic').remove()" ' +
+        'style="margin-top:10px;width:100%;padding:13px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:12px;font-size:14px;cursor:pointer;">' +
+        'Fechar' +
+      '</button>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+}
+
+// Desenha a ficha no canvas e chama callback com o dataURL
+function _desenharFichaCiclismo(callback) {
+  _gerarQRDataURL(_fichaAtual, 220, (qrDataUrl) => {
+    const W = 800, H = 1100;
+    const cv = document.createElement('canvas');
+    cv.width  = W * 2;
+    cv.height = H * 2;
+    const ctx = cv.getContext('2d');
+    ctx.scale(2, 2);
+
+    // Fundo
+    ctx.fillStyle = '#0d2810';
+    ctx.fillRect(0, 0, W, H);
+
+    // Borda dupla dourada
+    ctx.strokeStyle = '#c8920a'; ctx.lineWidth = 8;
+    ctx.strokeRect(16, 16, W - 32, H - 32);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(28, 28, W - 56, H - 56);
+
+    // Cabeçalho
+    ctx.fillStyle = '#1a5c2a';
+    ctx.fillRect(16, 16, W - 32, 120);
+    ctx.fillStyle = '#f0b429';
+    ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('CICLISMO INDIVIDUAL 2026', W / 2, 68);
+    ctx.fillStyle = 'rgba(200,230,200,0.85)';
+    ctx.font = '16px Arial';
+    ctx.fillText('Turismo de Base Comunitária  ·  Assoc. Seringueiros do Vale do Guaporé', W / 2, 106);
+
+    // Número da ficha
+    ctx.fillStyle = '#f0b429';
+    ctx.font = 'bold 110px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(_fichaAtual, W / 2, 300);
+
+    // Linha dourada
+    ctx.strokeStyle = '#c8920a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(80, 330); ctx.lineTo(W - 80, 330); ctx.stroke();
+
+    // Nome
+    ctx.fillStyle = '#f5ead0';
+    ctx.font = 'bold 38px Arial';
+    let nomeUp = (_fichaAtualNome || '').toUpperCase();
+    while (ctx.measureText(nomeUp).width > 680 && nomeUp.length > 10)
+      nomeUp = nomeUp.slice(0, -4) + '...';
+    ctx.fillText(nomeUp, W / 2, 400);
+
+    // Gênero e camiseta
+    const genero = _fichaAtualSexo === 'M' ? 'MASCULINO' : 'FEMININO';
+    ctx.fillStyle = '#7dcf8a';
+    ctx.font = '26px Arial';
+    ctx.fillText(genero + '   |   CAMISETA ' + (_fichaAtualCamiseta || '—'), W / 2, 458);
+
+    // Linha sep
+    ctx.strokeStyle = '#2d7a3a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(80, 488); ctx.lineTo(W - 80, 488); ctx.stroke();
+
+    // Instrução
+    ctx.fillStyle = 'rgba(245,234,208,0.6)';
+    ctx.font = '22px Arial';
+    ctx.fillText('Apresente o QR Code abaixo no credenciamento', W / 2, 538);
+
+    const qrSize = 300, qrX = (W - qrSize) / 2, qrY = 565;
+
+    const continuar = () => {
+      // Legenda QR
+      ctx.fillStyle = 'rgba(125,207,138,0.7)';
+      ctx.font = '18px Arial'; ctx.textAlign = 'center';
+      ctx.fillText('Escaneie para verificar sua inscrição', W / 2, qrY + qrSize + 32);
+
+      // Linha
+      ctx.strokeStyle = '#2d7a3a'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(80, qrY + qrSize + 50); ctx.lineTo(W - 80, qrY + qrSize + 50); ctx.stroke();
+
+      // Rodapé
+      ctx.fillStyle = '#1a5c2a';
+      ctx.fillRect(16, qrY + qrSize + 56, W - 32, H - (qrY + qrSize + 72));
+      ctx.fillStyle = '#f0b429';
+      ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
+      ctx.fillText('09 DE AGOSTO DE 2026 · COSTA MARQUES, RO', W / 2, qrY + qrSize + 96);
+      ctx.fillStyle = 'rgba(200,230,200,0.85)';
+      ctx.font = '19px Arial';
+      ctx.fillText('Apresente esta ficha para retirar sua camiseta', W / 2, qrY + qrSize + 128);
+      ctx.fillStyle = 'rgba(150,190,150,0.6)';
+      ctx.font = '15px Arial';
+      ctx.fillText('Associação dos Seringueiros do Vale do Guaporé', W / 2, qrY + qrSize + 158);
+
+      callback(cv.toDataURL('image/png'));
+    };
+
+    // Fundo branco para o QR
+    ctx.fillStyle = '#ffffff';
+    rrect(ctx, qrX - 12, qrY - 12, qrSize + 24, qrSize + 24, 14);
+    ctx.fill();
+
+    if (qrDataUrl) {
+      const img = new Image();
+      img.onload  = () => { ctx.drawImage(img, qrX, qrY, qrSize, qrSize); continuar(); };
+      img.onerror = () => {
+        ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial';
+        ctx.fillText('(' + _fichaAtual + ')', W / 2, qrY + qrSize / 2);
+        continuar();
+      };
+      img.src = qrDataUrl;
+    } else {
+      ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial';
+      ctx.fillText('(' + _fichaAtual + ')', W / 2, qrY + qrSize / 2);
+      continuar();
+    }
+  });
+}
+
 function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
+  // Salva dados para usar no _desenharFichaCiclismo
+  _fichaAtual        = ficha;
+  _fichaAtualNome    = nome;
+  _fichaAtualCamiseta = camiseta;
+  _fichaAtualSexo    = sexo;
+
   const wrap = document.querySelector('.qrcode-wrap');
   if (!wrap) return;
-
-  // Não duplica
   if (document.getElementById('btn-salvar-ficha')) return;
 
   const btn = document.createElement('button');
@@ -655,7 +874,11 @@ function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
   btn.onclick = () => {
     btn.textContent = '⏳ Gerando ficha…';
     btn.disabled = true;
-    baixarFichaImagem(ficha, nome, camiseta, sexo, btn);
+    _desenharFichaCiclismo((dataUrl) => {
+      _mostrarModalFicha(dataUrl, 'ficha_' + ficha + '_' + (nome.split(' ')[0]) + '.png');
+      btn.textContent = '📲 Salvar ficha no celular';
+      btn.disabled = false;
+    });
   };
   wrap.appendChild(btn);
 
@@ -665,177 +888,6 @@ function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
   wrap.appendChild(dica);
 }
 
-// ── Gera imagem da ficha via Canvas e faz download ─────────────
-function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
-  // Tamanho: 800×1100px (proporção A5 vertical)
-  const W = 800, H = 1100;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // ── Fundo verde-escuro
-  ctx.fillStyle = '#0d2810';
-  ctx.fillRect(0, 0, W, H);
-
-  // ── Borda dupla dourada
-  ctx.strokeStyle = '#c8920a';
-  ctx.lineWidth = 8;
-  ctx.strokeRect(16, 16, W - 32, H - 32);
-  ctx.lineWidth = 2;
-  ctx.strokeRect(28, 28, W - 56, H - 56);
-
-  // ── Faixa cabeçalho
-  ctx.fillStyle = '#1a5c2a';
-  ctx.fillRect(16, 16, W - 32, 120);
-
-  ctx.fillStyle = '#f0b429';
-  ctx.font = 'bold 28px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('CICLISMO INDIVIDUAL 2026', W / 2, 70);
-
-  ctx.fillStyle = 'rgba(200,230,200,0.8)';
-  ctx.font = '18px Arial, sans-serif';
-  ctx.fillText('Turismo de Base Comunitária  ·  Assoc. Seringueiros do Vale do Guaporé', W / 2, 108);
-
-  // ── Número da ficha
-  ctx.fillStyle = '#f0b429';
-  ctx.font = 'bold 110px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(ficha, W / 2, 300);
-
-  // Linha dourada
-  ctx.strokeStyle = '#c8920a';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(80, 330); ctx.lineTo(W - 80, 330); ctx.stroke();
-
-  // ── Nome
-  ctx.fillStyle = '#f5ead0';
-  ctx.font = 'bold 38px Arial, sans-serif';
-  const nomeUpper = (nome || '').toUpperCase();
-  // Quebra nome se muito longo
-  if (ctx.measureText(nomeUpper).width > 640) {
-    ctx.font = 'bold 30px Arial, sans-serif';
-  }
-  ctx.fillText(nomeUpper, W / 2, 400);
-
-  // ── Categoria e camiseta
-  const genero = sexo === 'M' ? 'MASCULINO' : 'FEMININO';
-  ctx.fillStyle = '#7dcf8a';
-  ctx.font = '26px Arial, sans-serif';
-  ctx.fillText(`${genero}   |   CAMISETA ${camiseta || '—'}`, W / 2, 460);
-
-  // Linha separadora
-  ctx.strokeStyle = '#2d7a3a';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(80, 490); ctx.lineTo(W - 80, 490); ctx.stroke();
-
-  // ── Instrução
-  ctx.fillStyle = 'rgba(245,234,208,0.6)';
-  ctx.font = '22px Arial, sans-serif';
-  ctx.fillText('Apresente o QR Code abaixo no credenciamento', W / 2, 540);
-
-  // ── QR Code (pega do DOM já gerado)
-  const qrImg = document.querySelector('#qrcode-sucesso img') ||
-                document.querySelector('#qrcode-sucesso canvas');
-
-  const desenharRodape = () => {
-    // Linha separadora
-    ctx.strokeStyle = '#2d7a3a';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(80, 940); ctx.lineTo(W - 80, 940); ctx.stroke();
-
-    // Faixa rodapé
-    ctx.fillStyle = '#1a5c2a';
-    ctx.fillRect(16, 940, W - 32, 144);
-
-    ctx.fillStyle = '#f0b429';
-    ctx.font = 'bold 28px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('09 DE AGOSTO DE 2026 · COSTA MARQUES, RO', W / 2, 992);
-
-    ctx.fillStyle = 'rgba(200,230,200,0.8)';
-    ctx.font = '20px Arial, sans-serif';
-    ctx.fillText('Apresente esta ficha para retirar sua camiseta', W / 2, 1030);
-
-    ctx.fillStyle = 'rgba(150,190,150,0.6)';
-    ctx.font = '16px Arial, sans-serif';
-    ctx.fillText('Associação dos Seringueiros do Vale do Guaporé', W / 2, 1064);
-
-    // Download — mobile usa Web Share API, desktop usa link.click()
-    const nomeArq = `ficha_${ficha}_${nome.split(' ')[0]}.png`;
-    const resetBtn = () => {
-      if (btn) { btn.textContent = '📲 Salvar ficha no celular'; btn.disabled = false; }
-    };
-
-    canvas.toBlob(async (blob) => {
-      try {
-        // Tenta Web Share API (iOS Safari, Android Chrome)
-        if (blob && navigator.canShare) {
-          const file = new File([blob], nomeArq, { type: 'image/png' });
-          if (navigator.canShare({ files: [file] })) {
-            try {
-              await navigator.share({ files: [file], title: 'Ficha Ciclismo 2026', text: `Ficha ${ficha}` });
-              resetBtn(); // ← reseta mesmo após share bem-sucedido
-              return;
-            } catch(e) { /* cancelou — cai no fallback */ }
-          }
-        }
-        // Fallback: abre em nova aba (segurar para salvar) ou link direto
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const nova = window.open(url, '_blank');
-          if (!nova) {
-            const link = document.createElement('a');
-            link.download = nomeArq;
-            link.href = URL.createObjectURL(blob);
-            link.click();
-          }
-        } else {
-          // Último recurso sem blob
-          const link = document.createElement('a');
-          link.download = nomeArq;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-        }
-      } catch(e) {
-        alert('Erro ao salvar: ' + e.message);
-      } finally {
-        resetBtn(); // ← sempre reseta o botão, seja qual for o caminho
-      }
-    }, 'image/png');
-  };
-
-  if (qrImg) {
-    const src = qrImg.tagName === 'CANVAS' ? qrImg.toDataURL() : qrImg.src;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      // Fundo branco arredondado para o QR
-      ctx.fillStyle = '#ffffff';
-      const qrX = W / 2 - 155, qrY = 565;
-      ctx.beginPath();
-      ctx.roundRect(qrX - 10, qrY - 10, 330, 330, 14);
-      ctx.fill();
-      ctx.drawImage(img, qrX, qrY, 310, 310);
-
-      ctx.fillStyle = 'rgba(125,207,138,0.7)';
-      ctx.font = '18px Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Escaneie para verificar sua inscrição', W / 2, 920);
-
-      desenharRodape();
-    };
-    img.src = src;
-  } else {
-    // Sem QR disponível ainda — desenha placeholder
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(W/2 - 160, 560, 320, 320);
-    ctx.fillStyle = '#0d2810';
-    ctx.font = '16px Arial';
-    ctx.fillText('QR Code', W/2, 720);
-    desenharRodape();
-  }
-}
 
 // ══════════════════════════════════════════════════════════════
 // CONSULTA DE INSCRIÇÃO
