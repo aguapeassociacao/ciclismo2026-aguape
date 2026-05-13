@@ -14,7 +14,7 @@
   :root{--verde-escuro:#0d2810;--verde:#1a5c2a;--verde-medio:#2d7a3a;--verde-vivo:#3da84e;--verde-claro:#7dcf8a;--verde-neon:#a8e6b4;--dourado:#c8920a;--dourado-claro:#f0b429;--dourado-brilho:#ffd700;--terra:#8b4513;--marrom:#3d1a0a;--creme:#f5ead0;--branco:#ffffff}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{font-family:'Inter',sans-serif;color:var(--creme);overflow-x:hidden;background-image:url("01.jpeg");background-size:cover;background-position:center top;background-attachment:fixed;background-color:var(--verde-escuro)}
+  body{font-family:'Inter',sans-serif;background:var(--verde-escuro);color:var(--creme);overflow-x:hidden}
   @keyframes floatIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pulse-gold{0%,100%{box-shadow:0 4px 24px rgba(200,146,10,.5),0 0 0 3px rgba(200,146,10,.2)}50%{box-shadow:0 4px 32px rgba(200,146,10,.8),0 0 0 6px rgba(200,146,10,.15)}}
@@ -22,8 +22,8 @@
 
   /* HERO */
   .hero{min-height:100vh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
-  .hero-bg{position:absolute;inset:0;background:rgba(0,0,0,.18);z-index:0}
-  .hero-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(13,40,16,.35) 0%,transparent 60%),linear-gradient(to bottom,rgba(13,40,16,.25) 0%,rgba(13,40,16,.5) 100%);z-index:1}
+  .hero-bg{position:absolute;inset:0;background-image:url("01.jpeg");background-size:cover;background-position:center top;filter:brightness(.55) saturate(1.2);z-index:0}
+  .hero-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(13,40,16,.4) 0%,transparent 60%),linear-gradient(to bottom,rgba(13,40,16,.3) 0%,rgba(13,40,16,.7) 70%,rgba(13,40,16,.95) 100%);z-index:1}
   .hero-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 24px;max-width:800px;width:100%}
   .logo-wrap{margin-bottom:28px;filter:drop-shadow(0 4px 24px rgba(0,0,0,.7));animation:floatIn 1s ease-out both}
   .logo-wrap img{width:220px;max-width:65vw;object-fit:contain}
@@ -44,7 +44,7 @@
   .btn-prazo strong{color:#ff9a9a}
 
   /* SEÇÃO FORMULÁRIO */
-  .secao-form{padding:70px 20px 80px;max-width:680px;margin:0 auto;position:relative;z-index:1}
+  .secao-form{padding:70px 20px 80px;max-width:680px;margin:0 auto}
   .secao-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--verde-claro);margin-bottom:8px;text-align:center}
   .secao-titulo{font-family:'Cinzel',serif;font-size:clamp(22px,4vw,34px);font-weight:700;color:var(--creme);text-align:center;margin-bottom:40px}
   .secao-titulo span{color:var(--dourado-claro)}
