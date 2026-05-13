@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V2.3
+  admin.html — Painel Administrativo V2.4
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
@@ -9,6 +9,7 @@
   V2.2 — Logo aguape.png: login, sidebar, topbar, relatórios PDF e ficha individual
          Topbar fixa no painel desktop com nome do usuário e botão atualizar
   V2.3 — Correção ficha PDF (img element, sem fetch bloqueado em produção)
+  V2.4 — Atualização domínio para ciclismo.aguape.org
          Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
          Seção Gestão de Operadores na aba Configurações
 -->
@@ -399,7 +400,7 @@ tr:hover td{background:#fafafa}
       <div class="sb-logo"><img src="aguape.png" alt="Aguapé"></div>
       <div>
         <div class="sb-titulo">Ciclismo 2026</div>
-        <div class="sb-sub">Painel Administrativo · V2.3</div>
+        <div class="sb-sub">Painel Administrativo · V2.4</div>
       </div>
     </div>
     <div class="sb-nav">
@@ -431,7 +432,7 @@ tr:hover td{background:#fafafa}
         <img class="topbar-logo" src="aguape.png" alt="Aguapé">
         <div>
           <div class="topbar-titulo">Ciclismo Individual 2026</div>
-          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.3</div>
+          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.4</div>
         </div>
       </div>
       <div class="topbar-dir">
@@ -733,7 +734,7 @@ Identificamos que sua inscrição no *Ciclismo Individual 2026* ainda está pend
 📍 Costa Marques, Rondônia
 
 Para garantir sua vaga, acesse o link abaixo e conclua o pagamento:
-🔗 https://ciclismo2026-aguape-pied.vercel.app
+🔗 https://ciclismo.aguape.org
 
 Dúvidas? Fale com a organização.
 🚴 Equipe Aguapé — Turismo de Base Comunitária</div>
@@ -754,7 +755,7 @@ Turismo de Base Comunitária · Aguapé
 📅 Data: *09 de agosto de 2026*
 📍 Local: Costa Marques, Rondônia
 💰 Inscrição: R$ 160,00
-🔗 Inscrições: https://ciclismo2026-aguape-pied.vercel.app
+🔗 Inscrições: https://ciclismo.aguape.org
 
 Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
 
@@ -809,9 +810,9 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>admin.html</td><td>V2.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V2.4</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>js/app.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
-            <tr><td>api/criar-pagamento.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/criar-pagamento.js</td><td>V3.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/webhook-pagamento.js</td><td>V1.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/admin-auth.js</td><td>V2.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
@@ -865,7 +866,7 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
 
 <script>
 // ================================================================
-// admin.html — Script V2.3
+// admin.html — Script V2.4
 // © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
 
@@ -1279,7 +1280,7 @@ function renderizarPendentes(){
     const dias=Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000);
     const cls=dias>=7?'urgente':dias>=3?'atencao':'novo';
     const telFmt=p.telefone?p.telefone.replace(/\D/g,''):'';
-    const msgWpp=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! 👋\n\nSua inscrição no *Ciclismo Individual 2026* ainda está pendente de pagamento.\n\n📋 Ficha: *${i.numero_ficha}*\n💰 Valor: *R$ 160,00*\n📅 Evento: *09 de agosto de 2026*\n\nAcesse e conclua o pagamento:\n🔗 https://ciclismo2026-aguape-pied.vercel.app\n\n🚴 Equipe Aguapé`);
+    const msgWpp=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! 👋\n\nSua inscrição no *Ciclismo Individual 2026* ainda está pendente de pagamento.\n\n📋 Ficha: *${i.numero_ficha}*\n💰 Valor: *R$ 160,00*\n📅 Evento: *09 de agosto de 2026*\n\nAcesse e conclua o pagamento:\n🔗 https://ciclismo.aguape.org\n\n🚴 Equipe Aguapé`);
     return `<div class="pend-card">
       <div class="pend-header">
         <div><div class="pend-nome">${p.nome_completo||'—'}</div><div class="pend-ficha">Ficha: ${i.numero_ficha||'—'} · ${p.cidade||'—'} · 👕 ${p.tamanho_camiseta||'—'}</div></div>
@@ -1487,7 +1488,7 @@ function gerarListaWpp(){
     const p=gP(i.participante_id);
     const tel=(p.telefone||'').replace(/\D/g,'');
     if(!tel)return`${p.nome_completo} — sem telefone`;
-    const msg=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! Sua inscrição ${i.numero_ficha} está pendente. Acesse: https://ciclismo2026-aguape-pied.vercel.app`);
+    const msg=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! Sua inscrição ${i.numero_ficha} está pendente. Acesse: https://ciclismo.aguape.org`);
     return`${p.nome_completo} — https://wa.me/55${tel}?text=${msg}`;
   }).join('\n');
   document.getElementById('lista-wpp-conteudo').textContent=links;
@@ -1710,7 +1711,7 @@ function exportarPDF(tipo){
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FICHA INDIVIDUAL PDF — V2.3 (com logo Aguapé via img element)
+// FICHA INDIVIDUAL PDF — V2.4 (com logo Aguapé via img element)
 // ═══════════════════════════════════════════════════════════════
 function baixarFichaIndividual(inscId){
   const i=todosDados.inscricoes.find(x=>x.id===inscId); if(!i)return;
