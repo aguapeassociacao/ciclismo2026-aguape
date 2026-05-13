@@ -1256,6 +1256,8 @@ async function confirmarPagtoManual(id){
 async function cancelarInscricao(id){
   if(!confirm('Cancelar esta inscrição?'))return;
   await supabaseAtualizar('inscricoes',id,{status:'cancelado'});
+  await carregarTudo();
+}
 
 async function excluirParticipante(inscricaoId, participanteId, nome){
   if(!confirm(`⚠️ EXCLUIR "${nome}" do sistema?\n\nIsso remove o participante e a inscrição permanentemente.\nEle poderá se inscrever novamente do zero.\n\nConfirmar?`)) return;
@@ -1266,10 +1268,8 @@ async function excluirParticipante(inscricaoId, participanteId, nome){
     // 2. Deleta participante
     await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({acao:'deletar',tabela:'participantes',id:participanteId})});
-    await carregarDados();
+    await carregarTudo();
   } catch(e){ alert('Erro ao excluir: '+e.message); }
-}
-  await carregarTudo();
 }
 
 // ═══════════════════════════════════════════════════════════════
