@@ -1,10 +1,12 @@
 // ================================================================
-// app.js — V3.4 — Lógica principal do formulário de inscrições
+// app.js — V3.5 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
 // V3.3 — PIX direto + Cartão (sem boleto) · Modal de escolha
 // V3.3 — QR Code na ficha + botão "Salvar ficha no celular" (canvas PNG)
+// V3.4 — Web Share API para salvar ficha no celular (iOS/Android)
+// V3.5 — Data de nascimento: 3 selects (dia/mês/ano) no lugar do calendário nativo
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -992,6 +994,40 @@ function renderizarConsulta() {
 document.addEventListener('DOMContentLoaded', function() {
   const el = document.getElementById('data-acesso');
   if (el) el.textContent = new Date().toLocaleDateString('pt-BR');
+
+  // ── Popular selects de data de nascimento ──────────────────
+  const selDia = document.getElementById('nasc-dia');
+  const selAno = document.getElementById('nasc-ano');
+  if (selDia) {
+    for (let d = 1; d <= 31; d++) {
+      const o = document.createElement('option');
+      o.value = String(d).padStart(2, '0');
+      o.textContent = d;
+      selDia.appendChild(o);
+    }
+  }
+  if (selAno) {
+    const anoAtual = new Date().getFullYear();
+    for (let a = anoAtual - 5; a >= anoAtual - 100; a--) {
+      const o = document.createElement('option');
+      o.value = a;
+      o.textContent = a;
+      selAno.appendChild(o);
+    }
+  }
+  // Sincroniza os 3 selects → campo hidden #nascimento
+  function sincNascimento() {
+    const dia = document.getElementById('nasc-dia')?.value;
+    const mes = document.getElementById('nasc-mes')?.value;
+    const ano = document.getElementById('nasc-ano')?.value;
+    const campo = document.getElementById('nascimento');
+    if (campo) campo.value = (dia && mes && ano) ? `${ano}-${mes}-${dia}` : '';
+    verificarMenor();
+  }
+  ['nasc-dia','nasc-mes','nasc-ano'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s) { s.removeAttribute('onchange'); s.addEventListener('change', sincNascimento); }
+  });
 
   document.getElementById('btn-enviar').disabled = true;
 
