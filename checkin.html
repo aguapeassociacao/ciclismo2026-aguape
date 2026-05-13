@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<!--
+  checkin.html — Check-in Presencial V1.0
+  Ciclismo Individual 2026 — Turismo de Base Comunitária
+  Leitura de QR Code (BarcodeDetector + jsQR) · Busca por ficha/CPF/nome
+  Valida pagamento · Registra presença · Alerta se não pago
+  © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Check-in — Ciclismo 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+:root{
+  --verde:#0d2810; --verde-m:#1a5c2a; --verde-c:#2d7a3a;
+  --verde-cl:#7dcf8a; --dourado:#c8920a; --dourado-c:#f0b429;
+  --creme:#f5ead0; --marrom:#3d1a0a;
+  --azul:#1d4ed8; --err:#ef4444; --ok:#22c55e; --warn:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--verde);color:var(--creme);overflow-x:hidden}
+
+/* ── LOGIN ─────────────────────────────────────────── */
+#login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:rgba(13,40,16,.95);border:1px solid rgba(45,122,58,.4);border-radius:22px;padding:40px 30px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.login-logo{font-size:48px;margin-bottom:10px}
+.login-titulo{font-size:22px;font-weight:700;color:var(--dourado-c);margin-bottom:4px}
+.login-sub{font-size:12px;color:rgba(245,234,208,.4);margin-bottom:28px;line-height:1.5}
+.login-field{width:100%;padding:13px 16px;border-radius:12px;border:1px solid rgba(45,122,58,.3);background:rgba(0,0,0,.3);color:var(--creme);font-size:15px;margin-bottom:12px;outline:none;transition:border .2s;-webkit-appearance:none}
+.login-field:focus{border-color:var(--verde-cl)}
+.login-field::placeholder{color:rgba(245,234,208,.3)}
+.btn-entrar{width:100%;padding:15px;border:none;border-radius:50px;cursor:pointer;background:linear-gradient(135deg,var(--dourado),var(--dourado-c),var(--dourado));color:var(--marrom);font-size:16px;font-weight:700;margin-top:4px;transition:opacity .2s}
+.btn-entrar:hover{opacity:.9}
+.login-erro{font-size:13px;color:#f87171;margin-top:10px;padding:10px;background:rgba(239,68,68,.1);border-radius:8px;display:none}
+
+/* ── APP ────────────────────────────────────────────── */
+#app{display:none;min-height:100vh;flex-direction:column}
+
+/* Cabeçalho */
+.cabecalho{background:rgba(13,40,16,.95);border-bottom:1px solid rgba(45,122,58,.3);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+.cab-left{display:flex;align-items:center;gap:10px}
+.cab-logo{font-size:26px}
+.cab-info h1{font-size:15px;font-weight:700;color:var(--dourado-c)}
+.cab-info p{font-size:11px;color:rgba(245,234,208,.4)}
+.cab-contador{text-align:right}
+.cab-num{font-size:26px;font-weight:700;color:var(--verde-cl);line-height:1}
+.cab-num-lbl{font-size:10px;color:rgba(245,234,208,.4);text-transform:uppercase;letter-spacing:.8px}
+.btn-sair{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer}
+
+/* Container */
+.container{flex:1;padding:16px;max-width:500px;margin:0 auto;width:100%}
+
+/* Modos */
+.modo-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.modo-btn{padding:12px;border:1px solid rgba(45,122,58,.3);border-radius:12px;background:rgba(13,40,16,.5);color:rgba(245,234,208,.55);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.modo-btn.ativo{background:rgba(45,122,58,.3);border-color:rgba(45,122,58,.6);color:var(--verde-cl)}
+.modo-btn:hover{background:rgba(45,122,58,.2)}
+
+/* Câmera */
+.camera-card{background:rgba(13,40,16,.7);border:1px solid rgba(45,122,58,.3);border-radius:16px;overflow:hidden;margin-bottom:14px}
+.camera-titulo{padding:14px 16px;font-size:13px;font-weight:600;color:rgba(245,234,208,.6);border-bottom:1px solid rgba(45,122,58,.2)}
+.camera-video-wrap{position:relative;background:#000;aspect-ratio:1;max-height:300px;overflow:hidden}
+#camera-video{width:100%;height:100%;object-fit:cover;display:block}
+.camera-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.camera-frame{width:200px;height:200px;border:3px solid var(--azul);border-radius:18px;position:relative}
+.camera-linha{position:absolute;left:8px;right:8px;height:2px;background:linear-gradient(90deg,transparent,var(--azul),transparent);animation:scan 2s ease-in-out infinite}
+@keyframes scan{0%,100%{top:8px;opacity:0}10%{opacity:1}90%{opacity:1}50%{top:calc(100% - 8px)}}
+.camera-status-box{padding:10px 14px;font-size:13px;font-weight:600;text-align:center;border-top:1px solid rgba(45,122,58,.2)}
+.camera-status-box.lendo{color:var(--azul)}
+.camera-status-box.ok{color:var(--ok);background:rgba(34,197,94,.1)}
+.camera-status-box.erro{color:var(--err);background:rgba(239,68,68,.1)}
+.btn-camera{width:100%;padding:14px;border:none;border-radius:12px;background:var(--azul);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:opacity .2s}
+.btn-camera:hover{opacity:.88}
+.btn-parar{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:12px;padding:10px;font-size:13px;cursor:pointer;width:100%;margin-bottom:10px}
+
+/* Busca manual */
+.busca-card{background:rgba(13,40,16,.7);border:1px solid rgba(45,122,58,.3);border-radius:16px;padding:18px;margin-bottom:14px}
+.busca-titulo{font-size:13px;font-weight:600;color:rgba(245,234,208,.6);margin-bottom:12px}
+.busca-row{display:flex;gap:8px}
+.busca-input{flex:1;padding:13px 14px;border-radius:10px;border:1px solid rgba(45,122,58,.3);background:rgba(0,0,0,.3);color:var(--creme);font-size:15px;outline:none;transition:border .2s;-webkit-appearance:none}
+.busca-input:focus{border-color:var(--verde-cl)}
+.busca-input::placeholder{color:rgba(245,234,208,.3)}
+.btn-buscar{padding:13px 18px;border:none;border-radius:10px;background:var(--verde-c);color:#fff;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+.btn-buscar:hover{opacity:.88}
+.busca-erro{margin-top:10px;padding:12px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;font-size:13px;color:#f87171;display:none}
+
+/* Resultado */
+.resultado-card{border-radius:16px;overflow:hidden;margin-bottom:14px;display:none}
+.resultado-header{padding:18px 18px 14px;display:flex;align-items:flex-start;gap:12px}
+.resultado-icone{font-size:36px;flex-shrink:0;line-height:1}
+.resultado-nome{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:4px}
+.resultado-ficha{font-size:13px;opacity:.7}
+.resultado-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 18px 14px}
+.resultado-item{background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px}
+.resultado-item-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:4px}
+.resultado-item-val{font-size:16px;font-weight:700}
+
+/* Estado: PAGO */
+.resultado-card.pago{background:rgba(22,101,52,.4);border:1px solid rgba(34,197,94,.3)}
+.resultado-card.pago .resultado-header{background:rgba(22,101,52,.5)}
+.btn-confirmar{width:100%;padding:16px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--ok),#15803d);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin:0 18px 18px;width:calc(100% - 36px);transition:opacity .2s}
+.btn-confirmar:hover{opacity:.88}
+.btn-confirmar:disabled{opacity:.4;cursor:not-allowed}
+
+/* Estado: NAO PAGO */
+.resultado-card.nao-pago{background:rgba(154,52,18,.3);border:1px solid rgba(239,68,68,.3)}
+.resultado-card.nao-pago .resultado-header{background:rgba(154,52,18,.4)}
+.alerta-nao-pago{margin:0 18px 18px;padding:16px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:12px;font-size:13px;color:#fca5a5;line-height:1.7}
+.alerta-nao-pago strong{color:#f87171;font-size:15px;display:block;margin-bottom:6px}
+
+/* Estado: CANCELADO */
+.resultado-card.cancelado{background:rgba(55,65,81,.4);border:1px solid rgba(156,163,175,.3)}
+.resultado-card.cancelado .resultado-header{background:rgba(55,65,81,.5)}
+
+/* Estado: JÁ FEZ CHECK-IN */
+.resultado-card.ja-feito{background:rgba(22,101,52,.25);border:1px solid rgba(125,207,138,.4)}
+.badge-ci{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--verde-cl);margin:0 18px 14px}
+
+/* Feedback fullscreen */
+.feedback{position:fixed;inset:0;background:rgba(22,101,52,.97);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:200}
+.feedback.visivel{display:flex}
+.feedback-icone{font-size:80px;margin-bottom:16px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(.5)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.feedback-nome{font-size:26px;font-weight:700;color:var(--creme);margin-bottom:6px}
+.feedback-ficha{font-size:18px;color:var(--verde-cl);margin-bottom:4px}
+.feedback-cam{font-size:16px;color:rgba(245,234,208,.7);margin-bottom:4px}
+.feedback-hora{font-size:14px;color:rgba(245,234,208,.4);margin-bottom:28px}
+.btn-proximo{padding:14px 36px;border:none;border-radius:50px;background:var(--dourado);color:var(--marrom);font-size:16px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.btn-proximo:hover{opacity:.9}
+
+/* Spinner */
+.spin{width:30px;height:30px;border:3px solid rgba(45,122,58,.2);border-top-color:var(--verde-cl);border-radius:50%;animation:giro .7s linear infinite;margin:20px auto;display:block}
+@keyframes giro{to{transform:rotate(360deg)}}
+
+canvas{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">🚴</div>
+    <div class="login-titulo">Check-in</div>
+    <div class="login-sub">Ciclismo Individual 2026<br>Costa Marques, Rondônia</div>
+    <input class="login-field" type="text" id="login-user" placeholder="Usuário" autocomplete="username">
+    <input class="login-field" type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+    <button class="btn-entrar" onclick="entrar()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+
+<!-- APP CHECK-IN -->
+<div id="app">
+
+  <!-- Cabeçalho -->
+  <header class="cabecalho">
+    <div class="cab-left">
+      <div class="cab-logo">🚴</div>
+      <div class="cab-info">
+        <h1>Check-in 2026</h1>
+        <p id="cab-operador">Operador: —</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="cab-contador">
+        <div class="cab-num" id="contador-num">—</div>
+        <div class="cab-num-lbl" id="contador-lbl">check-ins</div>
+      </div>
+      <button class="btn-sair" onclick="sair()">Sair</button>
+    </div>
+  </header>
+
+  <!-- Conteúdo -->
+  <div class="container">
+
+    <!-- Modo: câmera ou busca -->
+    <div class="modo-btns">
+      <button class="modo-btn ativo" id="btn-modo-camera" onclick="mudarModo('camera')">📷 Câmera QR</button>
+      <button class="modo-btn" id="btn-modo-busca" onclick="mudarModo('busca')">🔍 Busca manual</button>
+    </div>
+
+    <!-- MODO CÂMERA -->
+    <div id="modo-camera">
+      <div class="camera-card">
+        <div class="camera-titulo">📷 Leitura de QR Code da ficha</div>
+        <div id="camera-video-wrap" style="display:none">
+          <div class="camera-video-wrap">
+            <video id="camera-video" playsinline autoplay muted></video>
+            <div class="camera-overlay">
+              <div class="camera-frame"><div class="camera-linha"></div></div>
+            </div>
+          </div>
+          <div class="camera-status-box lendo" id="camera-status">Aponte para o QR Code da ficha…</div>
+        </div>
+        <div style="padding:14px">
+          <button class="btn-camera" id="btn-iniciar-camera" onclick="iniciarCamera()">📷 Iniciar câmera</button>
+          <button class="btn-parar" id="btn-parar-camera" style="display:none" onclick="pararCamera()">⏹ Parar câmera</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODO BUSCA MANUAL -->
+    <div id="modo-busca" style="display:none">
+      <div class="busca-card">
+        <div class="busca-titulo">🔍 Buscar por ficha, CPF ou nome</div>
+        <div class="busca-row">
+          <input class="busca-input" id="busca-input" type="text"
+            placeholder="CIC-1234 · 000.000.000-00 · nome"
+            onkeydown="if(event.key==='Enter')buscar()">
+          <button class="btn-buscar" onclick="buscar()">Buscar</button>
+        </div>
+        <div class="busca-erro" id="busca-erro"></div>
+      </div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="resultado-card" id="resultado-card">
+
+      <!-- Cabeçalho do resultado -->
+      <div class="resultado-header">
+        <div class="resultado-icone" id="res-icone">—</div>
+        <div>
+          <div class="resultado-nome" id="res-nome">—</div>
+          <div class="resultado-ficha" id="res-ficha">—</div>
+        </div>
+      </div>
+
+      <!-- Grid de informações -->
+      <div class="resultado-grid">
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Camiseta</div>
+          <div class="resultado-item-val" id="res-cam">—</div>
+        </div>
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Categoria</div>
+          <div class="resultado-item-val" id="res-gen">—</div>
+        </div>
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Cidade</div>
+          <div class="resultado-item-val" id="res-cid">—</div>
+        </div>
+        <div class="resultado-item">
+          <div class="resultado-item-lbl">Pagamento</div>
+          <div class="resultado-item-val" id="res-pgto">—</div>
+        </div>
+      </div>
+
+      <!-- Badge de check-in já realizado -->
+      <div class="badge-ci" id="badge-ja-feito" style="display:none">✅ Check-in já realizado às <span id="badge-hora">—</span></div>
+
+      <!-- PAGO: botão de confirmar -->
+      <button class="btn-confirmar" id="btn-confirmar" onclick="confirmarCheckin()">
+        ✅ Confirmar presença e entregar camiseta
+      </button>
+
+      <!-- NÃO PAGO: alerta -->
+      <div class="alerta-nao-pago" id="alerta-nao-pago" style="display:none">
+        <strong>⛔ Pagamento não confirmado</strong>
+        Não é possível realizar o check-in. O participante deve procurar a <strong>administração do evento</strong> para regularizar a situação antes de receber a camiseta.
+      </div>
+
+      <!-- CANCELADO: alerta -->
+      <div class="alerta-nao-pago" id="alerta-cancelado" style="display:none">
+        <strong>⛔ Inscrição cancelada</strong>
+        Esta inscrição foi cancelada. O participante deve procurar a <strong>administração do evento</strong>.
+      </div>
+
+      <!-- Nova leitura -->
+      <div style="padding:0 18px 18px">
+        <button onclick="novaLeitura()" style="width:100%;padding:11px;border:1px solid rgba(45,122,58,.3);border-radius:10px;background:transparent;color:rgba(245,234,208,.5);font-size:13px;cursor:pointer">
+          🔄 Nova leitura
+        </button>
+      </div>
+
+    </div><!-- /.resultado-card -->
+
+  </div>
+</div>
+
+<!-- FEEDBACK FULLSCREEN -->
+<div class="feedback" id="feedback">
+  <div class="feedback-icone">✅</div>
+  <div class="feedback-nome" id="fb-nome">—</div>
+  <div class="feedback-ficha" id="fb-ficha">—</div>
+  <div class="feedback-cam" id="fb-cam">—</div>
+  <div class="feedback-hora" id="fb-hora">—</div>
+  <button class="btn-proximo" onclick="fecharFeedback()">🔄 Próximo check-in</button>
+</div>
+
+<!-- Canvas oculto para jsQR -->
+<canvas id="qr-canvas"></canvas>
+
+<script>
+// ================================================================
+// checkin.html — V1.0
+// © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
+// ================================================================
+
+let streamAtivo    = null;
+let animFrame      = null;
+let scanAtivo      = false;
+let scanBloqueado  = false;
+let barcodeDetector= null;
+let modoAtual      = 'camera';
+let participanteAtual = null;
+let inscricaoAtual    = null;
+let todosDados     = { inscricoes:[], participantes:[] };
+let totalCheckins  = 0;
+
+if ('BarcodeDetector' in window) {
+  try { barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] }); } catch(e){}
+}
+
+// ════════════════════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════════════════════
+async function entrar() {
+  const usuario = document.getElementById('login-user').value.trim();
+  const senha   = document.getElementById('login-senha').value;
+  const erroEl  = document.getElementById('login-erro');
+  erroEl.style.display = 'none';
+
+  if (!usuario || !senha) {
+    erroEl.textContent = 'Preencha usuário e senha.';
+    erroEl.style.display = 'block'; return;
+  }
+  try {
+    const r = await fetch('/api/admin-auth', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, senha })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      sessionStorage.setItem('ci_token', d.token);
+      sessionStorage.setItem('ci_nome',  d.nome || usuario);
+      mostrarApp(d.nome || usuario);
+    } else {
+      erroEl.textContent = d.erro || 'Usuário ou senha incorretos.';
+      erroEl.style.display = 'block';
+    }
+  } catch {
+    erroEl.textContent = 'Erro de conexão.';
+    erroEl.style.display = 'block';
+  }
+}
+
+document.getElementById('login-senha').addEventListener('keydown', e => {
+  if (e.key === 'Enter') entrar();
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const t = sessionStorage.getItem('ci_token');
+  const n = sessionStorage.getItem('ci_nome');
+  if (t) mostrarApp(n || 'Operador');
+});
+
+function mostrarApp(nome) {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('cab-operador').textContent = 'Operador: ' + nome;
+  carregarDados();
+}
+
+function sair() {
+  pararCamera();
+  sessionStorage.removeItem('ci_token');
+  sessionStorage.removeItem('ci_nome');
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════════
+// DADOS
+// ════════════════════════════════════════════════════════════════
+async function apiGet(tabela, query = '') {
+  const r = await fetch('/api/supabase', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao: 'buscar', tabela, query })
+  });
+  return r.json();
+}
+
+async function apiPatch(tabela, id, dados) {
+  const r = await fetch('/api/supabase', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ acao: 'atualizar', tabela, id, dados })
+  });
+  return r.json();
+}
+
+async function carregarDados() {
+  try {
+    const [insc, part] = await Promise.all([
+      apiGet('inscricoes', 'select=*'),
+      apiGet('participantes', 'select=*')
+    ]);
+    todosDados.inscricoes    = Array.isArray(insc) ? insc : [];
+    todosDados.participantes = Array.isArray(part) ? part : [];
+    totalCheckins = todosDados.inscricoes.filter(i => i.checkin_realizado).length;
+    atualizarContador();
+  } catch (e) {
+    console.error('carregarDados:', e);
+  }
+}
+
+function atualizarContador() {
+  document.getElementById('contador-num').textContent = totalCheckins;
+  const total = todosDados.inscricoes.filter(i => i.status === 'pago').length;
+  document.getElementById('contador-lbl').textContent = `de ${total} pagos`;
+}
+
+const getP = pid => todosDados.participantes.find(p => p.id === pid) || {};
+
+// ════════════════════════════════════════════════════════════════
+// MODOS
+// ════════════════════════════════════════════════════════════════
+function mudarModo(modo) {
+  modoAtual = modo;
+  document.getElementById('modo-camera').style.display = modo === 'camera' ? 'block' : 'none';
+  document.getElementById('modo-busca').style.display  = modo === 'busca'  ? 'block' : 'none';
+  document.getElementById('btn-modo-camera').classList.toggle('ativo', modo === 'camera');
+  document.getElementById('btn-modo-busca').classList.toggle('ativo',  modo === 'busca');
+  if (modo !== 'camera') pararCamera();
+  else document.getElementById('busca-input').value = '';
+}
+
+// ════════════════════════════════════════════════════════════════
+// CÂMERA
+// ════════════════════════════════════════════════════════════════
+async function iniciarCamera() {
+  if (streamAtivo) return;
+
+  // Checa HTTPS
+  if (!window.isSecureContext && location.hostname !== 'localhost') {
+    mostrarErroBusca('Câmera requer HTTPS. Use a busca manual ou acesse via https://');
+    mudarModo('busca'); return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }
+    });
+    streamAtivo = stream;
+    const video = document.getElementById('camera-video');
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('camera-video-wrap').style.display = 'block';
+    document.getElementById('btn-iniciar-camera').style.display = 'none';
+    document.getElementById('btn-parar-camera').style.display  = 'block';
+    document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+    document.getElementById('camera-status').className = 'camera-status-box lendo';
+    scanAtivo = true;
+    scanBloqueado = false;
+    requestAnimationFrame(scanFrame);
+  } catch (e) {
+    const msg = e.name === 'NotAllowedError'
+      ? 'Permissão negada. Libere a câmera nas configurações do navegador.'
+      : e.name === 'NotFoundError'
+      ? 'Nenhuma câmera encontrada neste dispositivo.'
+      : 'Erro ao abrir câmera: ' + e.message;
+    mostrarErroBusca(msg);
+    mudarModo('busca');
+  }
+}
+
+async function scanFrame() {
+  if (!scanAtivo) return;
+  const video = document.getElementById('camera-video');
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    animFrame = requestAnimationFrame(scanFrame); return;
+  }
+
+  let resultado = null;
+
+  // BarcodeDetector nativo (mais rápido)
+  if (barcodeDetector) {
+    try {
+      const codes = await barcodeDetector.detect(video);
+      if (codes.length) resultado = codes[0].rawValue;
+    } catch(e) {}
+  }
+
+  // jsQR fallback
+  if (!resultado) {
+    const canvas = document.getElementById('qr-canvas');
+    const w = video.videoWidth, h = video.videoHeight;
+    if (w && h) {
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const code = jsQR(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
+      if (code) resultado = code.data;
+    }
+  }
+
+  if (resultado && !scanBloqueado) {
+    scanBloqueado = true;
+    document.getElementById('camera-status').textContent = '✅ QR Code lido!';
+    document.getElementById('camera-status').className = 'camera-status-box ok';
+    // Extrai ficha do QR — formato: "CIC-XXXX|Nome" ou só "CIC-XXXX"
+    const ficha = resultado.split('|')[0].trim();
+    setTimeout(() => processarEntrada(ficha), 300);
+    return;
+  }
+
+  animFrame = requestAnimationFrame(scanFrame);
+}
+
+function pararCamera() {
+  scanAtivo = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  if (streamAtivo) { streamAtivo.getTracks().forEach(t => t.stop()); streamAtivo = null; }
+  document.getElementById('camera-video-wrap').style.display = 'none';
+  document.getElementById('btn-iniciar-camera').style.display = 'block';
+  document.getElementById('btn-parar-camera').style.display  = 'none';
+}
+
+// ════════════════════════════════════════════════════════════════
+// BUSCA MANUAL
+// ════════════════════════════════════════════════════════════════
+function buscar() {
+  const inp = document.getElementById('busca-input').value.trim();
+  if (!inp) { mostrarErroBusca('Digite a ficha, CPF ou nome.'); return; }
+  processarEntrada(inp);
+}
+
+function mostrarErroBusca(msg) {
+  const el = document.getElementById('busca-erro');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// PROCESSAR ENTRADA (câmera ou busca)
+// ════════════════════════════════════════════════════════════════
+function processarEntrada(entrada) {
+  document.getElementById('busca-erro').style.display = 'none';
+  participanteAtual = null;
+  inscricaoAtual    = null;
+
+  const norm = entrada.toUpperCase().replace(/\s/g, '');
+  let insc = null, part = null;
+
+  // Busca por ficha CIC-XXXX
+  if (/^CIC-?\d+$/.test(norm)) {
+    const ficha = 'CIC-' + norm.replace(/^CIC-?/, '');
+    insc = todosDados.inscricoes.find(i => i.numero_ficha === ficha);
+  }
+
+  // Busca por CPF
+  if (!insc) {
+    const digitos = entrada.replace(/\D/g, '');
+    if (digitos.length === 11) {
+      const cpfFmt = digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      part = todosDados.participantes.find(p => p.cpf === cpfFmt || p.cpf === digitos);
+      if (part) insc = todosDados.inscricoes.find(i => i.participante_id === part.id);
+    }
+  }
+
+  // Busca por nome
+  if (!insc) {
+    part = todosDados.participantes.find(p =>
+      (p.nome_completo || '').toLowerCase().includes(entrada.toLowerCase())
+    );
+    if (part) insc = todosDados.inscricoes.find(i => i.participante_id === part.id);
+  }
+
+  if (!insc) {
+    mostrarErroBusca('Nenhuma inscrição encontrada para: ' + entrada);
+    document.getElementById('camera-status').textContent = '❌ Não encontrado — tente novamente';
+    document.getElementById('camera-status').className = 'camera-status-box erro';
+    setTimeout(() => {
+      if (modoAtual === 'camera') {
+        document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+        document.getElementById('camera-status').className = 'camera-status-box lendo';
+        scanBloqueado = false;
+        if (!streamAtivo) return;
+        requestAnimationFrame(scanFrame);
+      }
+    }, 2500);
+    return;
+  }
+
+  part = part || getP(insc.participante_id);
+  participanteAtual = part;
+  inscricaoAtual    = insc;
+  exibirResultado(insc, part);
+}
+
+// ════════════════════════════════════════════════════════════════
+// EXIBIR RESULTADO
+// ════════════════════════════════════════════════════════════════
+function exibirResultado(insc, part) {
+  const card = document.getElementById('resultado-card');
+  const status = insc.status;
+  const jaMarca = insc.checkin_realizado;
+
+  // Reset classes
+  card.className = 'resultado-card';
+  card.style.display = 'block';
+
+  // Ícone e classe por status
+  let icone = '—', classe = '';
+  if (status === 'pago')      { icone = jaMarca ? '✅' : '✅'; classe = 'pago'; }
+  else if (status === 'cancelado') { icone = '⛔'; classe = 'cancelado'; }
+  else                        { icone = '⛔'; classe = 'nao-pago'; }
+
+  card.classList.add(classe);
+
+  document.getElementById('res-icone').textContent = icone;
+  document.getElementById('res-nome').textContent  = part.nome_completo || '—';
+  document.getElementById('res-ficha').textContent = `Ficha: ${insc.numero_ficha} · ${part.cidade}`;
+  document.getElementById('res-cam').textContent   = part.tamanho_camiseta || '—';
+  document.getElementById('res-gen').textContent   = part.sexo === 'M' ? 'Masculino' : 'Feminino';
+  document.getElementById('res-cid').textContent   = part.cidade || '—';
+  document.getElementById('res-pgto').textContent  = status === 'pago' ? 'Confirmado' : status === 'cancelado' ? 'Cancelado' : 'Pendente';
+
+  // Badge check-in já feito
+  const badge = document.getElementById('badge-ja-feito');
+  const btnCI = document.getElementById('btn-confirmar');
+  const alertaNP = document.getElementById('alerta-nao-pago');
+  const alertaCanc = document.getElementById('alerta-cancelado');
+
+  badge.style.display    = 'none';
+  btnCI.style.display    = 'none';
+  alertaNP.style.display = 'none';
+  alertaCanc.style.display = 'none';
+
+  if (status === 'pago') {
+    if (jaMarca) {
+      const hora = insc.checkin_data
+        ? new Date(insc.checkin_data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : '—';
+      document.getElementById('badge-hora').textContent = hora;
+      badge.style.display = 'flex';
+      btnCI.style.display = 'block';
+      btnCI.textContent = '✅ Fazer check-in novamente';
+      btnCI.disabled = false;
+    } else {
+      btnCI.style.display = 'block';
+      btnCI.textContent = '✅ Confirmar presença e entregar camiseta';
+      btnCI.disabled = false;
+    }
+  } else if (status === 'cancelado') {
+    alertaCanc.style.display = 'block';
+  } else {
+    alertaNP.style.display = 'block';
+  }
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONFIRMAR CHECK-IN
+// ════════════════════════════════════════════════════════════════
+async function confirmarCheckin() {
+  if (!inscricaoAtual || !participanteAtual) return;
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Registrando…';
+
+  try {
+    await apiPatch('inscricoes', inscricaoAtual.id, {
+      checkin_realizado: true,
+      checkin_data: new Date().toISOString()
+    });
+
+    // Atualiza local
+    inscricaoAtual.checkin_realizado = true;
+    inscricaoAtual.checkin_data = new Date().toISOString();
+    totalCheckins++;
+    atualizarContador();
+
+    mostrarFeedback(participanteAtual, inscricaoAtual);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ Confirmar presença e entregar camiseta';
+    mostrarErroBusca('Erro ao registrar check-in. Tente novamente.');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// FEEDBACK FULLSCREEN
+// ════════════════════════════════════════════════════════════════
+function mostrarFeedback(part, insc) {
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('fb-nome').textContent  = part.nome_completo || '—';
+  document.getElementById('fb-ficha').textContent = `Ficha: ${insc.numero_ficha}`;
+  document.getElementById('fb-cam').textContent   = `Camiseta: ${part.tamanho_camiseta} · ${part.sexo === 'M' ? 'Masculino' : 'Feminino'}`;
+  document.getElementById('fb-hora').textContent  = `Check-in registrado às ${hora}`;
+  document.getElementById('feedback').classList.add('visivel');
+  // Auto-fecha em 8 segundos
+  setTimeout(fecharFeedback, 8000);
+}
+
+function fecharFeedback() {
+  document.getElementById('feedback').classList.remove('visivel');
+  novaLeitura();
+}
+
+// ════════════════════════════════════════════════════════════════
+// NOVA LEITURA
+// ════════════════════════════════════════════════════════════════
+function novaLeitura() {
+  document.getElementById('resultado-card').style.display = 'none';
+  document.getElementById('busca-erro').style.display = 'none';
+  participanteAtual = null;
+  inscricaoAtual = null;
+
+  if (modoAtual === 'camera') {
+    document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+    document.getElementById('camera-status').className = 'camera-status-box lendo';
+    scanBloqueado = false;
+    if (streamAtivo) requestAnimationFrame(scanFrame);
+  } else {
+    document.getElementById('busca-input').value = '';
+    document.getElementById('busca-input').focus();
+  }
+}
+</script>
+</body>
+</html>
