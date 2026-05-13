@@ -3,8 +3,8 @@
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
-// V3.2 — PIX direto + Cartão (sem boleto) · Modal de escolha
-// V3.2 — botão de pagamento via createElement fora do card (fix Safari/iOS mobile)
+// V3.3 — PIX direto + Cartão (sem boleto) · Modal de escolha
+// V3.3 — QR Code na ficha + botão "Salvar ficha no celular" (canvas PNG)
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -343,7 +343,7 @@ async function enviarInscricao() {
     avisoRef.textContent = `Referência no extrato: "${ficha} · ${nome}"`;
   }
 
-  setTimeout(() => gerarQRCode(ficha, nome), 100);
+  setTimeout(() => gerarQRCode(ficha, nome, camiseta, sexo), 100);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -608,19 +608,186 @@ async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
   }
 }
 
-function gerarQRCode(ficha, nome) {
+function gerarQRCode(ficha, nome, camiseta, sexo) {
   const el = document.getElementById('qrcode-sucesso');
   if (!el || typeof QRCode === 'undefined') return;
   el.innerHTML = '';
-  const url = `${URL_SITE}/consulta.html?ficha=${ficha}`;
+
+  // Conteúdo do QR: número da ficha (lido pelo check-in do admin)
   new QRCode(el, {
-    text:         url,
-    width:        140,
-    height:       140,
+    text:         ficha,
+    width:        160,
+    height:       160,
     colorDark:    '#0d2810',
     colorLight:   '#ffffff',
     correctLevel: QRCode.CorrectLevel.M
   });
+
+  // Após gerar o QR, insere o botão de salvar ficha
+  setTimeout(() => inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo), 200);
+}
+
+// ── Insere botão "Salvar ficha no celular" na tela de sucesso ──
+function inserirBotaoSalvarFicha(ficha, nome, camiseta, sexo) {
+  const wrap = document.querySelector('.qrcode-wrap');
+  if (!wrap) return;
+
+  // Não duplica
+  if (document.getElementById('btn-salvar-ficha')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'btn-salvar-ficha';
+  btn.style.cssText = [
+    'width:100%','padding:14px 16px',
+    'background:linear-gradient(135deg,#1a5c2a,#2d7a3a)',
+    'color:#f5ead0','border:none','border-radius:14px',
+    'font-size:15px','font-weight:700','cursor:pointer',
+    'display:flex','align-items:center','justify-content:center',
+    'gap:10px','margin-top:10px','transition:opacity .2s'
+  ].join(';');
+  btn.innerHTML = '📲 Salvar ficha no celular';
+  btn.onclick = () => baixarFichaImagem(ficha, nome, camiseta, sexo);
+  wrap.appendChild(btn);
+
+  const dica = document.createElement('p');
+  dica.style.cssText = 'font-size:11px;color:rgba(245,234,208,.4);margin:4px 0 0;text-align:center';
+  dica.textContent = 'Salva como imagem na galeria · Apresente no dia do evento';
+  wrap.appendChild(dica);
+}
+
+// ── Gera imagem da ficha via Canvas e faz download ─────────────
+function baixarFichaImagem(ficha, nome, camiseta, sexo) {
+  // Tamanho: 800×1100px (proporção A5 vertical)
+  const W = 800, H = 1100;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ── Fundo verde-escuro
+  ctx.fillStyle = '#0d2810';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Borda dupla dourada
+  ctx.strokeStyle = '#c8920a';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(16, 16, W - 32, H - 32);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(28, 28, W - 56, H - 56);
+
+  // ── Faixa cabeçalho
+  ctx.fillStyle = '#1a5c2a';
+  ctx.fillRect(16, 16, W - 32, 120);
+
+  ctx.fillStyle = '#f0b429';
+  ctx.font = 'bold 28px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CICLISMO INDIVIDUAL 2026', W / 2, 70);
+
+  ctx.fillStyle = 'rgba(200,230,200,0.8)';
+  ctx.font = '18px Arial, sans-serif';
+  ctx.fillText('Turismo de Base Comunitária  ·  Aguapé  ·  Costa Marques, RO', W / 2, 108);
+
+  // ── Número da ficha
+  ctx.fillStyle = '#f0b429';
+  ctx.font = 'bold 110px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(ficha, W / 2, 300);
+
+  // Linha dourada
+  ctx.strokeStyle = '#c8920a';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(80, 330); ctx.lineTo(W - 80, 330); ctx.stroke();
+
+  // ── Nome
+  ctx.fillStyle = '#f5ead0';
+  ctx.font = 'bold 38px Arial, sans-serif';
+  const nomeUpper = (nome || '').toUpperCase();
+  // Quebra nome se muito longo
+  if (ctx.measureText(nomeUpper).width > 640) {
+    ctx.font = 'bold 30px Arial, sans-serif';
+  }
+  ctx.fillText(nomeUpper, W / 2, 400);
+
+  // ── Categoria e camiseta
+  const genero = sexo === 'M' ? 'MASCULINO' : 'FEMININO';
+  ctx.fillStyle = '#7dcf8a';
+  ctx.font = '26px Arial, sans-serif';
+  ctx.fillText(`${genero}   |   CAMISETA ${camiseta || '—'}`, W / 2, 460);
+
+  // Linha separadora
+  ctx.strokeStyle = '#2d7a3a';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(80, 490); ctx.lineTo(W - 80, 490); ctx.stroke();
+
+  // ── Instrução
+  ctx.fillStyle = 'rgba(245,234,208,0.6)';
+  ctx.font = '22px Arial, sans-serif';
+  ctx.fillText('Apresente o QR Code abaixo no credenciamento', W / 2, 540);
+
+  // ── QR Code (pega do DOM já gerado)
+  const qrImg = document.querySelector('#qrcode-sucesso img') ||
+                document.querySelector('#qrcode-sucesso canvas');
+
+  const desenharRodape = () => {
+    // Linha separadora
+    ctx.strokeStyle = '#2d7a3a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(80, 940); ctx.lineTo(W - 80, 940); ctx.stroke();
+
+    // Faixa rodapé
+    ctx.fillStyle = '#1a5c2a';
+    ctx.fillRect(16, 940, W - 32, 144);
+
+    ctx.fillStyle = '#f0b429';
+    ctx.font = 'bold 28px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('09 DE AGOSTO DE 2026 · COSTA MARQUES, RO', W / 2, 992);
+
+    ctx.fillStyle = 'rgba(200,230,200,0.8)';
+    ctx.font = '20px Arial, sans-serif';
+    ctx.fillText('Apresente esta ficha para retirar sua camiseta', W / 2, 1030);
+
+    ctx.fillStyle = 'rgba(150,190,150,0.6)';
+    ctx.font = '16px Arial, sans-serif';
+    ctx.fillText('Associação dos Seringueiros do Vale do Guaporé', W / 2, 1064);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `ficha_${ficha}_${nome.split(' ')[0]}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  if (qrImg) {
+    const src = qrImg.tagName === 'CANVAS' ? qrImg.toDataURL() : qrImg.src;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Fundo branco arredondado para o QR
+      ctx.fillStyle = '#ffffff';
+      const qrX = W / 2 - 155, qrY = 565;
+      ctx.beginPath();
+      ctx.roundRect(qrX - 10, qrY - 10, 330, 330, 14);
+      ctx.fill();
+      ctx.drawImage(img, qrX, qrY, 310, 310);
+
+      ctx.fillStyle = 'rgba(125,207,138,0.7)';
+      ctx.font = '18px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Escaneie para verificar sua inscrição', W / 2, 920);
+
+      desenharRodape();
+    };
+    img.src = src;
+  } else {
+    // Sem QR disponível ainda — desenha placeholder
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(W/2 - 160, 560, 320, 320);
+    ctx.fillStyle = '#0d2810';
+    ctx.font = '16px Arial';
+    ctx.fillText('QR Code', W/2, 720);
+    desenharRodape();
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
