@@ -1,11 +1,4 @@
 <!DOCTYPE html>
-<!--
-  checkin.html — Check-in Presencial V1.1
-  Ciclismo Individual 2026 — Turismo de Base Comunitária
-  Leitura de QR Code (BarcodeDetector + jsQR) · Busca por ficha/CPF/nome
-  Valida pagamento · Registra presença · Alerta se não pago
-  © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
--->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -139,7 +132,6 @@ canvas{display:none}
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-wrap">
   <div class="login-card">
     <div class="login-logo">🚴</div>
@@ -152,10 +144,8 @@ canvas{display:none}
   </div>
 </div>
 
-<!-- APP CHECK-IN -->
 <div id="app">
 
-  <!-- Cabeçalho -->
   <header class="cabecalho">
     <div class="cab-left">
       <div class="cab-logo">🚴</div>
@@ -173,17 +163,16 @@ canvas{display:none}
     </div>
   </header>
 
-  <!-- Conteúdo -->
   <div class="container">
 
-    <!-- Modo: câmera ou busca -->
     <div class="modo-btns">
       <button class="modo-btn ativo" id="btn-modo-camera" onclick="mudarModo('camera')">📷 Câmera QR</button>
       <button class="modo-btn" id="btn-modo-busca" onclick="mudarModo('busca')">🔍 Busca manual</button>
     </div>
 
-    <!-- MODO CÂMERA -->
     <div id="modo-camera">
+      <input type="file" id="qr-file-input" accept="image/*" capture="environment" onchange="lerFotoQR(this)" style="display:none">
+      
       <div class="camera-card">
         <div class="camera-titulo">📷 Leitura de QR Code da ficha</div>
         <div id="camera-video-wrap" style="display:none">
@@ -195,14 +184,27 @@ canvas{display:none}
           </div>
           <div class="camera-status-box lendo" id="camera-status">Aponte para o QR Code da ficha…</div>
         </div>
-        <div style="padding:14px">
-          <button class="btn-camera" id="btn-iniciar-camera" onclick="iniciarCamera()">📷 Iniciar câmera</button>
-          <button class="btn-parar" id="btn-parar-camera" style="display:none" onclick="pararCamera()">⏹ Parar câmera</button>
+        
+        <div style="padding:14px; display:flex; flex-direction:column; gap:10px;">
+          <button class="btn-camera" style="margin-bottom:0;" onclick="document.getElementById('qr-file-input').click()">
+            📸 Escanear com Foto (Mais confiável)
+          </button>
+          
+          <div id="botoes-camera-vivo" style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-camera" style="background:rgba(13,40,16,.5); border:1px solid rgba(45,122,58,.5); margin-bottom:0;" id="btn-iniciar-camera" onclick="iniciarCamera(false)">
+              🎥 Câmera Contínua
+            </button>
+            
+            <button class="btn-camera" style="background:rgba(13,40,16,.5); border:1px solid var(--azul); color:var(--azul); margin-bottom:0;" id="btn-camera-tela" onclick="iniciarCamera(true)">
+              📱 Ler QR da tela do celular
+            </button>
+          </div>
+
+          <button class="btn-parar" id="btn-parar-camera" style="display:none" onclick="pararCamera()">⏹ Parar câmera contínua</button>
         </div>
       </div>
     </div>
 
-    <!-- MODO BUSCA MANUAL -->
     <div id="modo-busca" style="display:none">
       <div class="busca-card">
         <div class="busca-titulo">🔍 Buscar por ficha, CPF ou nome</div>
@@ -216,10 +218,8 @@ canvas{display:none}
       </div>
     </div>
 
-    <!-- RESULTADO -->
     <div class="resultado-card" id="resultado-card">
 
-      <!-- Cabeçalho do resultado -->
       <div class="resultado-header">
         <div class="resultado-icone" id="res-icone">—</div>
         <div>
@@ -228,7 +228,6 @@ canvas{display:none}
         </div>
       </div>
 
-      <!-- Grid de informações -->
       <div class="resultado-grid">
         <div class="resultado-item">
           <div class="resultado-item-lbl">Camiseta</div>
@@ -248,39 +247,31 @@ canvas{display:none}
         </div>
       </div>
 
-      <!-- Badge de check-in já realizado -->
       <div class="badge-ci" id="badge-ja-feito" style="display:none">✅ Check-in já realizado às <span id="badge-hora">—</span></div>
 
-      <!-- PAGO: botão de confirmar -->
       <button class="btn-confirmar" id="btn-confirmar" onclick="confirmarCheckin()">
         ✅ Confirmar presença e entregar camiseta
       </button>
 
-      <!-- NÃO PAGO: alerta -->
       <div class="alerta-nao-pago" id="alerta-nao-pago" style="display:none">
         <strong>⛔ Pagamento não confirmado</strong>
         Não é possível realizar o check-in. O participante deve procurar a <strong>administração do evento</strong> para regularizar a situação antes de receber a camiseta.
       </div>
 
-      <!-- CANCELADO: alerta -->
       <div class="alerta-nao-pago" id="alerta-cancelado" style="display:none">
         <strong>⛔ Inscrição cancelada</strong>
         Esta inscrição foi cancelada. O participante deve procurar a <strong>administração do evento</strong>.
       </div>
 
-      <!-- Nova leitura -->
       <div style="padding:0 18px 18px">
         <button onclick="novaLeitura()" style="width:100%;padding:11px;border:1px solid rgba(45,122,58,.3);border-radius:10px;background:transparent;color:rgba(245,234,208,.5);font-size:13px;cursor:pointer">
           🔄 Nova leitura
         </button>
       </div>
 
-    </div><!-- /.resultado-card -->
-
-  </div>
+    </div></div>
 </div>
 
-<!-- FEEDBACK FULLSCREEN -->
 <div class="feedback" id="feedback">
   <div class="feedback-icone">✅</div>
   <div class="feedback-nome" id="fb-nome">—</div>
@@ -290,12 +281,11 @@ canvas{display:none}
   <button class="btn-proximo" onclick="fecharFeedback()">🔄 Próximo check-in</button>
 </div>
 
-<!-- Canvas oculto para jsQR -->
 <canvas id="qr-canvas"></canvas>
 
 <script>
 // ================================================================
-// checkin.html — V1.0
+// checkin.html — V1.2 (Com leitura nativa e jsQR otimizado)
 // © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
 // ================================================================
 
@@ -309,6 +299,7 @@ let participanteAtual = null;
 let inscricaoAtual    = null;
 let todosDados     = { inscricoes:[], participantes:[] };
 let totalCheckins  = 0;
+let modoLeituraTela = false; // Flag para o modo de corte central
 
 if ('BarcodeDetector' in window) {
   try { barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] }); } catch(e){}
@@ -428,16 +419,77 @@ function mudarModo(modo) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// CÂMERA
+// CÂMERA E LEITURA DE FOTO
 // ════════════════════════════════════════════════════════════════
-async function iniciarCamera() {
+
+// MÉTOD0 1: Leitura por foto (Câmera Nativa) - Mais infalível
+async function lerFotoQR(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const statusBox = document.getElementById('camera-status');
+  document.getElementById('camera-video-wrap').style.display = 'block';
+  statusBox.textContent = '⏳ Processando imagem...';
+  statusBox.className = 'camera-status-box lendo';
+
+  // Tenta BarcodeDetector nativo primeiro
+  if (barcodeDetector) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const codes  = await barcodeDetector.detect(bitmap);
+      bitmap.close();
+      if (codes.length > 0) {
+        input.value = '';
+        processarLeitura(codes[0].rawValue);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Fallback: Redimensiona a foto para o jsQR não travar
+  const MAX = 800;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const escala  = Math.min(MAX / img.width, MAX / img.height, 1);
+      const largura = Math.round(img.width  * escala);
+      const altura  = Math.round(img.height * escala);
+
+      const canvas = document.getElementById('qr-canvas');
+      canvas.width  = largura;
+      canvas.height = altura;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, largura, altura);
+
+      const imageData = ctx.getImageData(0, 0, largura, altura);
+      const code = jsQR(imageData.data, largura, altura, { inversionAttempts: 'attemptBoth' });
+
+      input.value = '';
+
+      if (code && code.data) {
+        processarLeitura(code.data);
+      } else {
+        statusBox.textContent = '❌ QR não lido. Tente mais de perto e com boa luz.';
+        statusBox.className = 'camera-status-box erro';
+        setTimeout(() => document.getElementById('camera-video-wrap').style.display = 'none', 3000);
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// MÉTODO 2: Câmera Contínua / Tela
+async function iniciarCamera(modoTela = false) {
   if (streamAtivo) return;
 
-  // Checa HTTPS
   if (!window.isSecureContext && location.hostname !== 'localhost') {
-    mostrarErroBusca('Câmera requer HTTPS. Use a busca manual ou acesse via https://');
+    mostrarErroBusca('Câmera requer HTTPS. Use a busca manual ou tire foto.');
     mudarModo('busca'); return;
   }
+
+  modoLeituraTela = modoTela;
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -447,22 +499,20 @@ async function iniciarCamera() {
     const video = document.getElementById('camera-video');
     video.srcObject = stream;
     await video.play();
+    
     document.getElementById('camera-video-wrap').style.display = 'block';
-    document.getElementById('btn-iniciar-camera').style.display = 'none';
+    document.getElementById('botoes-camera-vivo').style.display = 'none';
     document.getElementById('btn-parar-camera').style.display  = 'block';
-    document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
-    document.getElementById('camera-status').className = 'camera-status-box lendo';
+    
+    const statusBox = document.getElementById('camera-status');
+    statusBox.textContent = modoTela ? '📱 Aponte para a tela do celular (brilho alto)' : 'Aponte para o QR Code da ficha…';
+    statusBox.className = 'camera-status-box lendo';
+    
     scanAtivo = true;
     scanBloqueado = false;
     requestAnimationFrame(scanFrame);
   } catch (e) {
-    const msg = e.name === 'NotAllowedError'
-      ? 'Permissão negada. Libere a câmera nas configurações do navegador.'
-      : e.name === 'NotFoundError'
-      ? 'Nenhuma câmera encontrada neste dispositivo.'
-      : 'Erro ao abrir câmera: ' + e.message;
-    mostrarErroBusca(msg);
-    mudarModo('busca');
+    mostrarErroBusca('Erro ao abrir câmera. Use o botão de Foto nativa.');
   }
 }
 
@@ -475,47 +525,68 @@ async function scanFrame() {
 
   let resultado = null;
 
-  // BarcodeDetector nativo (mais rápido)
-  if (barcodeDetector) {
+  // Tenta BarcodeDetector (se não estiver em modo tela para garantir o crop do jsQR)
+  if (barcodeDetector && !modoLeituraTela) {
     try {
       const codes = await barcodeDetector.detect(video);
       if (codes.length) resultado = codes[0].rawValue;
     } catch(e) {}
   }
 
-  // jsQR fallback
+  // jsQR Fallback (com lógica de Crop para Telas de Celular)
   if (!resultado) {
     const canvas = document.getElementById('qr-canvas');
     const w = video.videoWidth, h = video.videoHeight;
+    
     if (w && h) {
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const code = jsQR(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
-      if (code) resultado = code.data;
+      ctx.drawImage(video, 0, 0, w, h);
+      
+      if (modoLeituraTela) {
+        // Modo tela: Lê apenas o centro para evitar reflexos das bordas
+        const cw = Math.round(w * 0.65);
+        const ch = Math.round(h * 0.65);
+        const cx = Math.round((w - cw) / 2);
+        const cy = Math.round((h - ch) / 2);
+        const imgData = ctx.getImageData(cx, cy, cw, ch);
+        // IMPORTANTE: attemptBoth no lugar de dontInvert
+        const code = jsQR(imgData.data, cw, ch, { inversionAttempts: 'attemptBoth' });
+        if (code) resultado = code.data;
+      } else {
+        // Frame normal
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const code = jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+        if (code) resultado = code.data;
+      }
     }
   }
 
   if (resultado && !scanBloqueado) {
-    scanBloqueado = true;
-    document.getElementById('camera-status').textContent = '✅ QR Code lido!';
-    document.getElementById('camera-status').className = 'camera-status-box ok';
-    // Extrai ficha do QR — formato: "CIC-XXXX|Nome" ou só "CIC-XXXX"
-    const ficha = resultado.split('|')[0].trim();
-    setTimeout(() => processarEntrada(ficha), 300);
+    processarLeitura(resultado);
     return;
   }
 
   animFrame = requestAnimationFrame(scanFrame);
 }
 
+function processarLeitura(texto) {
+  scanBloqueado = true;
+  document.getElementById('camera-status').textContent = '✅ QR Code lido!';
+  document.getElementById('camera-status').className = 'camera-status-box ok';
+  
+  // Extrai a ficha removendo barras e o nome, caso exista
+  const ficha = texto.split('|')[0].trim();
+  setTimeout(() => processarEntrada(ficha), 300);
+}
+
 function pararCamera() {
   scanAtivo = false;
   if (animFrame) cancelAnimationFrame(animFrame);
   if (streamAtivo) { streamAtivo.getTracks().forEach(t => t.stop()); streamAtivo = null; }
+  
   document.getElementById('camera-video-wrap').style.display = 'none';
-  document.getElementById('btn-iniciar-camera').style.display = 'block';
+  document.getElementById('botoes-camera-vivo').style.display = 'flex';
   document.getElementById('btn-parar-camera').style.display  = 'none';
 }
 
@@ -576,7 +647,7 @@ function processarEntrada(entrada) {
     document.getElementById('camera-status').className = 'camera-status-box erro';
     setTimeout(() => {
       if (modoAtual === 'camera') {
-        document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+        document.getElementById('camera-status').textContent = modoLeituraTela ? '📱 Aponte para a tela do celular (brilho alto)' : 'Aponte para o QR Code da ficha…';
         document.getElementById('camera-status').className = 'camera-status-box lendo';
         scanBloqueado = false;
         if (!streamAtivo) return;
@@ -713,7 +784,7 @@ function novaLeitura() {
   inscricaoAtual = null;
 
   if (modoAtual === 'camera') {
-    document.getElementById('camera-status').textContent = 'Aponte para o QR Code da ficha…';
+    document.getElementById('camera-status').textContent = modoLeituraTela ? '📱 Aponte para a tela do celular (brilho alto)' : 'Aponte para o QR Code da ficha…';
     document.getElementById('camera-status').className = 'camera-status-box lendo';
     scanBloqueado = false;
     if (streamAtivo) requestAnimationFrame(scanFrame);
