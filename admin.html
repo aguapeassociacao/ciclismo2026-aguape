@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V2.4
+  admin.html — Painel Administrativo V2.5
   Ciclismo Individual 2026 — Turismo de Base Comunitária
-  © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
+  © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
          Check-in com câmera · Relatório pendentes · Export Excel/PDF · Comunicação
   V2.1 — Mobile: bottom navigation bar + card acesso rápido check-in no dashboard
@@ -10,6 +10,8 @@
          Topbar fixa no painel desktop com nome do usuário e botão atualizar
   V2.3 — Correção ficha PDF (img element, sem fetch bloqueado em produção)
   V2.4 — Atualização domínio para ciclismo.aguape.org
+  V2.5 — Removidas todas as referências à Prefeitura e DTI
+         Associação dos Seringueiros do Vale do Guaporé como organização responsável
          Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
          Seção Gestão de Operadores na aba Configurações
 -->
@@ -374,7 +376,7 @@ tr:hover td{background:#fafafa}
   <div class="login-card">
     <div class="login-logo"><img src="aguape.png" alt="Aguapé"></div>
     <div class="login-titulo">Painel Admin</div>
-    <div class="login-sub">Ciclismo Individual 2026 · Costa Marques, RO</div>
+    <div class="login-sub">Ciclismo Individual 2026 · Assoc. Seringueiros do Vale do Guaporé</div>
     <input class="login-field" type="text" id="login-user" placeholder="Usuário" autocomplete="username">
     <input class="login-field" type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
     <button class="btn-login" onclick="fazerLogin()">Entrar</button>
@@ -400,7 +402,7 @@ tr:hover td{background:#fafafa}
       <div class="sb-logo"><img src="aguape.png" alt="Aguapé"></div>
       <div>
         <div class="sb-titulo">Ciclismo 2026</div>
-        <div class="sb-sub">Painel Administrativo · V2.4</div>
+        <div class="sb-sub">Painel Administrativo · V2.5</div>
       </div>
     </div>
     <div class="sb-nav">
@@ -432,7 +434,7 @@ tr:hover td{background:#fafafa}
         <img class="topbar-logo" src="aguape.png" alt="Aguapé">
         <div>
           <div class="topbar-titulo">Ciclismo Individual 2026</div>
-          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.4</div>
+          <div class="topbar-sub">Assoc. Seringueiros do Vale do Guaporé · Painel Administrativo V2.5</div>
         </div>
       </div>
       <div class="topbar-dir">
@@ -731,7 +733,7 @@ Identificamos que sua inscrição no *Ciclismo Individual 2026* ainda está pend
 📋 Sua ficha: *[FICHA]*
 💰 Valor: *R$ 160,00*
 📅 Evento: *09 de agosto de 2026*
-📍 Costa Marques, Rondônia
+📍 Costa Marques, Rondônia · Vale do Guaporé
 
 Para garantir sua vaga, acesse o link abaixo e conclua o pagamento:
 🔗 https://ciclismo.aguape.org
@@ -810,7 +812,7 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>admin.html</td><td>V2.4</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V2.5</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>js/app.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/criar-pagamento.js</td><td>V3.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
@@ -866,8 +868,8 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
 
 <script>
 // ================================================================
-// admin.html — Script V2.4
-// © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
+// admin.html — Script V2.5
+// © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
 // ================================================================
 
 let adminToken='', adminPerfil='', adminNome='';
@@ -1635,7 +1637,7 @@ function exportarPDF(tipo){
     doc.text('CICLISMO INDIVIDUAL 2026 — Turismo de Base Comunitária · Aguapé', logoDataUrl?28:8, 11);
     doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.setTextColor(200,230,200);
-    doc.text('Prefeitura de Costa Marques · DTI', logoDataUrl?28:8, 17);
+    doc.text('Assoc. dos Seringueiros do Vale do Guaporé', logoDataUrl?28:8, 17);
     doc.setTextColor(240,180,40);
     doc.setFontSize(9);
     doc.text('Costa Marques, Rondônia · '+new Date().toLocaleDateString('pt-BR'), 289, 13, {align:'right'});
@@ -1690,7 +1692,7 @@ function exportarPDF(tipo){
       doc.setFillColor(245,245,245); doc.rect(0,doc.internal.pageSize.height-10,297,10,'F');
       doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(0,doc.internal.pageSize.height-10,297,doc.internal.pageSize.height-10);
       doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-      doc.text(`Página ${pg} de ${pags}  ·  Ciclismo Individual 2026  ·  Prefeitura de Costa Marques, RO`,297/2,doc.internal.pageSize.height-3.5,{align:'center'});
+      doc.text(`Página ${pg} de ${pags}  ·  Ciclismo Individual 2026  ·  Assoc. Seringueiros do Vale do Guaporé`,297/2,doc.internal.pageSize.height-3.5,{align:'center'});
     }
 
     doc.save(`${tipo}_ciclismo2026_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
@@ -1738,7 +1740,7 @@ function baixarFichaIndividual(inscId){
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...corDouradoClaro);
     doc.text('CICLISMO INDIVIDUAL 2026',txX,13,{align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(200,230,200);
-    doc.text('Turismo de Base Comunitaria  |  Aguape  |  Costa Marques, RO',txX,19,{align:'center'});
+    doc.text('Turismo de Base Comunitária  |  Assoc. Seringueiros do Vale do Guaporé',txX,19,{align:'center'});
     doc.setFont('helvetica','bold'); doc.setFontSize(36); doc.setTextColor(...corDouradoClaro);
     doc.text(i.numero_ficha||'---',W/2,48,{align:'center'});
     doc.setDrawColor(...corDourado); doc.setLineWidth(0.6); doc.line(14,52,W-14,52);
