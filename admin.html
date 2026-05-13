@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V2.5
+  admin.html — Painel Administrativo V2.6
   Ciclismo Individual 2026 — Turismo de Base Comunitária
-  © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura de Costa Marques
+  © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
          Check-in com câmera · Relatório pendentes · Export Excel/PDF · Comunicação
   V2.1 — Mobile: bottom navigation bar + card acesso rápido check-in no dashboard
@@ -11,6 +11,7 @@
   V2.3 — Correção ficha PDF (img element, sem fetch bloqueado em produção)
   V2.4 — Atualização domínio para ciclismo.aguape.org
   V2.5 — Gerenciamento de operadores via Supabase (admin_operadores) · sem redeploy
+  V2.6 — PDF sem referência à Prefeitura · botão excluir participante (🗑) · remoção vínculo institucional
          Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
          Seção Gestão de Operadores na aba Configurações
 -->
@@ -401,7 +402,7 @@ tr:hover td{background:#fafafa}
       <div class="sb-logo"><img src="aguape.png" alt="Aguapé"></div>
       <div>
         <div class="sb-titulo">Ciclismo 2026</div>
-        <div class="sb-sub">Painel Administrativo · V2.5</div>
+        <div class="sb-sub">Painel Administrativo · V2.6</div>
       </div>
     </div>
     <div class="sb-nav">
@@ -433,7 +434,7 @@ tr:hover td{background:#fafafa}
         <img class="topbar-logo" src="aguape.png" alt="Aguapé">
         <div>
           <div class="topbar-titulo">Ciclismo Individual 2026</div>
-          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.5</div>
+          <div class="topbar-sub">Costa Marques, Rondônia · Painel Administrativo V2.6</div>
         </div>
       </div>
       <div class="topbar-dir">
@@ -806,8 +807,8 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>admin.html</td><td>V2.5</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
-            <tr><td>js/app.js</td><td>V3.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V2.6</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>js/app.js</td><td>V3.4</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/criar-pagamento.js</td><td>V3.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/webhook-pagamento.js</td><td>V1.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
@@ -863,7 +864,7 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
 
 <script>
 // ================================================================
-// admin.html — Script V2.5
+// admin.html — Script V2.6
 // © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
 
@@ -1189,7 +1190,8 @@ function renderizarInscritos(){
         <div class="btn-group">
           <button class="btn-sm btn-cinza" onclick="abrirFicha(${i.id})" title="Ver ficha">👁</button>
           ${adminPerfil==='admin'&&i.status!=='pago'?`<button class="btn-sm btn-verde" onclick="confirmarPagtoManual(${i.id})" title="Confirmar pagamento">✅</button>`:''}
-          ${adminPerfil==='admin'&&i.status!=='cancelado'?`<button class="btn-sm btn-verm" onclick="cancelarInscricao(${i.id})" title="Cancelar">✕</button>`:''}
+          ${adminPerfil==='admin'&&i.status!=='cancelado'?`<button class="btn-sm btn-verm" onclick="cancelarInscricao(${i.id})" title="Cancelar inscrição">✕</button>`:''}
+          ${adminPerfil==='admin'||adminPodeExcluir?`<button class="btn-sm btn-verm" onclick="excluirParticipante(${i.id},${p.id},'${(p.nome_completo||'').replace(/'/g,'')}')" title="Excluir participante do sistema" style="opacity:.7">🗑</button>`:''}
           ${p.telefone?`<a class="btn-sm btn-verde-claro" href="https://wa.me/55${p.telefone.replace(/\D/g,'')}" target="_blank" title="WhatsApp">💬</a>`:''}
         </div>
       </td>
@@ -1254,6 +1256,19 @@ async function confirmarPagtoManual(id){
 async function cancelarInscricao(id){
   if(!confirm('Cancelar esta inscrição?'))return;
   await supabaseAtualizar('inscricoes',id,{status:'cancelado'});
+
+async function excluirParticipante(inscricaoId, participanteId, nome){
+  if(!confirm(`⚠️ EXCLUIR "${nome}" do sistema?\n\nIsso remove o participante e a inscrição permanentemente.\nEle poderá se inscrever novamente do zero.\n\nConfirmar?`)) return;
+  try {
+    // 1. Deleta inscrição
+    await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'deletar',tabela:'inscricoes',id:inscricaoId})});
+    // 2. Deleta participante
+    await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'deletar',tabela:'participantes',id:participanteId})});
+    await carregarDados();
+  } catch(e){ alert('Erro ao excluir: '+e.message); }
+}
   await carregarTudo();
 }
 
@@ -1606,7 +1621,7 @@ function exportarPDF(tipo){
     doc.text('CICLISMO INDIVIDUAL 2026 — Turismo de Base Comunitária · Aguapé', logoDataUrl?28:8, 11);
     doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.setTextColor(200,230,200);
-    doc.text('Prefeitura de Costa Marques · DTI', logoDataUrl?28:8, 17);
+    doc.text('Assoc. dos Seringueiros do Vale do Guaporé', logoDataUrl?28:8, 17);
     doc.setTextColor(240,180,40);
     doc.setFontSize(9);
     doc.text('Costa Marques, Rondônia · '+new Date().toLocaleDateString('pt-BR'), 289, 13, {align:'right'});
@@ -1661,7 +1676,7 @@ function exportarPDF(tipo){
       doc.setFillColor(245,245,245); doc.rect(0,doc.internal.pageSize.height-10,297,10,'F');
       doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(0,doc.internal.pageSize.height-10,297,doc.internal.pageSize.height-10);
       doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-      doc.text(`Página ${pg} de ${pags}  ·  Ciclismo Individual 2026  ·  Prefeitura de Costa Marques, RO`,297/2,doc.internal.pageSize.height-3.5,{align:'center'});
+      doc.text(`Página ${pg} de ${pags}  ·  Ciclismo Individual 2026  ·  Assoc. Seringueiros do Vale do Guaporé`,297/2,doc.internal.pageSize.height-3.5,{align:'center'});
     }
 
     doc.save(`${tipo}_ciclismo2026_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
