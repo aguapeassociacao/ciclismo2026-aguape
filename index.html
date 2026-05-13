@@ -253,7 +253,24 @@
         <div class="row">
           <div>
             <label class="campo">Data de nascimento</label>
-            <input type="date" id="nascimento" oninput="verificarMenor()">
+            <div style="display:grid;grid-template-columns:72px 1fr 88px;gap:6px;">
+              <select id="nasc-dia" onchange="verificarMenor()" style="padding:11px 6px;background:rgba(5,15,7,.6);border:1px solid rgba(45,122,58,.4);border-radius:8px;font-size:14px;color:var(--creme);-webkit-appearance:none;text-align:center">
+                <option value="">Dia</option>
+              </select>
+              <select id="nasc-mes" onchange="verificarMenor()" style="padding:11px 6px;background:rgba(5,15,7,.6);border:1px solid rgba(45,122,58,.4);border-radius:8px;font-size:14px;color:var(--creme);-webkit-appearance:none;text-align:center">
+                <option value="">Mês</option>
+                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                <option value="03">Março</option><option value="04">Abril</option>
+                <option value="05">Maio</option><option value="06">Junho</option>
+                <option value="07">Julho</option><option value="08">Agosto</option>
+                <option value="09">Setembro</option><option value="10">Outubro</option>
+                <option value="11">Novembro</option><option value="12">Dezembro</option>
+              </select>
+              <select id="nasc-ano" onchange="verificarMenor()" style="padding:11px 6px;background:rgba(5,15,7,.6);border:1px solid rgba(45,122,58,.4);border-radius:8px;font-size:14px;color:var(--creme);-webkit-appearance:none;text-align:center">
+                <option value="">Ano</option>
+              </select>
+            </div>
+            <input type="hidden" id="nascimento">
           </div>
           <div>
             <label class="campo">WhatsApp <span class="obrigatorio">*</span></label>
