@@ -1,5 +1,5 @@
 // ================================================================
-// api/criar-pagamento.js  —  V3.1
+// api/criar-pagamento.js  —  V3.2
 // PIX direto (tela própria) + Cartão (checkout MP) — sem boleto nem PIX no checkout MP
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // © 2026 Ewerson Luiz de Oliveira
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     const payload = {
       payment_method_id:  'pix',
-      transaction_amount:  1.00,  // ⚠️ TESTE — alterar para 160.00 antes de abrir ao público
+      transaction_amount:  160.00,
       description:        `Ciclismo 2026 - Ficha ${numero_ficha} - ${nome}`,
       external_reference:  String(inscricao_id),
       date_of_expiration:  expiraPix,
@@ -154,7 +154,7 @@ export default async function handler(req, res) {
       title:       'Ciclismo Individual 2026 — Inscricao',
       description: `Participante: ${nome} - Ficha: ${numero_ficha}`,
       quantity:    1,
-      unit_price:  1.00,   // ⚠️ TESTE — alterar para 160.00 antes de abrir ao público
+      unit_price:  160.00,
       currency_id: 'BRL'
     }],
     payment_methods: {
