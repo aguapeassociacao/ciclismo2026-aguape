@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V3.5 — Lógica principal do formulário de inscrições
+// app.js — V3.6 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -7,6 +7,7 @@
 // V3.3 — QR Code na ficha + botão "Salvar ficha no celular" (canvas PNG)
 // V3.4 — Web Share API para salvar ficha no celular (iOS/Android)
 // V3.5 — Data de nascimento: 3 selects (dia/mês/ano) no lugar do calendário nativo
+// V3.6 — Scroll para tela de sucesso após inscrição · botão salvar ficha não trava mais
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -346,7 +347,10 @@ async function enviarInscricao() {
   }
 
   setTimeout(() => gerarQRCode(ficha, nome, camiseta, sexo), 100);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    const el = document.getElementById('sucesso');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -759,29 +763,45 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
 
     // Download — mobile usa Web Share API, desktop usa link.click()
     const nomeArq = `ficha_${ficha}_${nome.split(' ')[0]}.png`;
+    const resetBtn = () => {
+      if (btn) { btn.textContent = '📲 Salvar ficha no celular'; btn.disabled = false; }
+    };
+
     canvas.toBlob(async (blob) => {
-      // Tenta Web Share API (iOS Safari, Android Chrome)
-      if (navigator.canShare && blob) {
-        const file = new File([blob], nomeArq, { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file], title: 'Ficha Ciclismo 2026', text: `Ficha ${ficha}` });
-            return;
-          } catch(e) { /* usuário cancelou o share — cai no fallback */ }
+      try {
+        // Tenta Web Share API (iOS Safari, Android Chrome)
+        if (blob && navigator.canShare) {
+          const file = new File([blob], nomeArq, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: 'Ficha Ciclismo 2026', text: `Ficha ${ficha}` });
+              resetBtn(); // ← reseta mesmo após share bem-sucedido
+              return;
+            } catch(e) { /* cancelou — cai no fallback */ }
+          }
         }
+        // Fallback: abre em nova aba (segurar para salvar) ou link direto
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const nova = window.open(url, '_blank');
+          if (!nova) {
+            const link = document.createElement('a');
+            link.download = nomeArq;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+          }
+        } else {
+          // Último recurso sem blob
+          const link = document.createElement('a');
+          link.download = nomeArq;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        }
+      } catch(e) {
+        alert('Erro ao salvar: ' + e.message);
+      } finally {
+        resetBtn(); // ← sempre reseta o botão, seja qual for o caminho
       }
-      // Fallback mobile: abre imagem em nova aba (usuário segura para salvar)
-      const url = URL.createObjectURL(blob || new Blob([canvas.toDataURL()], {type:'image/png'}));
-      const nova = window.open(url, '_blank');
-      if (!nova) {
-        // Último recurso: link direto
-        const link = document.createElement('a');
-        link.download = nomeArq;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      }
-      btn.textContent = '📲 Salvar ficha no celular';
-      btn.disabled = false;
     }, 'image/png');
   };
 
