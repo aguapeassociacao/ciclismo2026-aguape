@@ -1,52 +1,97 @@
 // ================================================================
-// api/admin-auth.js
-// Autenticação — admin master + operadores configurados
+// api/admin-auth.js — V2.0
+// Autenticação segura — sem fallback hardcoded
+// Sessão expira em 8 horas
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
+// © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
+
+// Gera token com timestamp de expiração embutido
+function gerarToken(usuario, perfil) {
+  const expira = Date.now() + (8 * 60 * 60 * 1000); // 8 horas
+  const payload = `${usuario}:${perfil}:${expira}`;
+  const rand    = Math.random().toString(36).slice(2);
+  return Buffer.from(payload).toString('base64') + '.' + rand;
+}
+
+// Valida token — retorna dados ou null se expirado/inválido
+export function validarToken(token) {
+  try {
+    const [payload] = token.split('.');
+    const decoded   = Buffer.from(payload, 'base64').toString('utf8');
+    const [usuario, perfil, expira] = decoded.split(':');
+    if (Date.now() > parseInt(expira)) return null; // expirado
+    return { usuario, perfil };
+  } catch {
+    return null;
+  }
+}
 
 export default function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ erro: 'Método não permitido' });
   }
 
-  const { usuario, senha, acao } = req.body;
+  const ADMIN_USER  = process.env.ADMIN_USER;
+  const ADMIN_SENHA = process.env.ADMIN_SENHA;
 
-  const ADMIN_USER  = process.env.ADMIN_USER  || 'admin';
-  const ADMIN_SENHA = process.env.ADMIN_SENHA || 'ciclismo2026';
+  // ── Bloqueia se variáveis não configuradas ────────────────────
+  if (!ADMIN_USER || !ADMIN_SENHA) {
+    console.error('admin-auth: ADMIN_USER ou ADMIN_SENHA não configurados no Vercel');
+    return res.status(503).json({
+      ok:   false,
+      erro: 'Painel não configurado. Configure ADMIN_USER e ADMIN_SENHA nas variáveis de ambiente do Vercel.'
+    });
+  }
 
-  // ── Verificar permissão em tempo real (sem precisar de senha) ──
-  // Chamado antes de cada exclusão para garantir permissão atual
+  const { usuario, senha, acao, token } = req.body;
+
+  // ── Validar token existente (checagem de sessão ativa) ────────
+  if (acao === 'validarSessao') {
+    if (!token) return res.status(401).json({ ok: false, erro: 'Token não informado' });
+    const dados = validarToken(token);
+    if (!dados)  return res.status(401).json({ ok: false, erro: 'Sessão expirada' });
+    return res.status(200).json({ ok: true, ...dados });
+  }
+
+  // ── Verificar permissão de operador ───────────────────────────
   if (acao === 'verificarPermissao') {
-    if (!usuario) return res.status(400).json({ ok: false, erro: 'Usuário não informado' });
+    if (!token) return res.status(401).json({ ok: false });
+    const dados = validarToken(token);
+    if (!dados)  return res.status(401).json({ ok: false, erro: 'Sessão expirada' });
 
-    // Admin sempre pode
-    if (usuario === ADMIN_USER) {
+    if (dados.usuario === ADMIN_USER) {
       return res.status(200).json({ ok: true, podeExcluir: true });
     }
-
-    // Busca operador pelo login e retorna permissão atual do process.env
     for (let i = 1; i <= 20; i++) {
       const op = process.env[`OPERADOR_${i}`];
       if (!op) continue;
       const [opUser, , , opExcluir] = op.split(':');
-      if (opUser === usuario) {
+      if (opUser === dados.usuario) {
         return res.status(200).json({ ok: true, podeExcluir: opExcluir === 'true' });
       }
     }
     return res.status(404).json({ ok: false, erro: 'Operador não encontrado' });
   }
 
-  // ── Login normal ──────────────────────────────────────────────
+  // ── Login ─────────────────────────────────────────────────────
+  if (!usuario || !senha) {
+    return res.status(400).json({ ok: false, erro: 'Usuário e senha obrigatórios' });
+  }
+
+  // Admin master
   if (usuario === ADMIN_USER && senha === ADMIN_SENHA) {
-    const token = Date.now().toString(36) + Math.random().toString(36).slice(2);
     return res.status(200).json({
-      ok: true, token,
-      perfil: 'admin',
-      nome: 'Administrador',
-      podeExcluir: true
+      ok:          true,
+      token:       gerarToken(usuario, 'admin'),
+      perfil:      'admin',
+      nome:        'Administrador',
+      podeExcluir: true,
+      expira_em:   Date.now() + (8 * 60 * 60 * 1000)
     });
   }
 
+  // Operadores (OPERADOR_1, OPERADOR_2... formato: usuario:senha:nome:podeExcluir)
   for (let i = 1; i <= 20; i++) {
     const op = process.env[`OPERADOR_${i}`];
     if (!op) continue;
@@ -54,15 +99,19 @@ export default function handler(req, res) {
     if (partes.length < 3) continue;
     const [opUser, opSenha, opNome, opExcluir] = partes;
     if (usuario === opUser && senha === opSenha) {
-      const token = Date.now().toString(36) + Math.random().toString(36).slice(2);
       return res.status(200).json({
-        ok: true, token,
-        perfil: 'operador',
-        nome: opNome || opUser,
-        podeExcluir: opExcluir === 'true'
+        ok:          true,
+        token:       gerarToken(usuario, 'operador'),
+        perfil:      'operador',
+        nome:        opNome || opUser,
+        podeExcluir: opExcluir === 'true',
+        expira_em:   Date.now() + (8 * 60 * 60 * 1000)
       });
     }
   }
 
-  return res.status(401).json({ ok: false, erro: 'Usuário ou senha incorretos' });
+  // Delay artificial para dificultar brute force
+  return new Promise(resolve => setTimeout(() => {
+    resolve(res.status(401).json({ ok: false, erro: 'Usuário ou senha incorretos' }));
+  }, 800));
 }
