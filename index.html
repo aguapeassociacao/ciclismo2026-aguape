@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  index.html — Sistema de Inscrições V1.3
+  index.html — Sistema de Inscrições V1.4
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   Associação dos Seringueiros do Vale do Guaporé · Aguapé
   © 2026 Ewerson Luiz de Oliveira
@@ -8,6 +8,7 @@
   V1.1 — QR Code na ficha · botão salvar ficha no celular
   V1.2 — Data de nascimento: 3 selects (dia/mês/ano) · sem calendário nativo
   V1.3 — Duas modalidades de inscrição (Normal R$160 / Participativa R$70) · Seção de Patrocinadores
+  V1.4 — Patrocinadores movidos para o hero (acima do botão) · Data inscrições: 19/07/2026
 -->
 <html lang="pt-BR">
 <head>
@@ -200,16 +201,14 @@
   .tipo-card-badge{display:inline-block;background:rgba(200,146,10,.2);border:1px solid rgba(200,146,10,.4);color:var(--dourado-claro);font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;margin-bottom:8px}
   .tipo-card.ativo .tipo-card-badge{background:rgba(200,146,10,.35);border-color:var(--dourado)}
 
-  /* PATROCINADORES */
-  .secao-patrocinadores{padding:48px 0;background:rgba(0,0,0,.3);border-top:1px solid rgba(45,122,58,.2)}
-  .patrocinadores-inner{max-width:700px;margin:0 auto;padding:0 20px;text-align:center}
-  .patrocinadores-label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--verde-claro);margin-bottom:8px}
-  .patrocinadores-titulo{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--branco);margin-bottom:32px}
-  .patrocinadores-grid{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:center}
-  .patrocinador-item{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px 28px;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:140px;transition:all .3s}
-  .patrocinador-item:hover{background:rgba(255,255,255,.1);border-color:rgba(200,146,10,.4);transform:translateY(-2px)}
-  .patrocinador-item img{max-width:120px;max-height:60px;object-fit:contain;filter:brightness(1.1)}
-  .patrocinador-item span{font-size:11px;color:rgba(245,234,208,.5);letter-spacing:.5px;font-weight:600}
+  /* PATROCINADORES — no hero acima do botão */
+  .patrocinadores-hero{margin:0 auto 28px;text-align:center;animation:fadeUp .8s 1s ease-out both}
+  .patrocinadores-hero-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--verde-claro);margin-bottom:12px;opacity:.8}
+  .patrocinadores-hero-grid{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .patrocinador-hero-item{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:120px;transition:all .3s;backdrop-filter:blur(6px)}
+  .patrocinador-hero-item:hover{background:rgba(255,255,255,.12);border-color:rgba(200,146,10,.5);transform:translateY(-2px)}
+  .patrocinador-hero-item img{max-width:100px;max-height:48px;object-fit:contain;filter:brightness(1.15)}
+  .patrocinador-hero-item span{font-size:10px;color:rgba(245,234,208,.55);letter-spacing:.5px;font-weight:600}
 </style>
 </head>
 <body>
@@ -233,7 +232,7 @@
       <div class="info-card">
         <div class="info-card-icon">⏳</div>
         <div class="info-card-label">Inscrições até</div>
-        <div class="info-card-val">01 Ago 2026</div>
+        <div class="info-card-val">19 Jul 2026</div>
       </div>
       <div class="info-card">
         <div class="info-card-icon">💰</div>
@@ -246,8 +245,23 @@
         <div class="info-card-val">Camiseta</div>
       </div>
     </div>
+
+    <div class="patrocinadores-hero">
+      <div class="patrocinadores-hero-label">Patrocinadores</div>
+      <div class="patrocinadores-hero-grid">
+        <div class="patrocinador-hero-item">
+          <img src="prefeituracm.png" alt="Prefeitura de Costa Marques" onerror="this.style.display='none'">
+          <span>Prefeitura de Costa Marques</span>
+        </div>
+        <div class="patrocinador-hero-item">
+          <img src="sicoob.png" alt="Sicoob Credip" onerror="this.style.display='none'">
+          <span>Sicoob Credip</span>
+        </div>
+      </div>
+    </div>
+
     <a href="#inscricao" class="btn-inscricao">🚴 Inscreva-se Agora</a>
-    <p class="btn-prazo">Inscrições encerram em <strong>01/08/2026</strong> · Vagas limitadas</p>
+    <p class="btn-prazo">Inscrições encerram em <strong>19/07/2026</strong> · Vagas limitadas</p>
   </div>
 </section>
 
@@ -443,23 +457,6 @@
     </div>
     <div class="consulta-resultado" id="consulta-resultado">
       <div class="card"><div id="consulta-perfil"></div></div>
-    </div>
-  </div>
-</section>
-
-<section class="secao-patrocinadores">
-  <div class="patrocinadores-inner">
-    <div class="patrocinadores-label">Apoio &amp; Realização</div>
-    <h2 class="patrocinadores-titulo">Patrocinadores</h2>
-    <div class="patrocinadores-grid">
-      <div class="patrocinador-item">
-        <img src="prefeituracm.png" alt="Prefeitura de Costa Marques" onerror="this.style.display='none'">
-        <span>Prefeitura de Costa Marques</span>
-      </div>
-      <div class="patrocinador-item">
-        <img src="sicoob.png" alt="Sicoob Credip" onerror="this.style.display='none'">
-        <span>Sicoob Credip</span>
-      </div>
     </div>
   </div>
 </section>
