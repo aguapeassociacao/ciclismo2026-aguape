@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <!--
-  index.html — Sistema de Inscrições V1.2
+  index.html — Sistema de Inscrições V1.3
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   Associação dos Seringueiros do Vale do Guaporé · Aguapé
   © 2026 Ewerson Luiz de Oliveira
   V1.0 — Formulário de inscrição completo · CPF · PIX · Cartão
   V1.1 — QR Code na ficha · botão salvar ficha no celular
   V1.2 — Data de nascimento: 3 selects (dia/mês/ano) · sem calendário nativo
+  V1.3 — Duas modalidades de inscrição (Normal R$160 / Participativa R$70) · Seção de Patrocinadores
 -->
 <html lang="pt-BR">
 <head>
@@ -185,6 +186,30 @@
     .info-cards{gap:8px}
     .info-card{min-width:110px;padding:12px 14px}
   }
+
+  /* TIPO DE INSCRIÇÃO */
+  .tipo-inscricao-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+  @media(max-width:480px){.tipo-inscricao-wrap{grid-template-columns:1fr}}
+  .tipo-card{border:2px solid rgba(45,122,58,.4);border-radius:14px;padding:16px;cursor:pointer;background:rgba(5,15,7,.5);transition:all .25s;position:relative;text-align:left}
+  .tipo-card:hover{border-color:var(--dourado);background:rgba(200,146,10,.07)}
+  .tipo-card.ativo{border-color:var(--dourado);background:rgba(200,146,10,.12);box-shadow:0 0 0 3px rgba(200,146,10,.15)}
+  .tipo-card input[type=radio]{position:absolute;opacity:0;pointer-events:none}
+  .tipo-card-titulo{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--dourado-claro);margin-bottom:4px}
+  .tipo-card-preco{font-size:22px;font-weight:800;color:var(--branco);margin-bottom:6px;font-family:'Cinzel',serif}
+  .tipo-card-desc{font-size:12px;color:rgba(245,234,208,.6);line-height:1.6}
+  .tipo-card-badge{display:inline-block;background:rgba(200,146,10,.2);border:1px solid rgba(200,146,10,.4);color:var(--dourado-claro);font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;margin-bottom:8px}
+  .tipo-card.ativo .tipo-card-badge{background:rgba(200,146,10,.35);border-color:var(--dourado)}
+
+  /* PATROCINADORES */
+  .secao-patrocinadores{padding:48px 0;background:rgba(0,0,0,.3);border-top:1px solid rgba(45,122,58,.2)}
+  .patrocinadores-inner{max-width:700px;margin:0 auto;padding:0 20px;text-align:center}
+  .patrocinadores-label{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--verde-claro);margin-bottom:8px}
+  .patrocinadores-titulo{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--branco);margin-bottom:32px}
+  .patrocinadores-grid{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .patrocinador-item{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px 28px;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:140px;transition:all .3s}
+  .patrocinador-item:hover{background:rgba(255,255,255,.1);border-color:rgba(200,146,10,.4);transform:translateY(-2px)}
+  .patrocinador-item img{max-width:120px;max-height:60px;object-fit:contain;filter:brightness(1.1)}
+  .patrocinador-item span{font-size:11px;color:rgba(245,234,208,.5);letter-spacing:.5px;font-weight:600}
 </style>
 </head>
 <body>
@@ -213,7 +238,7 @@
       <div class="info-card">
         <div class="info-card-icon">💰</div>
         <div class="info-card-label">Inscrição</div>
-        <div class="info-card-val">R$ 160,00</div>
+        <div class="info-card-val">R$ 160 / R$ 70</div>
       </div>
       <div class="info-card">
         <div class="info-card-icon">👕</div>
@@ -306,6 +331,28 @@
         </div>
       </div>
 
+      <div class="card">
+        <h2>🎫 Modalidade de Inscrição <span class="obrigatorio">*</span></h2>
+        <p style="font-size:13px;color:rgba(245,234,208,.5);margin-bottom:16px;">Escolha a modalidade que melhor se encaixa para você:</p>
+        <div class="tipo-inscricao-wrap">
+          <label class="tipo-card ativo" id="tipo-card-normal" onclick="selecionarTipoInscricao('normal')">
+            <input type="radio" name="tipo_inscricao" value="normal" checked>
+            <div class="tipo-card-badge">🏆 COMPLETA</div>
+            <div class="tipo-card-titulo">Inscrição Normal</div>
+            <div class="tipo-card-preco">R$ 160,00</div>
+            <div class="tipo-card-desc">✅ Camiseta oficial do evento<br>🍽️ Alimentação inclusa<br>🌲 Percurso trilha na floresta<br>🚿 Área de banho na comunidade</div>
+          </label>
+          <label class="tipo-card" id="tipo-card-participativa" onclick="selecionarTipoInscricao('participativa')">
+            <input type="radio" name="tipo_inscricao" value="participativa">
+            <div class="tipo-card-badge">🤝 PARTICIPATIVA</div>
+            <div class="tipo-card-titulo">Inscrição Participativa</div>
+            <div class="tipo-card-preco">R$ 70,00</div>
+            <div class="tipo-card-desc">✅ Camiseta oficial do evento<br>🚿 Área de banho na comunidade<br>❌ Não inclui alimentação<br>❌ Não inclui trilha na floresta</div>
+          </label>
+        </div>
+        <input type="hidden" id="tipo-inscricao" value="normal">
+      </div>
+
       <div class="card" id="camiseta-wrap">
         <h2>👕 Tamanho da camiseta <span class="obrigatorio">*</span></h2>
         <p style="font-size:13px;color:rgba(245,234,208,.5);margin-bottom:14px;">Incluída no valor da inscrição. Escolha seu tamanho:</p>
@@ -344,7 +391,7 @@
         </div>
       </div>
 
-      <button id="btn-enviar" onclick="enviarInscricao()">🚴 Enviar inscrição — R$ 160,00</button>
+      <button id="btn-enviar" onclick="enviarInscricao()">🚴 Enviar inscrição — <span id="btn-valor-label">R$ 160,00</span></button>
       <p style="text-align:center;font-size:11px;color:rgba(245,234,208,.3);margin-top:10px;">Após o envio você receberá sua ficha e seguirá para o pagamento.</p>
     </div>
 
@@ -396,6 +443,23 @@
     </div>
     <div class="consulta-resultado" id="consulta-resultado">
       <div class="card"><div id="consulta-perfil"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="secao-patrocinadores">
+  <div class="patrocinadores-inner">
+    <div class="patrocinadores-label">Apoio &amp; Realização</div>
+    <h2 class="patrocinadores-titulo">Patrocinadores</h2>
+    <div class="patrocinadores-grid">
+      <div class="patrocinador-item">
+        <img src="prefeituracm.png" alt="Prefeitura de Costa Marques" onerror="this.style.display='none'">
+        <span>Prefeitura de Costa Marques</span>
+      </div>
+      <div class="patrocinador-item">
+        <img src="sicoob.png" alt="Sicoob Credip" onerror="this.style.display='none'">
+        <span>Sicoob Credip</span>
+      </div>
     </div>
   </div>
 </section>
