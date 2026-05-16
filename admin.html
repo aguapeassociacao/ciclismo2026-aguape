@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V2.7
+  admin.html — Painel Administrativo V3.0
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
@@ -15,6 +15,13 @@
   V2.7 — Tabela de versões atualizada · index.html V1.2 · app.js V3.5
          Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
          Seção Gestão de Operadores na aba Configurações
+  V3.0 — Suporte completo a tipo_inscricao (Normal R$160 / Participativa R$70)
+         Dashboard: 2 novos cards Normal vs Participativa + gráfico donut modalidades
+         Inscritos: filtro por tipo + coluna Modalidade na tabela
+         Camisetas: exibe apenas inscrições normais (participativas sem camiseta)
+         Financeiro: cards por tipo, coluna Modalidade, gráfico receita empilhado
+         Exportações Excel/PDF: coluna Modalidade adicionada em todos os relatórios
+         confirmarPagtoManual usa valor conforme tipo_inscricao
 -->
 <html lang="pt-BR">
 <head>
@@ -180,6 +187,8 @@ tr:hover td{background:#fafafa}
 .chip-cartao{background:#ede9fe;color:#6d28d9}
 .chip-manual{background:#fef3c7;color:#92400e}
 .chip-nova{background:#dcfce7;color:#15803d;font-size:9px;padding:2px 6px}
+.chip-normal{background:#dbeafe;color:#1d4ed8}
+.chip-participativa{background:#fce7f3;color:#9d174d}
 
 /* ── Camisetas ───────────────────────────────────────────────── */
 .tam-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
@@ -192,10 +201,19 @@ tr:hover td{background:#fafafa}
 .tam-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
 
 /* ── Financeiro ──────────────────────────────────────────────── */
-.fin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
-.fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.fin-valor{font-size:26px;font-weight:700;margin-bottom:4px;line-height:1}
+.fin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.fin-grid-2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden}
+.fin-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.fin-card.azul::before{background:#3b82f6}
+.fin-card.verde::before{background:var(--ok)}
+.fin-card.rosa::before{background:#ec4899}
+.fin-card.roxo::before{background:#7c3aed}
+.fin-card.dourado::before{background:var(--dourado)}
+.fin-card.cinza::before{background:#9ca3af}
+.fin-valor{font-size:24px;font-weight:700;margin-bottom:4px;line-height:1}
 .fin-label{font-size:12px;color:#6b7280}
+.fin-sublabel{font-size:10px;color:#9ca3af;margin-top:2px}
 
 /* ── Check-in ────────────────────────────────────────────────── */
 .ci-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
@@ -480,6 +498,13 @@ tr:hover td{background:#fafafa}
         <div class="stat-card roxo"><div class="stat-label">Pendentes</div><span class="stat-icon">⏳</span><div class="stat-valor" id="stat-pendentes">—</div><div class="stat-pct down" id="stat-pend-pct">— % do total</div></div>
         <div class="stat-card dourado"><div class="stat-label">Arrecadado</div><span class="stat-icon">💰</span><div class="stat-valor" id="stat-arrecadado">—</div><div class="stat-pct" id="stat-ticket">ticket médio: —</div></div>
       </div>
+      <!-- Stats por modalidade -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+        <div class="stat-card azul"><div class="stat-label">🏆 Normal (R$160)</div><span class="stat-icon">🚴</span><div class="stat-valor" id="stat-normal-total">—</div><div class="stat-pct up" id="stat-normal-pagos">— pagos</div></div>
+        <div class="stat-card" style="--cor:#ec4899"><div class="stat-label">🤝 Participativa (R$70)</div><span class="stat-icon">🤝</span><div class="stat-valor" id="stat-part-total">—</div><div class="stat-pct" style="color:#ec4899" id="stat-part-pagos">— pagos</div></div>
+        <div class="stat-card verde"><div class="stat-label">Arrecadado · Normal</div><span class="stat-icon">💵</span><div class="stat-valor" id="stat-normal-arr" style="font-size:20px">—</div><div class="stat-pct">R$ 160 × pagos</div></div>
+        <div class="stat-card" style="border-left:4px solid #ec4899"><div class="stat-label">Arrecadado · Participativa</div><span class="stat-icon">💵</span><div class="stat-valor" id="stat-part-arr" style="font-size:20px">—</div><div class="stat-pct">R$ 70 × pagos</div></div>
+      </div>
 
       <!-- Barra de progresso de arrecadação -->
       <div class="progress-wrap">
@@ -491,8 +516,9 @@ tr:hover td{background:#fafafa}
       <!-- Gráficos -->
       <div class="charts-grid">
         <div class="chart-card"><div class="chart-titulo">Gênero</div><div class="chart-wrap"><canvas id="chart-genero"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Modalidade (Normal vs Participativa)</div><div class="chart-wrap"><canvas id="chart-modalidade"></canvas></div></div>
         <div class="chart-card"><div class="chart-titulo">Método de pagamento</div><div class="chart-wrap"><canvas id="chart-metodo"></canvas></div></div>
-        <div class="chart-card"><div class="chart-titulo">Camisetas (pagos)</div><div class="chart-wrap"><canvas id="chart-camiseta"></canvas></div></div>
+        <div class="chart-card"><div class="chart-titulo">Camisetas — só Normal (pagos)</div><div class="chart-wrap"><canvas id="chart-camiseta"></canvas></div></div>
         <div class="chart-card wide"><div class="chart-titulo">Inscrições por dia</div><div class="chart-wrap" style="height:160px"><canvas id="chart-timeline"></canvas></div></div>
         <div class="chart-card"><div class="chart-titulo">Top 5 Cidades</div><div id="chart-cidades" style="margin-top:8px"></div></div>
       </div>
@@ -504,8 +530,8 @@ tr:hover td{background:#fafafa}
           <button class="btn-acao btn-verde" onclick="abrirTab('inscritos')">Ver todos →</button>
         </div>
         <table>
-          <thead><tr><th>Ficha</th><th>Nome</th><th>Gênero</th><th>Camiseta</th><th>Status</th><th>Data</th></tr></thead>
-          <tbody id="tbody-recentes"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
+          <thead><tr><th>Ficha</th><th>Nome</th><th>Modalidade</th><th>Gênero</th><th>Camiseta</th><th>Status</th><th>Data</th></tr></thead>
+          <tbody id="tbody-recentes"><tr><td colspan="7"><div class="spin"></div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -535,6 +561,11 @@ tr:hover td{background:#fafafa}
               <option value="P">P</option><option value="M">M</option>
               <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
             </select>
+            <select class="select-filtro" id="insc-filtro-tipo" onchange="filtrarInscritos()">
+              <option value="">Todas modalidades</option>
+              <option value="normal">🏆 Normal (R$160)</option>
+              <option value="participativa">🤝 Participativa (R$70)</option>
+            </select>
             <div class="btn-group">
               <button class="btn-acao btn-verde-claro" onclick="exportarExcel('inscritos')">📊 Excel</button>
               <button class="btn-acao btn-roxo" onclick="exportarPDF('inscritos')">📄 PDF</button>
@@ -549,6 +580,7 @@ tr:hover td{background:#fafafa}
                 <th onclick="ordenar('nome_completo')">Nome ⇅</th>
                 <th>CPF</th>
                 <th onclick="ordenar('sexo')">Gênero ⇅</th>
+                <th onclick="ordenar('tipo_inscricao')">Modalidade ⇅</th>
                 <th onclick="ordenar('cidade')">Cidade ⇅</th>
                 <th onclick="ordenar('tamanho_camiseta')">Camiseta ⇅</th>
                 <th onclick="ordenar('status')">Status ⇅</th>
@@ -556,7 +588,7 @@ tr:hover td{background:#fafafa}
                 <th>Ações</th>
               </tr>
             </thead>
-            <tbody id="tbody-inscritos"><tr><td colspan="9"><div class="spin"></div></td></tr></tbody>
+            <tbody id="tbody-inscritos"><tr><td colspan="10"><div class="spin"></div></td></tr></tbody>
           </table>
         </div>
         <div class="pag-wrap">
@@ -586,7 +618,7 @@ tr:hover td{background:#fafafa}
     <!-- ═══ CAMISETAS ══════════════════════════════════════════ -->
     <div class="tab-pane" id="tab-camisetas">
       <div class="page-titulo">Gestão de Camisetas</div>
-      <div class="page-sub">Apenas inscritos com pagamento confirmado</div>
+      <div class="page-sub">Apenas inscrições <strong>Normais</strong> com pagamento confirmado (Participativas não recebem camiseta)</div>
       <div class="tam-grid">
         <div class="tam-card"><div class="tam-letra">P</div><div class="tam-total" id="cam-P-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-P-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-P-f">0</span></span></div><div class="tam-label">camisetas</div></div>
         <div class="tam-card"><div class="tam-letra">M</div><div class="tam-total" id="cam-M-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-M-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-M-f">0</span></span></div><div class="tam-label">camisetas</div></div>
@@ -624,27 +656,87 @@ tr:hover td{background:#fafafa}
     <!-- ═══ FINANCEIRO ════════════════════════════════════════ -->
     <div class="tab-pane" id="tab-financeiro">
       <div class="page-titulo">Painel Financeiro</div>
-      <div class="page-sub">Totalizações e histórico de pagamentos</div>
+      <div class="page-sub">Totalizações e histórico de pagamentos · separado por modalidade</div>
+
+      <!-- Cards totais gerais -->
       <div class="fin-grid">
-        <div class="fin-card"><div class="fin-valor" style="color:var(--ok)" id="fin-total">R$ —</div><div class="fin-label">Total arrecadado (pagos)</div></div>
-        <div class="fin-card"><div class="fin-valor" style="color:var(--azul-pix)" id="fin-pix">R$ —</div><div class="fin-label">Via PIX</div></div>
-        <div class="fin-card"><div class="fin-valor" style="color:#7c3aed" id="fin-cartao">R$ —</div><div class="fin-label">Via Cartão</div></div>
-        <div class="fin-card"><div class="fin-valor" style="color:#92400e" id="fin-pendente-val">—</div><div class="fin-label">Pendentes (qtd)</div></div>
-        <div class="fin-card"><div class="fin-valor" style="color:#374151" id="fin-ticket">R$ —</div><div class="fin-label">Ticket médio</div></div>
-        <div class="fin-card"><div class="fin-valor" style="color:#374151" id="fin-potencial">R$ —</div><div class="fin-label">Potencial (todos pagos)</div></div>
+        <div class="fin-card verde"><div class="fin-valor" style="color:var(--ok)" id="fin-total">R$ —</div><div class="fin-label">Total arrecadado (pagos)</div></div>
+        <div class="fin-card azul"><div class="fin-valor" style="color:var(--azul-pix)" id="fin-pix">R$ —</div><div class="fin-label">Via PIX</div></div>
+        <div class="fin-card roxo"><div class="fin-valor" style="color:#7c3aed" id="fin-cartao">R$ —</div><div class="fin-label">Via Cartão</div></div>
+        <div class="fin-card cinza"><div class="fin-valor" style="color:#374151" id="fin-ticket">R$ —</div><div class="fin-label">Ticket médio real</div></div>
       </div>
+
+      <!-- Cards por modalidade -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+        <div class="fin-card azul">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#1d4ed8;margin-bottom:10px">🏆 Normal — R$ 160</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="fin-label">Pagos</span><strong id="fin-normal-pagos">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="fin-label">Pendentes</span><strong id="fin-normal-pend">—</strong>
+          </div>
+          <div class="fin-valor" style="color:#1d4ed8;margin-top:10px" id="fin-normal-arr">R$ —</div>
+          <div class="fin-label">Arrecadado Normal</div>
+          <div class="fin-sublabel" id="fin-normal-pot">Potencial: R$ —</div>
+        </div>
+        <div class="fin-card rosa">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#be185d;margin-bottom:10px">🤝 Participativa — R$ 70</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="fin-label">Pagos</span><strong id="fin-part-pagos">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="fin-label">Pendentes</span><strong id="fin-part-pend">—</strong>
+          </div>
+          <div class="fin-valor" style="color:#be185d;margin-top:10px" id="fin-part-arr">R$ —</div>
+          <div class="fin-label">Arrecadado Participativa</div>
+          <div class="fin-sublabel" id="fin-part-pot">Potencial: R$ —</div>
+        </div>
+        <div class="fin-card cinza">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#6b7280;margin-bottom:10px">📊 Potencial total</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="fin-label">Pendentes (qtd)</span><strong id="fin-pendente-val">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="fin-label">Potencial pendentes</span><strong id="fin-potencial-pend">—</strong>
+          </div>
+          <div class="fin-valor" style="color:#374151;margin-top:10px" id="fin-potencial">R$ —</div>
+          <div class="fin-label">Potencial total (todos pagos)</div>
+        </div>
+      </div>
+
+      <!-- Gráfico receita empilhado por semana -->
+      <div class="chart-card" style="margin-bottom:20px">
+        <div class="chart-titulo">Receita por semana — Normal vs Participativa</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-receita-semana"></canvas></div>
+      </div>
+
+      <!-- Tabela histórico com filtros -->
       <div class="tabela-wrap">
         <div class="tabela-header">
           <div class="tabela-header-titulo">💰 Histórico de pagamentos confirmados</div>
-          <div class="btn-group">
-            <button class="btn-acao btn-verde-claro" onclick="exportarExcel('financeiro')">📊 Excel</button>
-            <button class="btn-acao btn-roxo" onclick="exportarPDF('financeiro')">📄 PDF</button>
+          <div class="tabela-controles">
+            <select class="select-filtro" id="fin-filtro-tipo" onchange="filtrarFinanceiro()">
+              <option value="">Todas modalidades</option>
+              <option value="normal">🏆 Normal</option>
+              <option value="participativa">🤝 Participativa</option>
+            </select>
+            <select class="select-filtro" id="fin-filtro-metodo" onchange="filtrarFinanceiro()">
+              <option value="">Todos os métodos</option>
+              <option value="pix">⚡ PIX</option>
+              <option value="cartao">💳 Cartão</option>
+              <option value="manual">✍️ Manual</option>
+            </select>
+            <div class="btn-group">
+              <button class="btn-acao btn-verde-claro" onclick="exportarExcel('financeiro')">📊 Excel</button>
+              <button class="btn-acao btn-roxo" onclick="exportarPDF('financeiro')">📄 PDF</button>
+            </div>
           </div>
         </div>
         <div style="overflow-x:auto">
           <table>
-            <thead><tr><th>Ficha</th><th>Nome</th><th>Método</th><th>Valor</th><th>Data pagamento</th></tr></thead>
-            <tbody id="tbody-financeiro"><tr><td colspan="5"><div class="spin"></div></td></tr></tbody>
+            <thead><tr><th>Ficha</th><th>Nome</th><th>Modalidade</th><th>Método</th><th>Valor</th><th>Data pagamento</th></tr></thead>
+            <tbody id="tbody-financeiro"><tr><td colspan="6"><div class="spin"></div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -808,14 +900,15 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>index.html</td><td>V1.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
-            <tr><td>admin.html</td><td>V2.7</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
-            <tr><td>js/app.js</td><td>V3.5</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
-            <tr><td>api/criar-pagamento.js</td><td>V3.3</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>index.html</td><td>V1.5</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V3.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>js/app.js</td><td>V4.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>api/criar-pagamento.js</td><td>V3.4</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/webhook-pagamento.js</td><td>V1.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/admin-auth.js</td><td>V3.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/admin-operadores.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>schema.sql</td><td>V1.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>pix.html</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>pagamento.html</td><td>V2.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
           </tbody>
@@ -866,19 +959,21 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
 
 <script>
 // ================================================================
-// admin.html — Script V2.7
+// admin.html — Script V3.0
 // © 2026 Ewerson Luiz de Oliveira · DTI · Prefeitura Costa Marques
 // ================================================================
 
-let adminToken='', adminPerfil='', adminNome='';
+let adminToken='', adminPerfil='', adminNome='', adminPodeExcluir=false;
 let todosDados = { inscricoes:[], participantes:[] };
 let checkinAtual = null;
 let chartGenero=null, chartMetodo=null, chartCamiseta=null, chartTimeline=null;
+let chartModalidade=null, chartReceitaSemana=null;
 let insc_pagina=1, insc_ordem='criado_em', insc_desc=true;
 const INSC_POR_PAG=20;
-let inscFiltrados=[], pendFiltrados=[];
+let inscFiltrados=[], pendFiltrados=[], finFiltrados=[];
 let streamAtivo=null, animFrame=null, barcodeDetector=null;
 let scanAtivo=false;
+let guEditandoId=null;
 
 if('BarcodeDetector' in window){
   try{ barcodeDetector = new BarcodeDetector({formats:['qr_code']}); }catch(e){}
@@ -974,7 +1069,7 @@ async function supabaseAtualizar(tabela,id,dados){
 async function carregarTudo(){
   document.getElementById('dash-atualizado').textContent='Atualizando…';
   const [inscricoes,participantes]=await Promise.all([
-    supabase('inscricoes','select=*&order=criado_em.desc'),
+    supabase('inscricoes','select=id,participante_id,modalidade_id,numero_ficha,tipo_inscricao,status,pagamento_id,pagamento_metodo,pagamento_valor,pagamento_data,pix_qrcode,checkin_realizado,checkin_data,criado_em&order=criado_em.desc'),
     supabase('participantes','select=*')
   ]);
   todosDados.inscricoes=Array.isArray(inscricoes)?inscricoes:[];
@@ -1016,6 +1111,11 @@ function chipMetodo(m){
   if(m==='manual') return '<span class="chip chip-manual">✍️ Manual</span>';
   return m?`<span class="chip">${m}</span>`:'—';
 }
+function chipModalidade(t){
+  if(t==='participativa') return '<span class="chip chip-participativa">🤝 Participativa</span>';
+  return '<span class="chip chip-normal">🏆 Normal</span>';
+}
+function valorPorTipo(t){ return t==='participativa'?70:160; }
 
 function abrirTab(nome){
   document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('ativo'));
@@ -1067,7 +1167,17 @@ function renderizarDashboard(){
   const pagos24=pagos.filter(i=>agora-new Date(i.pagamento_data||i.criado_em).getTime()<86400000).length;
   const arrecadado=pagos.reduce((s,i)=>s+(parseFloat(i.pagamento_valor)||0),0);
   const ticket=pagos.length?arrecadado/pagos.length:0;
-  const meta=insc.length*160;
+
+  // Normal vs Participativa
+  const normAll=insc.filter(i=>i.tipo_inscricao!=='participativa');
+  const partAll=insc.filter(i=>i.tipo_inscricao==='participativa');
+  const normPagos=normAll.filter(i=>i.status==='pago');
+  const partPagos=partAll.filter(i=>i.status==='pago');
+  const normArr=normPagos.reduce((s,i)=>s+(parseFloat(i.pagamento_valor)||160),0);
+  const partArr=partPagos.reduce((s,i)=>s+(parseFloat(i.pagamento_valor)||70),0);
+
+  // Meta dinâmica por tipo
+  const meta=normAll.length*160+partAll.length*70;
   const pct=meta>0?Math.round(arrecadado/meta*100):0;
 
   document.getElementById('stat-total').textContent=insc.length;
@@ -1079,6 +1189,14 @@ function renderizarDashboard(){
   document.getElementById('stat-arrecadado').textContent=fR(arrecadado);
   document.getElementById('stat-ticket').textContent='ticket médio: '+fR(ticket);
 
+  // Stats por modalidade
+  document.getElementById('stat-normal-total').textContent=normAll.length;
+  document.getElementById('stat-normal-pagos').textContent=normPagos.length+' pagos';
+  document.getElementById('stat-part-total').textContent=partAll.length;
+  document.getElementById('stat-part-pagos').textContent=partPagos.length+' pagos';
+  document.getElementById('stat-normal-arr').textContent=fR(normArr);
+  document.getElementById('stat-part-arr').textContent=fR(partArr);
+
   document.getElementById('prog-bar').style.width=Math.min(pct,100)+'%';
   document.getElementById('prog-pct').textContent=pct+'%';
   document.getElementById('prog-atual').textContent=fR(arrecadado)+' arrecadados';
@@ -1088,13 +1206,17 @@ function renderizarDashboard(){
   const masc=part.filter(p=>p.sexo==='M').length, fem=part.filter(p=>p.sexo==='F').length;
   mkChart('chart-genero',chartGenero,'doughnut',['Masculino','Feminino'],[masc,fem],['#1a5c2a','#be185d'],c=>chartGenero=c);
 
+  mkChart('chart-modalidade',chartModalidade,'doughnut',['🏆 Normal (R$160)','🤝 Participativa (R$70)'],[normAll.length,partAll.length],['#3b82f6','#ec4899'],c=>chartModalidade=c);
+
   const pixN=pagos.filter(i=>i.pagamento_metodo==='pix').length;
   const carN=pagos.filter(i=>i.pagamento_metodo==='cartao').length;
   const manN=pagos.filter(i=>i.pagamento_metodo==='manual').length;
   mkChart('chart-metodo',chartMetodo,'doughnut',['PIX','Cartão','Manual'],[pixN,carN,manN],['#00b4d8','#7c3aed','#f59e0b'],c=>chartMetodo=c);
 
+  // Camisetas apenas Normal
+  const pagosNorm=pagos.filter(i=>i.tipo_inscricao!=='participativa');
   const tams=['P','M','G','GG','XG'];
-  const ctsT=tams.map(t=>pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t).length);
+  const ctsT=tams.map(t=>pagosNorm.filter(i=>gP(i.participante_id).tamanho_camiseta===t).length);
   mkChart('chart-camiseta',chartCamiseta,'bar',tams,ctsT,['#1a5c2a','#2d7a3a','#7dcf8a','#c8920a','#f0b429'],c=>chartCamiseta=c);
 
   // Timeline — inscrições por dia (últimos 14 dias)
@@ -1116,13 +1238,13 @@ function renderizarDashboard(){
     `<div class="cidade-item-dash"><span class="cidade-nome">${c}</span><div class="cidade-bar"><div class="cidade-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div><span class="cidade-count">${n}</span></div>`
   ).join('');
 
-  // Últimas inscrições
+  // Últimas inscrições — com coluna Modalidade
   const tbody=document.getElementById('tbody-recentes');
   tbody.innerHTML=insc.slice(0,8).map(i=>{
     const p=gP(i.participante_id);
     const nova=Date.now()-new Date(i.criado_em).getTime()<86400000;
-    return `<tr class="${nova?'row-nova':''}"><td><strong>${i.numero_ficha||'—'}</strong>${nova?' <span class="chip chip-nova">NOVA</span>':''}</td><td>${p.nome_completo||'—'}</td><td>${p.sexo==='M'?'🚴 Masc':'🚴 Fem'}</td><td>${p.tamanho_camiseta||'—'}</td><td>${chipStatus(i.status)}</td><td style="font-size:11px">${fD(i.criado_em)}</td></tr>`;
-  }).join('')||'<tr><td colspan="6" class="empty">Nenhum inscrito</td></tr>';
+    return `<tr class="${nova?'row-nova':''}"><td><strong>${i.numero_ficha||'—'}</strong>${nova?' <span class="chip chip-nova">NOVA</span>':''}</td><td>${p.nome_completo||'—'}</td><td>${chipModalidade(i.tipo_inscricao)}</td><td>${p.sexo==='M'?'🚴 Masc':'🚴 Fem'}</td><td>${i.tipo_inscricao==='participativa'?'<span style="font-size:11px;color:#9ca3af">sem camiseta</span>':p.tamanho_camiseta||'—'}</td><td>${chipStatus(i.status)}</td><td style="font-size:11px">${fD(i.criado_em)}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">Nenhum inscrito</td></tr>';
 }
 
 function mkChart(id,inst,tipo,labels,data,colors,setter){
@@ -1151,11 +1273,13 @@ function filtrarInscritos(){
   const status=document.getElementById('insc-filtro-status').value;
   const sexo=document.getElementById('insc-filtro-sexo').value;
   const cam=document.getElementById('insc-filtro-cam').value;
+  const tipo=document.getElementById('insc-filtro-tipo').value;
   inscFiltrados=todosDados.inscricoes.filter(i=>{
     const p=gP(i.participante_id);
     if(status&&i.status!==status)return false;
     if(sexo&&p.sexo!==sexo)return false;
     if(cam&&p.tamanho_camiseta!==cam)return false;
+    if(tipo&&(i.tipo_inscricao||'normal')!==tipo)return false;
     if(busca){const txt=`${p.nome_completo||''} ${p.cpf||''} ${i.numero_ficha||''}`.toLowerCase();if(!txt.includes(busca))return false;}
     return true;
   });
@@ -1179,13 +1303,15 @@ function renderizarInscritos(){
   tbody.innerHTML=pagina.map(i=>{
     const p=gP(i.participante_id);
     const nova=Date.now()-new Date(i.criado_em).getTime()<86400000;
+    const ehPart=i.tipo_inscricao==='participativa';
     return `<tr class="${nova?'row-nova':''}">
       <td><strong>${i.numero_ficha||'—'}</strong>${nova?' <span class="chip chip-nova">NOVA</span>':''}</td>
       <td><a href="#" onclick="abrirFicha(${i.id})" style="color:var(--verde);font-weight:600;text-decoration:none">${p.nome_completo||'—'}</a></td>
       <td>${mCPF(p.cpf)}</td>
       <td>${p.sexo==='M'?'♂ Masc':'♀ Fem'}</td>
+      <td>${chipModalidade(i.tipo_inscricao)}</td>
       <td>${p.cidade||'—'}</td>
-      <td><strong>${p.tamanho_camiseta||'—'}</strong></td>
+      <td>${ehPart?'<span style="font-size:11px;color:#9ca3af">—</span>':`<strong>${p.tamanho_camiseta||'—'}</strong>`}</td>
       <td>${chipStatus(i.status)}</td>
       <td style="font-size:11px">${fDcurta(i.criado_em)}</td>
       <td>
@@ -1198,7 +1324,7 @@ function renderizarInscritos(){
         </div>
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="9" class="empty">Nenhum resultado</td></tr>';
+  }).join('')||'<tr><td colspan="10" class="empty">Nenhum resultado</td></tr>';
 
   document.getElementById('insc-pag-info').textContent=`${inicio+1}–${Math.min(inicio+INSC_POR_PAG,inscFiltrados.length)} de ${inscFiltrados.length}`;
   const btns=document.getElementById('insc-pag-btns'); btns.innerHTML='';
@@ -1252,7 +1378,9 @@ function abrirFicha(inscId){
 // ─── Ações manuais ─────────────────────────────────────────────
 async function confirmarPagtoManual(id){
   if(!confirm('Confirmar pagamento manualmente?'))return;
-  await supabaseAtualizar('inscricoes',id,{status:'pago',pagamento_metodo:'manual',pagamento_data:new Date().toISOString(),pagamento_valor:160.00});
+  const insc=todosDados.inscricoes.find(i=>i.id===id);
+  const val=valorPorTipo(insc?.tipo_inscricao);
+  await supabaseAtualizar('inscricoes',id,{status:'pago',pagamento_metodo:'manual',pagamento_data:new Date().toISOString(),pagamento_valor:val});
   await carregarTudo();
 }
 async function cancelarInscricao(id){
@@ -1313,7 +1441,8 @@ function renderizarPendentes(){
 // CAMISETAS
 // ═══════════════════════════════════════════════════════════════
 function renderizarCamisetas(){
-  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+  // Apenas inscrições Normais (Participativas não recebem camiseta)
+  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
   document.getElementById('cam-total-pagos').textContent=pagos.length;
   ['P','M','G','GG','XG'].forEach(t=>{
     const m=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
@@ -1328,7 +1457,8 @@ function renderizarCamisetas(){
 function filtrarCamisetas(){
   const t=document.getElementById('cam-filtro-tam').value;
   const s=document.getElementById('cam-filtro-sexo').value;
-  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+  // Só inscrições Normais pagas
+  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
   const lista=pagos.filter(i=>{
     const p=gP(i.participante_id);
     if(t&&p.tamanho_camiseta!==t)return false;
@@ -1349,17 +1479,76 @@ function renderizarFinanceiro(){
   const pagos=insc.filter(i=>i.status==='pago');
   const pend=insc.filter(i=>i.status!=='pago'&&i.status!=='cancelado');
   const soma=arr=>arr.reduce((s,i)=>s+(parseFloat(i.pagamento_valor)||0),0);
+
+  // Split por tipo
+  const normPagos=pagos.filter(i=>i.tipo_inscricao!=='participativa');
+  const partPagos=pagos.filter(i=>i.tipo_inscricao==='participativa');
+  const normPend=pend.filter(i=>i.tipo_inscricao!=='participativa');
+  const partPend=pend.filter(i=>i.tipo_inscricao==='participativa');
+
   const total=soma(pagos);
+  const normArr=soma(normPagos)||normPagos.length*160;
+  const partArr=soma(partPagos)||partPagos.length*70;
+  const normPot=normPend.length*160;
+  const partPot=partPend.length*70;
+  const ticket=pagos.length?total/pagos.length:0;
+  const potTotal=(insc.filter(i=>i.tipo_inscricao!=='participativa').length*160)+(insc.filter(i=>i.tipo_inscricao==='participativa').length*70);
+
   document.getElementById('fin-total').textContent=fR(total);
   document.getElementById('fin-pix').textContent=fR(soma(pagos.filter(i=>i.pagamento_metodo==='pix')));
   document.getElementById('fin-cartao').textContent=fR(soma(pagos.filter(i=>i.pagamento_metodo==='cartao')));
+  document.getElementById('fin-ticket').textContent=fR(ticket);
+  document.getElementById('fin-normal-pagos').textContent=normPagos.length;
+  document.getElementById('fin-normal-pend').textContent=normPend.length;
+  document.getElementById('fin-normal-arr').textContent=fR(normArr);
+  document.getElementById('fin-normal-pot').textContent='Potencial: '+fR(normPot);
+  document.getElementById('fin-part-pagos').textContent=partPagos.length;
+  document.getElementById('fin-part-pend').textContent=partPend.length;
+  document.getElementById('fin-part-arr').textContent=fR(partArr);
+  document.getElementById('fin-part-pot').textContent='Potencial: '+fR(partPot);
   document.getElementById('fin-pendente-val').textContent=pend.length+' inscrições';
-  document.getElementById('fin-ticket').textContent=fR(pagos.length?total/pagos.length:0);
-  document.getElementById('fin-potencial').textContent=fR(insc.length*160);
-  document.getElementById('tbody-financeiro').innerHTML=pagos.map(i=>{
+  document.getElementById('fin-potencial-pend').textContent=fR(normPot+partPot);
+  document.getElementById('fin-potencial').textContent=fR(potTotal);
+
+  // Gráfico receita empilhada por semana (últimas 8 semanas)
+  const semLabels=[], semNorm=[], semPart=[];
+  for(let i=7;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i*7); d.setHours(0,0,0,0);
+    const d2=new Date(d); d2.setDate(d2.getDate()+7);
+    const semStr='W'+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    semLabels.push(semStr);
+    const nS=normPagos.filter(x=>{const c=new Date(x.pagamento_data||x.criado_em);return c>=d&&c<d2;});
+    const pS=partPagos.filter(x=>{const c=new Date(x.pagamento_data||x.criado_em);return c>=d&&c<d2;});
+    semNorm.push(soma(nS)||nS.length*160);
+    semPart.push(soma(pS)||pS.length*70);
+  }
+  const ctxR=document.getElementById('chart-receita-semana');
+  if(ctxR){
+    if(chartReceitaSemana) chartReceitaSemana.destroy();
+    chartReceitaSemana=new Chart(ctxR,{type:'bar',data:{labels:semLabels,datasets:[
+      {label:'Normal (R$160)',data:semNorm,backgroundColor:'#3b82f6',borderRadius:4},
+      {label:'Participativa (R$70)',data:semPart,backgroundColor:'#ec4899',borderRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{callback:v=>'R$'+v}}}}});
+  }
+
+  // Preenche finFiltrados e renderiza tabela
+  finFiltrados=pagos;
+  filtrarFinanceiro();
+}
+
+function filtrarFinanceiro(){
+  const tipo=(document.getElementById('fin-filtro-tipo')||{}).value||'';
+  const metodo=(document.getElementById('fin-filtro-metodo')||{}).value||'';
+  const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+  finFiltrados=pagos.filter(i=>{
+    if(tipo&&(i.tipo_inscricao||'normal')!==tipo)return false;
+    if(metodo&&i.pagamento_metodo!==metodo)return false;
+    return true;
+  });
+  document.getElementById('tbody-financeiro').innerHTML=finFiltrados.map(i=>{
     const p=gP(i.participante_id);
-    return `<tr><td><strong>${i.numero_ficha||'—'}</strong></td><td>${p.nome_completo||'—'}</td><td>${chipMetodo(i.pagamento_metodo)}</td><td><strong>${fR(i.pagamento_valor)}</strong></td><td style="font-size:11px">${fD(i.pagamento_data)}</td></tr>`;
-  }).join('')||'<tr><td colspan="5" class="empty">Nenhum pagamento</td></tr>';
+    return `<tr><td><strong>${i.numero_ficha||'—'}</strong></td><td>${p.nome_completo||'—'}</td><td>${chipModalidade(i.tipo_inscricao)}</td><td>${chipMetodo(i.pagamento_metodo)}</td><td><strong>${fR(i.pagamento_valor)}</strong></td><td style="font-size:11px">${fD(i.pagamento_data)}</td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Nenhum pagamento</td></tr>';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1559,16 +1748,16 @@ function exportarExcel(tipo){
   let rows=[], nome='';
   if(tipo==='inscritos'){
     nome='inscritos_ciclismo2026.xlsx';
-    rows=[['Ficha','Nome','CPF','Gênero','Camiseta','Cidade','UF','Telefone','E-mail','Status','Data Inscrição']];
-    inscFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.cpf,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade,p.uf||'RO',p.telefone,p.email||'',i.status,fDcurta(i.criado_em)]);});
+    rows=[['Ficha','Nome','CPF','Gênero','Modalidade','Camiseta','Cidade','UF','Telefone','E-mail','Status','Data Inscrição']];
+    inscFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.cpf,p.sexo==='M'?'Masculino':'Feminino',i.tipo_inscricao==='participativa'?'Participativa (R$70)':'Normal (R$160)',i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,p.cidade,p.uf||'RO',p.telefone,p.email||'',i.status,fDcurta(i.criado_em)]);});
   }else if(tipo==='pendentes'){
     nome='pendentes_ciclismo2026.xlsx';
-    rows=[['Ficha','Nome','Telefone','Cidade','Camiseta','Dias pendente']];
-    pendFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.telefone,p.cidade,p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)]);});
+    rows=[['Ficha','Nome','Modalidade','Telefone','Cidade','Camiseta','Dias pendente']];
+    pendFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa (R$70)':'Normal (R$160)',p.telefone,p.cidade,i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)]);});
   }else if(tipo==='camisetas'){
     nome='camisetas_ciclismo2026.xlsx';
     rows=[['Tamanho','Masculino','Feminino','Total']];
-    const pagos=todosDados.inscricoes.filter(i=>i.status==='pago');
+    const pagos=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
     ['P','M','G','GG','XG'].forEach(t=>{
       const m=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
       const f=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
@@ -1580,17 +1769,16 @@ function exportarExcel(tipo){
     pagos.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade]);});
   }else if(tipo==='financeiro'){
     nome='financeiro_ciclismo2026.xlsx';
-    rows=[['Ficha','Nome','Método','Valor (R$)','Data Pagamento']];
-    todosDados.inscricoes.filter(i=>i.status==='pago').forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,i.pagamento_metodo||'—',parseFloat(i.pagamento_valor||0),fDcurta(i.pagamento_data)]);});
+    rows=[['Ficha','Nome','Modalidade','Método','Valor (R$)','Data Pagamento']];
+    finFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa (R$70)':'Normal (R$160)',i.pagamento_metodo||'—',parseFloat(i.pagamento_valor||0),fDcurta(i.pagamento_data)]);});
   }else if(tipo==='checkins'){
     nome='checkins_ciclismo2026.xlsx';
-    rows=[['Ficha','Nome','Camiseta','Gênero','Horário Check-in']];
-    todosDados.inscricoes.filter(i=>i.checkin_realizado).forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.tamanho_camiseta,p.sexo==='M'?'Masculino':'Feminino',fD(i.checkin_data)]);});
+    rows=[['Ficha','Nome','Modalidade','Camiseta','Gênero','Horário Check-in']];
+    todosDados.inscricoes.filter(i=>i.checkin_realizado).forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa':'Normal',i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,p.sexo==='M'?'Masculino':'Feminino',fD(i.checkin_data)]);});
   }
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  // Largura das colunas
-  ws['!cols']=[{wch:12},{wch:35},{wch:18},{wch:12},{wch:10},{wch:20},{wch:6},{wch:16},{wch:30},{wch:18},{wch:16}];
+  ws['!cols']=[{wch:12},{wch:35},{wch:18},{wch:14},{wch:10},{wch:20},{wch:6},{wch:16},{wch:30},{wch:18},{wch:16}];
   XLSX.utils.book_append_sheet(wb,ws,'Dados');
   XLSX.writeFile(wb,nome);
 }
@@ -1632,20 +1820,20 @@ function exportarPDF(tipo){
     let head=[], body=[], titulo='';
     if(tipo==='inscritos'){
       titulo='Lista de Inscritos';
-      head=[['Ficha','Nome','Gênero','Camiseta','Cidade','Status','Data']];
-      body=inscFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masc':'Fem',p.tamanho_camiseta,p.cidade,i.status,fDcurta(i.criado_em)];});
+      head=[['Ficha','Nome','Modalidade','Gênero','Camiseta','Cidade','Status','Data']];
+      body=inscFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa':'Normal',p.sexo==='M'?'Masc':'Fem',i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,p.cidade,i.status,fDcurta(i.criado_em)];});
     }else if(tipo==='pendentes'){
       titulo='Pendentes de Pagamento';
-      head=[['Ficha','Nome','Telefone','Cidade','Camiseta','Dias pendente']];
-      body=pendFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.telefone||'—',p.cidade,p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)+' dias'];});
+      head=[['Ficha','Nome','Modalidade','Telefone','Cidade','Camiseta','Dias pendente']];
+      body=pendFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa':'Normal',p.telefone||'—',p.cidade,i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)+' dias'];});
     }else if(tipo==='camisetas'){
-      titulo='Relatório de Camisetas — Pagos confirmados';
+      titulo='Relatório de Camisetas — Apenas Inscrições Normais';
       head=[['Ficha','Nome','Gênero','Camiseta','Cidade']];
-      body=todosDados.inscricoes.filter(i=>i.status==='pago').map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade];});
+      body=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa').map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade];});
     }else if(tipo==='financeiro'){
       titulo='Relatório Financeiro';
-      head=[['Ficha','Nome','Método','Valor','Data']];
-      body=todosDados.inscricoes.filter(i=>i.status==='pago').map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,i.pagamento_metodo||'—',fR(i.pagamento_valor),fDcurta(i.pagamento_data)];});
+      head=[['Ficha','Nome','Modalidade','Método','Valor','Data']];
+      body=finFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa':'Normal',i.pagamento_metodo||'—',fR(i.pagamento_valor),fDcurta(i.pagamento_data)];});
     }
 
     doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(13,40,16);
@@ -1906,7 +2094,7 @@ function baixarFichaIndividual(inscId){
 // Ativo imediatamente após salvar
 // ================================================================
 
-let guEditandoId = null; // ID do operador sendo editado
+let guEditandoId = null; // ID do operador sendo editado — declarado em escopo global acima
 
 function escHtml(str) {
   if (str == null) return '';
