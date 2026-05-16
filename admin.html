@@ -618,59 +618,19 @@ tr:hover td{background:#fafafa}
     <!-- ═══ CAMISETAS ══════════════════════════════════════════ -->
     <div class="tab-pane" id="tab-camisetas">
       <div class="page-titulo">Gestão de Camisetas</div>
-      <div class="page-sub">Apenas inscrições <strong>Normais</strong> com pagamento confirmado · Clique em um tamanho para filtrar</div>
+      <div class="page-sub">Apenas inscrições <strong>Normais</strong> com pagamento confirmado (Participativas não recebem camiseta)</div>
       <div class="tam-grid">
-        <div class="tam-card" id="tam-card-P" onclick="clicarCard('P')" style="cursor:pointer" title="Clique para filtrar por P">
-          <div class="tam-letra">P</div><div class="tam-total" id="cam-P-t">—</div>
-          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
-            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-P-m">0</span></span>
-            <span style="font-size:12px;color:#be185d">♀ <span id="cam-P-f">0</span></span>
-          </div>
-          <div class="tam-label">camisetas</div>
-          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
-        </div>
-        <div class="tam-card" id="tam-card-M" onclick="clicarCard('M')" style="cursor:pointer" title="Clique para filtrar por M">
-          <div class="tam-letra">M</div><div class="tam-total" id="cam-M-t">—</div>
-          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
-            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-M-m">0</span></span>
-            <span style="font-size:12px;color:#be185d">♀ <span id="cam-M-f">0</span></span>
-          </div>
-          <div class="tam-label">camisetas</div>
-          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
-        </div>
-        <div class="tam-card" id="tam-card-G" onclick="clicarCard('G')" style="cursor:pointer" title="Clique para filtrar por G">
-          <div class="tam-letra">G</div><div class="tam-total" id="cam-G-t">—</div>
-          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
-            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-G-m">0</span></span>
-            <span style="font-size:12px;color:#be185d">♀ <span id="cam-G-f">0</span></span>
-          </div>
-          <div class="tam-label">camisetas</div>
-          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
-        </div>
-        <div class="tam-card" id="tam-card-GG" onclick="clicarCard('GG')" style="cursor:pointer" title="Clique para filtrar por GG">
-          <div class="tam-letra">GG</div><div class="tam-total" id="cam-GG-t">—</div>
-          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
-            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-GG-m">0</span></span>
-            <span style="font-size:12px;color:#be185d">♀ <span id="cam-GG-f">0</span></span>
-          </div>
-          <div class="tam-label">camisetas</div>
-          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
-        </div>
-        <div class="tam-card" id="tam-card-XG" onclick="clicarCard('XG')" style="cursor:pointer" title="Clique para filtrar por XG">
-          <div class="tam-letra">XG</div><div class="tam-total" id="cam-XG-t">—</div>
-          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
-            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-XG-m">0</span></span>
-            <span style="font-size:12px;color:#be185d">♀ <span id="cam-XG-f">0</span></span>
-          </div>
-          <div class="tam-label">camisetas</div>
-          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
-        </div>
+        <div class="tam-card"><div class="tam-letra">P</div><div class="tam-total" id="cam-P-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-P-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-P-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">M</div><div class="tam-total" id="cam-M-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-M-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-M-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">G</div><div class="tam-total" id="cam-G-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-G-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-G-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">GG</div><div class="tam-total" id="cam-GG-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-GG-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-GG-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card"><div class="tam-letra">XG</div><div class="tam-total" id="cam-XG-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-XG-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-XG-f">0</span></span></div><div class="tam-label">camisetas</div></div>
       </div>
       <div class="tabela-wrap">
         <div class="tabela-header">
-          <div class="tabela-header-titulo">👕 Lista para confecção — <span id="cam-total-lista">—</span> camisetas <span id="cam-filtro-ativo" style="font-size:11px;color:#6b7280;font-weight:400"></span></div>
+          <div class="tabela-header-titulo">👕 Lista para confecção — <span id="cam-total-pagos">—</span> camisetas</div>
           <div class="tabela-controles">
-            <select class="select-filtro" id="cam-filtro-tam" onchange="filtrarCamisetas();atualizarCardAtivo()">
+            <select class="select-filtro" id="cam-filtro-tam" onchange="filtrarCamisetas()">
               <option value="">Todos os tamanhos</option>
               <option value="P">P</option><option value="M">M</option>
               <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
@@ -680,7 +640,6 @@ tr:hover td{background:#fafafa}
               <option value="M">Masculino</option>
               <option value="F">Feminino</option>
             </select>
-            <button class="btn-acao btn-cinza" id="btn-cam-limpar" onclick="limparFiltrosCamiseta()" style="display:none">✕ Limpar filtro</button>
             <button class="btn-acao btn-verde-claro" onclick="exportarExcel('camisetas')">📊 Excel</button>
             <button class="btn-acao btn-roxo" onclick="exportarPDF('camisetas')">📄 PDF Confecção</button>
           </div>
@@ -1011,7 +970,7 @@ let chartGenero=null, chartMetodo=null, chartCamiseta=null, chartTimeline=null;
 let chartModalidade=null, chartReceitaSemana=null;
 let insc_pagina=1, insc_ordem='criado_em', insc_desc=true;
 const INSC_POR_PAG=20;
-let inscFiltrados=[], pendFiltrados=[], finFiltrados=[], camFiltrados=[];
+let inscFiltrados=[], pendFiltrados=[], finFiltrados=[];
 let streamAtivo=null, animFrame=null, barcodeDetector=null;
 let scanAtivo=false;
 let guEditandoId=null;
