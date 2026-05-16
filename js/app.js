@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V4.0 — Lógica principal do formulário de inscrições
+// app.js — V4.1 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -7,6 +7,7 @@
 // V3.8 — QR Code gerado em canvas isolado (_gerarQRDataURL) — sem cross-origin
 // V3.9 — Correção de cor (preto) e margem (quiet zone) do QR Code
 // V4.0 — Correção de Layout: Ajuste das posições (Y) para o fundo branco não cobrir as letras
+// V4.1 — Duas modalidades: Inscrição Normal (R$160) e Participativa (R$70) · Patrocinadores
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -14,6 +15,21 @@ let itemAtivo            = -1;
 let sexoSelecionado      = '';
 let participanteConsulta = null;
 let inscricaoConsulta    = null;
+let tipoInscricaoAtual   = 'normal'; // 'normal' | 'participativa'
+
+// ── Seleção de tipo de inscrição ───────────────────────────────
+function selecionarTipoInscricao(tipo) {
+  tipoInscricaoAtual = tipo;
+  document.getElementById('tipo-inscricao').value = tipo;
+
+  document.getElementById('tipo-card-normal').classList.toggle('ativo', tipo === 'normal');
+  document.getElementById('tipo-card-participativa').classList.toggle('ativo', tipo === 'participativa');
+
+  const valor = tipo === 'normal' ? 'R$ 160,00' : 'R$ 70,00';
+  const labelBtn = document.getElementById('btn-valor-label');
+  if (labelBtn) labelBtn.textContent = valor;
+}
+
 
 // ══════════════════════════════════════════════════════════════
 // ABAS (Nova inscrição / Já inscrito?)
@@ -300,6 +316,7 @@ async function enviarInscricao() {
     modalidade_id:    sexo === 'M' ? 1 : 2,
     numero_ficha:     ficha,
     status:           'pendente_pagamento',
+    tipo_inscricao:   tipoInscricaoAtual,
   });
 
   const inscFalhou = !resInsc || (!Array.isArray(resInsc) && (resInsc.code || resInsc.erro || resInsc.error));
@@ -337,6 +354,7 @@ async function enviarInscricao() {
   const btnPagar = document.getElementById('btn-pagar-agora');
   if (btnPagar && inscricaoId) {
     btnPagar.style.display = 'block';
+    btnPagar.textContent = `⚡ Pagar agora — ${tipoInscricaoAtual === 'normal' ? 'R$ 160,00' : 'R$ 70,00'}`;
     btnPagar.onclick = () => irParaPagamento(inscricaoId, ficha, nome, email);
   }
 
@@ -374,7 +392,7 @@ function abrirModalPagamento(inscricaoId, ficha, nome, email, btnOrigem) {
       <div class="modal-topo">
         <div class="modal-icone">💳</div>
         <h2 class="modal-titulo">Como deseja pagar?</h2>
-        <p class="modal-sub">Inscrição · Ciclismo Individual 2026 · <strong>R$ 160,00</strong></p>
+        <p class="modal-sub">Inscrição · Ciclismo Individual 2026 · <strong>${tipoInscricaoAtual === 'normal' ? 'R$ 160,00' : 'R$ 70,00'}</strong></p>
       </div>
       <div class="modal-opcoes">
         <button class="modal-opcao" id="btn-modal-pix" onclick="processarPagamento(${inscricaoId},'${ficha.replace(/'/g,"\\'")}','${nome.replace(/'/g,"\\'")}','${(email||'').replace(/'/g,"\\'")}','pix')">
@@ -467,7 +485,7 @@ async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
     const r = await fetch('/api/criar-pagamento', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ inscricao_id: inscricaoId, numero_ficha: ficha, nome, email, metodo })
+      body:    JSON.stringify({ inscricao_id: inscricaoId, numero_ficha: ficha, nome, email, metodo, tipo_inscricao: tipoInscricaoAtual })
     });
 
     const dados = await r.json();
