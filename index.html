@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  index.html — Sistema de Inscrições V1.5
+  index.html — Sistema de Inscrições V1.6
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   Associação dos Seringueiros do Vale do Guaporé · Aguapé
   © 2026 Ewerson Luiz de Oliveira
@@ -10,6 +10,7 @@
   V1.3 — Duas modalidades de inscrição (Normal R$160 / Participativa R$70) · Seção de Patrocinadores
   V1.4 — Patrocinadores movidos para o hero (acima do botão) · Data inscrições: 19/07/2026
   V1.5 — Cards patrocinadores tamanho igual · logos maiores preenchendo o card
+  V1.6 — Resumo completo do Regulamento (RESEX Rio Cautário) no card · link PDF atualizado
 -->
 <html lang="pt-BR">
 <head>
@@ -388,17 +389,54 @@
           <input type="checkbox" id="cb-autorizo" onclick="event.stopPropagation();sincronizarAutorizacao()">
           <span>Autorizo o uso da minha imagem, voz e nome em fotos, vídeos e materiais de divulgação do <strong>Ciclismo Individual 2026</strong>.</span>
         </div>
-        <a href="regulamento.pdf" target="_blank" class="reg-link">📄 Baixar Regulamento em PDF</a>
+        <a href="REGULAMENTO_DE_VISITACAO_E_TRILHAS.pdf" target="_blank" class="reg-link">📄 Baixar Regulamento Completo em PDF</a>
         <div class="reg-cabecalho" onclick="toggleRegulamento()">
           <span>Ver resumo do regulamento</span>
           <span class="reg-seta" id="reg-seta">▲</span>
         </div>
         <div class="reg-conteudo" id="reg-conteudo">
+
+          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">🚴 Participação</p>
           <p>· Aberto a ciclistas amadores e profissionais nas categorias Masculino e Feminino.</p>
-          <p>· A inscrição inclui camiseta oficial do evento.</p>
-          <p>· Capacete obrigatório. O participante é responsável pelo seu equipamento.</p>
+          <p>· <strong>Inscrição Normal (R$ 160)</strong>: inclui camiseta oficial, alimentação, percurso trilha na floresta e área de banho na comunidade.</p>
+          <p>· <strong>Inscrição Participativa (R$ 70)</strong>: inclui camiseta oficial e área de banho na comunidade. Não inclui alimentação nem trilha na floresta.</p>
           <p>· Menores de 18 anos precisam de autorização do responsável legal.</p>
-          <p>· Consulte o regulamento completo em PDF para todos os detalhes.</p>
+
+          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">⛑️ Segurança obrigatória</p>
+          <p>· Capacete obrigatório durante todo o percurso.</p>
+          <p>· O participante é responsável pelo seu equipamento e condição física.</p>
+          <p>· Manter velocidade compatível com a segurança ambiental e reduzir próximo às comunidades.</p>
+          <p>· Respeitar pedestres, moradores e condutores comunitários.</p>
+          <p>· Comunicar acidentes ou emergências à organização do evento.</p>
+
+          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">✅ O que é permitido</p>
+          <p>· Pedalar exclusivamente nas rotas autorizadas do evento.</p>
+          <p>· Fotografar paisagens naturais.</p>
+          <p>· Participar de atividades comunitárias autorizadas pela organização.</p>
+          <p>· Consumir produtos locais autorizados.</p>
+          <p>· Participar de ações de educação ambiental.</p>
+
+          <p style="font-size:11px;font-weight:700;color:var(--err);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">🚫 O que é proibido</p>
+          <p>· Circular fora das trilhas e rotas oficiais do evento.</p>
+          <p>· Abrir atalhos ou novas trilhas.</p>
+          <p>· Usar veículos motorizados nas trilhas de bicicleta.</p>
+          <p>· Fazer fogueiras ou descartar lixo nas trilhas, rios ou comunidades.</p>
+          <p>· Caçar, pescar, retirar plantas ou animais da área.</p>
+          <p>· Fazer barulho excessivo ou usar som em volume elevado.</p>
+          <p>· Fotografar moradores sem autorização.</p>
+          <p>· Entrar em áreas privadas ou residências sem autorização comunitária.</p>
+          <p>· Danificar placas, pontes ou estruturas da trilha.</p>
+          <p>· Consumir drogas ilícitas ou portar armas sem autorização legal.</p>
+
+          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">🌿 Meio ambiente — RESEX Rio Cautário</p>
+          <p>· O percurso passa pela Reserva Extrativista Rio Cautário. Respeite as normas de uso e conservação.</p>
+          <p>· Adote práticas de mínimo impacto: retire todo resíduo que produzir.</p>
+          <p>· Não contamine rios, igarapés ou vegetação.</p>
+          <p>· Respeite moradores, lideranças e os modos de vida das populações tradicionais.</p>
+
+          <p style="font-size:11px;font-weight:700;color:var(--err);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">⚠️ Penalidades</p>
+          <p>· O descumprimento das regras pode resultar em advertência, retirada do percurso, suspensão e responsabilização civil, administrativa e penal, conforme regulamento da RESEX Rio Cautário e legislação vigente.</p>
+
         </div>
         <div class="aceite-wrap">
           <input type="checkbox" id="aceite-regulamento" onchange="verificarAceite()">
