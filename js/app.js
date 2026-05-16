@@ -1,5 +1,5 @@
 // ================================================================
-// app.js — V4.1 — Lógica principal do formulário de inscrições
+// app.js — V4.2 — Lógica principal do formulário de inscrições
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // Associação dos Seringueiros do Vale do Guaporé · Aguapé
 // © 2026 Ewerson Luiz de Oliveira
@@ -8,6 +8,7 @@
 // V3.9 — Correção de cor (preto) e margem (quiet zone) do QR Code
 // V4.0 — Correção de Layout: Ajuste das posições (Y) para o fundo branco não cobrir as letras
 // V4.1 — Duas modalidades: Inscrição Normal (R$160) e Participativa (R$70) · Patrocinadores
+// V4.2 — Campo camiseta oculto automaticamente ao selecionar Inscrição Participativa (R$70)
 // ================================================================
 
 // ── Estado da aplicação ────────────────────────────────────────
@@ -28,6 +29,19 @@ function selecionarTipoInscricao(tipo) {
   const valor = tipo === 'normal' ? 'R$ 160,00' : 'R$ 70,00';
   const labelBtn = document.getElementById('btn-valor-label');
   if (labelBtn) labelBtn.textContent = valor;
+
+  // Mostrar/ocultar seleção de camiseta
+  const camisetaWrap = document.getElementById('camiseta-wrap');
+  if (camisetaWrap) {
+    if (tipo === 'participativa') {
+      camisetaWrap.style.display = 'none';
+      // Limpa seleção anterior
+      document.getElementById('tamanho-camiseta').value = '';
+      document.querySelectorAll('.tamanho-btn').forEach(b => b.classList.remove('ativo'));
+    } else {
+      camisetaWrap.style.display = '';
+    }
+  }
 }
 
 
@@ -239,7 +253,7 @@ async function enviarInscricao() {
     return;
   }
 
-  if (!camiseta) {
+  if (!camiseta && tipoInscricaoAtual !== 'participativa') {
     erro.textContent = 'Selecione o tamanho da camiseta.';
     erro.style.display = 'block';
     document.getElementById('camiseta-wrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
