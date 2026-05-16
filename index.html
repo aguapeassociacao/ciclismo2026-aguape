@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  index.html — Sistema de Inscrições V1.6
+  index.html — Sistema de Inscrições V1.7
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   Associação dos Seringueiros do Vale do Guaporé · Aguapé
   © 2026 Ewerson Luiz de Oliveira
@@ -11,6 +11,7 @@
   V1.4 — Patrocinadores movidos para o hero (acima do botão) · Data inscrições: 19/07/2026
   V1.5 — Cards patrocinadores tamanho igual · logos maiores preenchendo o card
   V1.6 — Resumo completo do Regulamento (RESEX Rio Cautário) no card · link PDF atualizado
+  V1.7 — Card visual de resumo do regulamento com colunas Permitido/Proibido · botão download PDF abaixo
 -->
 <html lang="pt-BR">
 <head>
@@ -190,7 +191,27 @@
     .info-card{min-width:110px;padding:12px 14px}
   }
 
-  /* TIPO DE INSCRIÇÃO */
+  /* CARD RESUMO REGULAMENTO */
+  .reg-resumo-card{margin-top:18px;background:rgba(5,15,7,.6);border:1px solid rgba(45,122,58,.4);border-radius:14px;overflow:hidden}
+  .reg-resumo-titulo{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--dourado-claro);padding:14px 16px 2px}
+  .reg-resumo-subtitulo{font-size:11px;color:rgba(245,234,208,.4);padding:0 16px 14px;border-bottom:1px solid rgba(45,122,58,.3)}
+  .reg-cols{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid rgba(45,122,58,.3)}
+  @media(max-width:480px){.reg-cols{grid-template-columns:1fr}}
+  .reg-col{padding:14px 16px}
+  .reg-col:first-child{border-right:1px solid rgba(45,122,58,.3)}
+  @media(max-width:480px){.reg-col:first-child{border-right:none;border-bottom:1px solid rgba(45,122,58,.3)}}
+  .reg-col-header{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding:4px 10px;border-radius:20px;display:inline-block}
+  .reg-verde{background:rgba(45,122,58,.2);color:var(--verde-neon);border:1px solid rgba(125,207,138,.3)}
+  .reg-vermelho{background:rgba(220,38,38,.1);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
+  .reg-lista{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px}
+  .reg-lista li{font-size:12px;color:rgba(245,234,208,.65);padding-left:14px;position:relative;line-height:1.5}
+  .reg-lista li::before{content:'·';position:absolute;left:0;color:var(--verde-claro);font-weight:700}
+  .reg-itens-extra{padding:14px 16px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(45,122,58,.3)}
+  .reg-item-extra{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:rgba(245,234,208,.6);line-height:1.6}
+  .reg-item-icone{font-size:18px;flex-shrink:0;margin-top:1px}
+  .reg-item-extra strong{color:rgba(245,234,208,.9)}
+  .reg-btn-download{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 16px;background:rgba(200,146,10,.1);color:var(--dourado-claro);font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;border-top:none}
+  .reg-btn-download:hover{background:rgba(200,146,10,.2);color:var(--dourado)}
   .tipo-inscricao-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
   @media(max-width:480px){.tipo-inscricao-wrap{grid-template-columns:1fr}}
   .tipo-card{border:2px solid rgba(45,122,58,.4);border-radius:14px;padding:16px;cursor:pointer;background:rgba(5,15,7,.5);transition:all .25s;position:relative;text-align:left}
@@ -389,55 +410,58 @@
           <input type="checkbox" id="cb-autorizo" onclick="event.stopPropagation();sincronizarAutorizacao()">
           <span>Autorizo o uso da minha imagem, voz e nome em fotos, vídeos e materiais de divulgação do <strong>Ciclismo Individual 2026</strong>.</span>
         </div>
-        <a href="REGULAMENTO_DE_VISITACAO_E_TRILHAS.pdf" target="_blank" class="reg-link">📄 Baixar Regulamento Completo em PDF</a>
-        <div class="reg-cabecalho" onclick="toggleRegulamento()">
-          <span>Ver resumo do regulamento</span>
-          <span class="reg-seta" id="reg-seta">▲</span>
+
+        <!-- CARD RESUMO DO REGULAMENTO -->
+        <div class="reg-resumo-card">
+          <div class="reg-resumo-titulo">📋 Resumo do Regulamento</div>
+          <div class="reg-resumo-subtitulo">Reserva Extrativista Rio Cautário · RESEX Rio Cautário</div>
+
+          <div class="reg-cols">
+            <div class="reg-col">
+              <div class="reg-col-header reg-verde">✅ Permitido</div>
+              <ul class="reg-lista">
+                <li>Pedalar nas rotas autorizadas</li>
+                <li>Fotografar paisagens naturais</li>
+                <li>Participar de atividades comunitárias</li>
+                <li>Consumir produtos locais autorizados</li>
+                <li>Ações de educação ambiental</li>
+              </ul>
+            </div>
+            <div class="reg-col">
+              <div class="reg-col-header reg-vermelho">🚫 Proibido</div>
+              <ul class="reg-lista">
+                <li>Circular fora das trilhas oficiais</li>
+                <li>Veículos motorizados nas trilhas</li>
+                <li>Jogar lixo ou fazer fogueiras</li>
+                <li>Caçar, pescar ou retirar animais</li>
+                <li>Barulho excessivo e som alto</li>
+                <li>Fotografar moradores sem autorização</li>
+                <li>Entrar em áreas privadas</li>
+                <li>Drogas ilícitas ou armas</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="reg-itens-extra">
+            <div class="reg-item-extra">
+              <span class="reg-item-icone">⛑️</span>
+              <div><strong>Segurança</strong> — Capacete obrigatório. Mantenha velocidade segura, respeite pedestres e moradores. Comunique emergências à organização.</div>
+            </div>
+            <div class="reg-item-extra">
+              <span class="reg-item-icone">🌿</span>
+              <div><strong>Meio ambiente</strong> — Retire todo resíduo produzido. Não contamine rios e igarapés. Respeite as populações tradicionais e seus modos de vida.</div>
+            </div>
+            <div class="reg-item-extra">
+              <span class="reg-item-icone">⚠️</span>
+              <div><strong>Penalidades</strong> — O descumprimento pode resultar em advertência, retirada do percurso e responsabilização civil, administrativa e penal.</div>
+            </div>
+          </div>
+
+          <a href="REGULAMENTO_DE_VISITACAO_E_TRILHAS.pdf" target="_blank" class="reg-btn-download">
+            📄 Baixar Regulamento Original Completo (PDF)
+          </a>
         </div>
-        <div class="reg-conteudo" id="reg-conteudo">
 
-          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">🚴 Participação</p>
-          <p>· Aberto a ciclistas amadores e profissionais nas categorias Masculino e Feminino.</p>
-          <p>· <strong>Inscrição Normal (R$ 160)</strong>: inclui camiseta oficial, alimentação, percurso trilha na floresta e área de banho na comunidade.</p>
-          <p>· <strong>Inscrição Participativa (R$ 70)</strong>: inclui camiseta oficial e área de banho na comunidade. Não inclui alimentação nem trilha na floresta.</p>
-          <p>· Menores de 18 anos precisam de autorização do responsável legal.</p>
-
-          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">⛑️ Segurança obrigatória</p>
-          <p>· Capacete obrigatório durante todo o percurso.</p>
-          <p>· O participante é responsável pelo seu equipamento e condição física.</p>
-          <p>· Manter velocidade compatível com a segurança ambiental e reduzir próximo às comunidades.</p>
-          <p>· Respeitar pedestres, moradores e condutores comunitários.</p>
-          <p>· Comunicar acidentes ou emergências à organização do evento.</p>
-
-          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">✅ O que é permitido</p>
-          <p>· Pedalar exclusivamente nas rotas autorizadas do evento.</p>
-          <p>· Fotografar paisagens naturais.</p>
-          <p>· Participar de atividades comunitárias autorizadas pela organização.</p>
-          <p>· Consumir produtos locais autorizados.</p>
-          <p>· Participar de ações de educação ambiental.</p>
-
-          <p style="font-size:11px;font-weight:700;color:var(--err);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">🚫 O que é proibido</p>
-          <p>· Circular fora das trilhas e rotas oficiais do evento.</p>
-          <p>· Abrir atalhos ou novas trilhas.</p>
-          <p>· Usar veículos motorizados nas trilhas de bicicleta.</p>
-          <p>· Fazer fogueiras ou descartar lixo nas trilhas, rios ou comunidades.</p>
-          <p>· Caçar, pescar, retirar plantas ou animais da área.</p>
-          <p>· Fazer barulho excessivo ou usar som em volume elevado.</p>
-          <p>· Fotografar moradores sem autorização.</p>
-          <p>· Entrar em áreas privadas ou residências sem autorização comunitária.</p>
-          <p>· Danificar placas, pontes ou estruturas da trilha.</p>
-          <p>· Consumir drogas ilícitas ou portar armas sem autorização legal.</p>
-
-          <p style="font-size:11px;font-weight:700;color:var(--dourado-claro);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">🌿 Meio ambiente — RESEX Rio Cautário</p>
-          <p>· O percurso passa pela Reserva Extrativista Rio Cautário. Respeite as normas de uso e conservação.</p>
-          <p>· Adote práticas de mínimo impacto: retire todo resíduo que produzir.</p>
-          <p>· Não contamine rios, igarapés ou vegetação.</p>
-          <p>· Respeite moradores, lideranças e os modos de vida das populações tradicionais.</p>
-
-          <p style="font-size:11px;font-weight:700;color:var(--err);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">⚠️ Penalidades</p>
-          <p>· O descumprimento das regras pode resultar em advertência, retirada do percurso, suspensão e responsabilização civil, administrativa e penal, conforme regulamento da RESEX Rio Cautário e legislação vigente.</p>
-
-        </div>
         <div class="aceite-wrap">
           <input type="checkbox" id="aceite-regulamento" onchange="verificarAceite()">
           <label for="aceite-regulamento">Li e aceito o <strong>Regulamento do Ciclismo Individual 2026</strong>.</label>
