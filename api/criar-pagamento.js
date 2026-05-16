@@ -1,6 +1,7 @@
 // ================================================================
-// api/criar-pagamento.js  —  V3.3
+// api/criar-pagamento.js  —  V3.4
 // V3.3 — Atualização domínio para ciclismo.aguape.org
+// V3.4 — Suporte a tipo_inscricao: normal (R$160) / participativa (R$70)
 // PIX direto (tela própria) + Cartão (checkout MP) — sem boleto nem PIX no checkout MP
 // Ciclismo Individual 2026 — Turismo de Base Comunitária
 // © 2026 Ewerson Luiz de Oliveira
@@ -26,8 +27,12 @@ export default async function handler(req, res) {
     numero_ficha,
     nome,
     email,
-    metodo = 'cartao'   // 'pix' | 'cartao'
+    metodo = 'cartao',         // 'pix' | 'cartao'
+    tipo_inscricao = 'normal'  // 'normal' | 'participativa'
   } = req.body;
+
+  // Valor conforme modalidade: normal=R$160 / participativa=R$70
+  const VALOR = tipo_inscricao === 'participativa' ? 70.00 : 160.00;
 
   if (!inscricao_id || !numero_ficha || !nome) {
     return res.status(400).json({ erro: 'Campos obrigatórios: inscricao_id, numero_ficha, nome' });
@@ -77,7 +82,7 @@ export default async function handler(req, res) {
 
     const payload = {
       payment_method_id:  'pix',
-      transaction_amount:  160.00,
+      transaction_amount:  VALOR,
       description:        `Ciclismo 2026 - Ficha ${numero_ficha} - ${nome}`,
       external_reference:  String(inscricao_id),
       date_of_expiration:  expiraPix,
@@ -155,7 +160,7 @@ export default async function handler(req, res) {
       title:       'Ciclismo Individual 2026 — Inscricao',
       description: `Participante: ${nome} - Ficha: ${numero_ficha}`,
       quantity:    1,
-      unit_price:  160.00,
+      unit_price:  VALOR,
       currency_id: 'BRL'
     }],
     payment_methods: {
