@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  admin.html — Painel Administrativo V3.0
+  admin.html — Painel Administrativo V3.1
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   © 2026 Ewerson Luiz de Oliveira · Assoc. dos Seringueiros do Vale do Guaporé
   V2.0 — Dashboard aprimorado · Modal participante · WhatsApp · QR Code na ficha
@@ -12,16 +12,17 @@
   V2.4 — Atualização domínio para ciclismo.aguape.org
   V2.5 — Gerenciamento de operadores via Supabase (admin_operadores) · sem redeploy
   V2.6 — PDF sem referência à Prefeitura · botão excluir participante (🗑) · remoção vínculo institucional
-  V2.7 — Tabela de versões atualizada · index.html V1.2 · app.js V3.5
-         Botão "Abrir Check-in da Equipe" abre checkin.html em nova aba
-         Seção Gestão de Operadores na aba Configurações
+  V2.7 — Tabela de versões atualizada · Botão "Abrir Check-in da Equipe" · Gestão de Operadores
   V3.0 — Suporte completo a tipo_inscricao (Normal R$160 / Participativa R$70)
-         Dashboard: 2 novos cards Normal vs Participativa + gráfico donut modalidades
-         Inscritos: filtro por tipo + coluna Modalidade na tabela
-         Camisetas: exibe apenas inscrições normais (participativas sem camiseta)
-         Financeiro: cards por tipo, coluna Modalidade, gráfico receita empilhado
-         Exportações Excel/PDF: coluna Modalidade adicionada em todos os relatórios
-         confirmarPagtoManual usa valor conforme tipo_inscricao
+         Dashboard: 2 novos cards + gráfico donut modalidades
+         Inscritos: filtro por tipo + coluna Modalidade
+         Camisetas: só inscrições normais · cards clicáveis · PDF/Excel respeitam filtro
+         Financeiro: cards por tipo · gráfico receita empilhado · filtros na tabela
+         Exportações: coluna Modalidade em todos os relatórios · contagem no PDF camisetas
+         Footer: assinatura Ewerson Luiz de Oliveira · Web Developer · Lei 9.610/98
+  V3.1 — Correção: adminPodeExcluir agora salvo/restaurado via sessionStorage
+         Operadores com pode_excluir=true passam a ver o botão 🗑 corretamente
+         Correção: re-declaração de let guEditandoId causava SyntaxError silencioso
 -->
 <html lang="pt-BR">
 <head>
@@ -1012,8 +1013,8 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
         <table>
           <thead><tr><th>Arquivo</th><th>Versão</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>index.html</td><td>V1.5</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
-            <tr><td>admin.html</td><td>V3.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>index.html</td><td>V1.8</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
+            <tr><td>admin.html</td><td>V3.1</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>js/app.js</td><td>V4.2</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/criar-pagamento.js</td><td>V3.4</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
             <tr><td>api/status-pagamento.js</td><td>V1.0</td><td><span class="chip chip-pago">✅ Ativo</span></td></tr>
@@ -1122,9 +1123,11 @@ async function fazerLogin(){
     const d=await r.json();
     if(!d.ok){erro.textContent=d.erro||'Usuário ou senha incorretos.';return;}
     adminToken=d.token; adminPerfil=d.perfil; adminNome=d.nome;
+    adminPodeExcluir = d.podeExcluir === true;
     sessionStorage.setItem('admin_token',adminToken);
     sessionStorage.setItem('admin_perfil',adminPerfil);
     sessionStorage.setItem('admin_nome',adminNome);
+    sessionStorage.setItem('admin_pode_excluir', adminPodeExcluir ? 'true' : 'false');
     if(d.expira_em) sessionStorage.setItem('admin_expira',d.expira_em);
     iniciarApp(); iniciarAvisoExpiracao(d.expira_em);
   }catch{erro.textContent='Erro de conexão. Tente novamente.';}
@@ -1153,12 +1156,14 @@ async function validarSessaoAtiva(t){
       adminToken=t;
       adminPerfil=sessionStorage.getItem('admin_perfil')||d.perfil;
       adminNome=sessionStorage.getItem('admin_nome')||d.usuario;
+      adminPodeExcluir=sessionStorage.getItem('admin_pode_excluir')==='true';
       iniciarApp();
     }else{sessionStorage.clear();document.getElementById('login-erro').textContent='Sessão expirada. Faça login novamente.';}
   }catch{
     adminToken=t;
     adminPerfil=sessionStorage.getItem('admin_perfil')||'';
     adminNome=sessionStorage.getItem('admin_nome')||'';
+    adminPodeExcluir=sessionStorage.getItem('admin_pode_excluir')==='true';
     iniciarApp();
   }
 }
