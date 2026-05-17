@@ -200,7 +200,75 @@ tr:hover td{background:#fafafa}
 .tam-total{font-size:28px;font-weight:700;color:var(--verde-escuro)}
 .tam-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
 
-/* ── Financeiro ──────────────────────────────────────────────── */
+/* ── Footer de assinatura ────────────────────────────────────── */
+.footer-assinatura{
+  background:linear-gradient(135deg,#0a2e10 0%,#1a5c2a 60%,#0a2e10 100%);
+  color:#e8f5e9;
+  padding:32px 40px 24px;
+  margin-top:32px;
+  border-top:3px solid var(--dourado);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  text-align:center;
+}
+.footer-linha-dourada{
+  width:60px;height:3px;
+  background:var(--dourado);
+  border-radius:2px;
+  margin-bottom:6px;
+}
+.footer-nome{
+  font-size:18px;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:.5px;
+}
+.footer-cargo{
+  font-size:12px;
+  color:var(--dourado);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:1.2px;
+}
+.footer-org{
+  font-size:11px;
+  color:#a5d6a7;
+  margin-top:2px;
+}
+.footer-contato{
+  display:flex;
+  gap:20px;
+  margin-top:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.footer-contato a, .footer-contato span{
+  font-size:12px;
+  color:#c8e6c9;
+  text-decoration:none;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.footer-contato a:hover{ color:var(--dourado); }
+.footer-divider{
+  width:100%;
+  height:1px;
+  background:rgba(255,255,255,.1);
+  margin:10px 0;
+}
+.footer-direitos{
+  font-size:10px;
+  color:#81c784;
+  line-height:1.6;
+}
+.footer-direitos strong{ color:var(--dourado); }
+@media(max-width:768px){
+  .footer-assinatura{ padding:24px 20px 20px; }
+  .footer-nome{ font-size:15px; }
+}
 .fin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .fin-grid-2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
 .fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden}
@@ -442,6 +510,9 @@ tr:hover td{background:#fafafa}
       <div class="sb-usuario" id="sb-nome"></div>
       <button class="btn-atualizar" onclick="carregarTudo()">🔄 Atualizar dados</button>
       <button class="btn-logout" onclick="logout()">Sair</button>
+      <div style="font-size:9px;color:rgba(255,255,255,.35);text-align:center;margin-top:10px;line-height:1.5">
+        Dev. Ewerson L. de Oliveira<br>Costa Marques · 2026
+      </div>
     </div>
   </nav>
 
@@ -968,6 +1039,31 @@ Garanta sua vaga agora! As inscrições encerram em 01/08/2026.
     </div>
 
     </div><!-- /conteudo-inner -->
+
+    <!-- ═══ FOOTER DE ASSINATURA ═══════════════════════════════ -->
+    <footer class="footer-assinatura">
+      <div class="footer-linha-dourada"></div>
+      <div class="footer-nome">Ewerson Luiz de Oliveira</div>
+      <div class="footer-cargo">Gestor em Tecnologia da Informação</div>
+      <div class="footer-org">
+        Desenvolvedor de Sistemas · Costa Marques, Rondônia
+      </div>
+      <div class="footer-contato">
+        <a href="tel:+5569984222154">📱 (69) 98422-2154</a>
+        <span>📍 Costa Marques, RO</span>
+        <span>🗓️ 2026</span>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-direitos">
+        <strong>© 2026 Ewerson Luiz de Oliveira</strong> · Todos os direitos reservados.<br>
+        Sistema desenvolvido de forma particular para o <strong>Ciclismo Individual 2026</strong> —
+        Turismo de Base Comunitária · Aguapé · Vale do Guaporé · Costa Marques, Rondônia.<br>
+        Este software é protegido pela <strong>Lei nº 9.610/98</strong> (Lei de Direitos Autorais) e demais
+        normas aplicáveis. É expressamente proibida a reprodução total ou parcial, a distribuição,
+        a modificação ou o uso comercial deste sistema sem autorização prévia e por escrito do autor.
+        A violação dos direitos autorais sujeita o infrator às sanções civis e penais previstas em lei.
+      </div>
+    </footer>
 
   </main>
 
@@ -1837,23 +1933,47 @@ function exportarExcel(tipo){
   }else if(tipo==='camisetas'){
     const tam=document.getElementById('cam-filtro-tam').value;
     const sex=document.getElementById('cam-filtro-sexo').value;
-    const sufTam=tam?` — Tamanho ${tam}`:'';
-    const sufSex=sex?' — '+(sex==='M'?'Masculino':'Feminino'):'';
-    nome=`camisetas${tam?'_'+tam:''}${sex?'_'+sex:''}_ciclismo2026.xlsx`;
-    // Resumo por tamanho (dentro do filtro atual)
+    const sufTam=tam?`_${tam}`:'';
+    const sufSex=sex?`_${sex==='M'?'Masc':'Fem'}`:'';
+    nome=`camisetas${sufTam}${sufSex}_ciclismo2026.xlsx`;
+
+    // ── Cabeçalho do relatório ──────────────────────────────
+    const tituloRel=tam?`Camisetas — Tamanho ${tam}${sex?' · '+(sex==='M'?'Masculino':'Feminino'):''}` : `Camisetas — Todos os Tamanhos${sex?' · '+(sex==='M'?'Masculino':'Feminino'):''}`;
+    rows.push([tituloRel]);
+    rows.push([`Gerado em: ${new Date().toLocaleString('pt-BR')}`]);
+    rows.push([`Total de camisetas neste relatório: ${camFiltrados.length}`]);
+    rows.push([]);
+
+    // ── Resumo de quantidades ───────────────────────────────
+    rows.push(['RESUMO DE QUANTIDADES']);
     if(!tam){
-      rows=[['Tamanho','Masculino','Feminino','Total']];
-      const base=sex?camFiltrados:todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
+      // Sem filtro de tamanho → tabela completa por tamanho
+      rows.push(['Tamanho','Masculino','Feminino','Total']);
       ['P','M','G','GG','XG'].forEach(t=>{
-        const m=base.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
-        const f=base.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
-        rows.push([t,m,f,m+f]);
+        const base=camFiltrados.filter(i=>gP(i.participante_id).tamanho_camiseta===t);
+        const m=base.filter(i=>gP(i.participante_id).sexo==='M').length;
+        const f=base.filter(i=>gP(i.participante_id).sexo==='F').length;
+        rows.push([t, m, f, m+f]);
       });
-      rows.push(['','','TOTAL',camFiltrados.length]);
-      rows.push([]);
+      const totM=camFiltrados.filter(i=>gP(i.participante_id).sexo==='M').length;
+      const totF=camFiltrados.filter(i=>gP(i.participante_id).sexo==='F').length;
+      rows.push(['TOTAL', totM, totF, camFiltrados.length]);
+    } else {
+      // Com filtro de tamanho → só as linhas relevantes
+      rows.push(['Tamanho','Masculino','Feminino','Total']);
+      const m=camFiltrados.filter(i=>gP(i.participante_id).sexo==='M').length;
+      const f=camFiltrados.filter(i=>gP(i.participante_id).sexo==='F').length;
+      rows.push([tam, m, f, camFiltrados.length]);
     }
-    rows.push(['Ficha','Nome','Gênero','Camiseta','Cidade']);
-    camFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade]);});
+    rows.push([]);
+
+    // ── Lista nominal ───────────────────────────────────────
+    rows.push(['LISTA NOMINAL']);
+    rows.push(['Nº','Ficha','Nome','Gênero','Tamanho','Cidade']);
+    camFiltrados.forEach((i,idx)=>{
+      const p=gP(i.participante_id);
+      rows.push([idx+1, i.numero_ficha, p.nome_completo, p.sexo==='M'?'Masculino':'Feminino', p.tamanho_camiseta, p.cidade]);
+    });
   }else if(tipo==='financeiro'){
     nome='financeiro_ciclismo2026.xlsx';
     rows=[['Ficha','Nome','Modalidade','Método','Valor (R$)','Data Pagamento']];
@@ -1919,8 +2039,73 @@ function exportarPDF(tipo){
       const sufTam=tam?` — Tamanho ${tam}`:'';
       const sufSex=sex?' — '+(sex==='M'?'Masculino':'Feminino'):'';
       titulo=`Camisetas — Inscrições Normais${sufTam}${sufSex}`;
-      head=[['Ficha','Nome','Gênero','Camiseta','Cidade']];
-      body=camFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade];});
+
+      // ── Resumo de quantidades (tabela separada antes da lista nominal) ──
+      let resumoHead, resumoBody;
+      if(!tam){
+        resumoHead=[['Tamanho','Masculino','Feminino','Total']];
+        resumoBody=['P','M','G','GG','XG'].map(t=>{
+          const base=camFiltrados.filter(i=>gP(i.participante_id).tamanho_camiseta===t);
+          const m=base.filter(i=>gP(i.participante_id).sexo==='M').length;
+          const f=base.filter(i=>gP(i.participante_id).sexo==='F').length;
+          return [t, m, f, m+f];
+        });
+        const totM=camFiltrados.filter(i=>gP(i.participante_id).sexo==='M').length;
+        const totF=camFiltrados.filter(i=>gP(i.participante_id).sexo==='F').length;
+        resumoBody.push(['TOTAL', totM, totF, camFiltrados.length]);
+      } else {
+        resumoHead=[['Tamanho','Masculino','Feminino','Total']];
+        const m=camFiltrados.filter(i=>gP(i.participante_id).sexo==='M').length;
+        const f=camFiltrados.filter(i=>gP(i.participante_id).sexo==='F').length;
+        resumoBody=[[tam, m, f, camFiltrados.length]];
+      }
+
+      // Renderiza resumo de quantidades
+      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(13,40,16);
+      doc.text(titulo, 8, 32);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 8, 38);
+
+      doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+      doc.text('RESUMO DE QUANTIDADES', 8, 48);
+
+      doc.autoTable({
+        head: resumoHead,
+        body: resumoBody,
+        startY: 52,
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [26,92,42], textColor: 255, fontStyle: 'bold' },
+        bodyStyles: { textColor: [30,30,30] },
+        alternateRowStyles: { fillColor: [240,253,244] },
+        foot: [],
+        didParseCell: (data)=>{
+          if(data.section==='body' && data.row.index===resumoBody.length-1){
+            data.cell.styles.fontStyle='bold';
+            data.cell.styles.fillColor=[200,240,210];
+          }
+        }
+      });
+
+      // Lista nominal abaixo do resumo
+      const yAposResumo = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+      doc.text(`LISTA NOMINAL — ${camFiltrados.length} camiseta${camFiltrados.length!==1?'s':''}`, 8, yAposResumo);
+
+      head=[['Nº','Ficha','Nome','Gênero','Tamanho','Cidade']];
+      body=camFiltrados.map((i,idx)=>{
+        const p=gP(i.participante_id);
+        return [idx+1, i.numero_ficha, p.nome_completo, p.sexo==='M'?'Masculino':'Feminino', p.tamanho_camiseta, p.cidade];
+      });
+
+      doc.autoTable({
+        head, body,
+        startY: yAposResumo + 4,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [26,92,42], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [240,253,244] },
+      });
+      doc.save(`camisetas${tam?'_'+tam:''}${sex?'_'+sex:''}_ciclismo2026.pdf`);
+      return; // já salvou, pular o doc.autoTable e doc.save genérico abaixo
     }else if(tipo==='financeiro'){
       titulo='Relatório Financeiro';
       head=[['Ficha','Nome','Modalidade','Método','Valor','Data']];
@@ -1954,10 +2139,12 @@ function exportarPDF(tipo){
     const pags=doc.getNumberOfPages();
     for(let pg=1;pg<=pags;pg++){
       doc.setPage(pg);
-      doc.setFillColor(245,245,245); doc.rect(0,doc.internal.pageSize.height-10,297,10,'F');
-      doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(0,doc.internal.pageSize.height-10,297,doc.internal.pageSize.height-10);
-      doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-      doc.text(`Página ${pg} de ${pags}  ·  Ciclismo Individual 2026  ·  Assoc. Seringueiros do Vale do Guaporé`,297/2,doc.internal.pageSize.height-3.5,{align:'center'});
+      doc.setFillColor(10,46,16); doc.rect(0,doc.internal.pageSize.height-10,297,10,'F');
+      doc.setFontSize(7); doc.setTextColor(200,230,200); doc.setFont('helvetica','normal');
+      doc.text(
+        `Ciclismo Individual 2026 · Aguapé · Costa Marques, RO  |  Dev. Ewerson Luiz de Oliveira · (69) 98422-2154  |  Pág. ${pg}/${pags}`,
+        297/2, doc.internal.pageSize.height-3.5, {align:'center'}
+      );
     }
 
     doc.save(`${tipo}_ciclismo2026_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
