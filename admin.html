@@ -618,19 +618,59 @@ tr:hover td{background:#fafafa}
     <!-- ═══ CAMISETAS ══════════════════════════════════════════ -->
     <div class="tab-pane" id="tab-camisetas">
       <div class="page-titulo">Gestão de Camisetas</div>
-      <div class="page-sub">Apenas inscrições <strong>Normais</strong> com pagamento confirmado (Participativas não recebem camiseta)</div>
+      <div class="page-sub">Apenas inscrições <strong>Normais</strong> com pagamento confirmado · Clique em um tamanho para filtrar</div>
       <div class="tam-grid">
-        <div class="tam-card"><div class="tam-letra">P</div><div class="tam-total" id="cam-P-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-P-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-P-f">0</span></span></div><div class="tam-label">camisetas</div></div>
-        <div class="tam-card"><div class="tam-letra">M</div><div class="tam-total" id="cam-M-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-M-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-M-f">0</span></span></div><div class="tam-label">camisetas</div></div>
-        <div class="tam-card"><div class="tam-letra">G</div><div class="tam-total" id="cam-G-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-G-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-G-f">0</span></span></div><div class="tam-label">camisetas</div></div>
-        <div class="tam-card"><div class="tam-letra">GG</div><div class="tam-total" id="cam-GG-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-GG-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-GG-f">0</span></span></div><div class="tam-label">camisetas</div></div>
-        <div class="tam-card"><div class="tam-letra">XG</div><div class="tam-total" id="cam-XG-t">—</div><div style="display:flex;justify-content:center;gap:12px;margin-top:6px"><span style="font-size:12px;color:var(--verde)">♂ <span id="cam-XG-m">0</span></span><span style="font-size:12px;color:#be185d">♀ <span id="cam-XG-f">0</span></span></div><div class="tam-label">camisetas</div></div>
+        <div class="tam-card" id="tam-card-P" onclick="clicarCard('P')" style="cursor:pointer" title="Clique para filtrar por P">
+          <div class="tam-letra">P</div><div class="tam-total" id="cam-P-t">—</div>
+          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
+            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-P-m">0</span></span>
+            <span style="font-size:12px;color:#be185d">♀ <span id="cam-P-f">0</span></span>
+          </div>
+          <div class="tam-label">camisetas</div>
+          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
+        </div>
+        <div class="tam-card" id="tam-card-M" onclick="clicarCard('M')" style="cursor:pointer" title="Clique para filtrar por M">
+          <div class="tam-letra">M</div><div class="tam-total" id="cam-M-t">—</div>
+          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
+            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-M-m">0</span></span>
+            <span style="font-size:12px;color:#be185d">♀ <span id="cam-M-f">0</span></span>
+          </div>
+          <div class="tam-label">camisetas</div>
+          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
+        </div>
+        <div class="tam-card" id="tam-card-G" onclick="clicarCard('G')" style="cursor:pointer" title="Clique para filtrar por G">
+          <div class="tam-letra">G</div><div class="tam-total" id="cam-G-t">—</div>
+          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
+            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-G-m">0</span></span>
+            <span style="font-size:12px;color:#be185d">♀ <span id="cam-G-f">0</span></span>
+          </div>
+          <div class="tam-label">camisetas</div>
+          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
+        </div>
+        <div class="tam-card" id="tam-card-GG" onclick="clicarCard('GG')" style="cursor:pointer" title="Clique para filtrar por GG">
+          <div class="tam-letra">GG</div><div class="tam-total" id="cam-GG-t">—</div>
+          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
+            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-GG-m">0</span></span>
+            <span style="font-size:12px;color:#be185d">♀ <span id="cam-GG-f">0</span></span>
+          </div>
+          <div class="tam-label">camisetas</div>
+          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
+        </div>
+        <div class="tam-card" id="tam-card-XG" onclick="clicarCard('XG')" style="cursor:pointer" title="Clique para filtrar por XG">
+          <div class="tam-letra">XG</div><div class="tam-total" id="cam-XG-t">—</div>
+          <div style="display:flex;justify-content:center;gap:12px;margin-top:6px">
+            <span style="font-size:12px;color:var(--verde)">♂ <span id="cam-XG-m">0</span></span>
+            <span style="font-size:12px;color:#be185d">♀ <span id="cam-XG-f">0</span></span>
+          </div>
+          <div class="tam-label">camisetas</div>
+          <div style="font-size:10px;color:var(--verde);margin-top:6px;opacity:.7">▼ ver lista</div>
+        </div>
       </div>
       <div class="tabela-wrap">
         <div class="tabela-header">
-          <div class="tabela-header-titulo">👕 Lista para confecção — <span id="cam-total-pagos">—</span> camisetas</div>
+          <div class="tabela-header-titulo">👕 Lista para confecção — <span id="cam-total-lista">—</span> camisetas <span id="cam-filtro-ativo" style="font-size:11px;color:#6b7280;font-weight:400"></span></div>
           <div class="tabela-controles">
-            <select class="select-filtro" id="cam-filtro-tam" onchange="filtrarCamisetas()">
+            <select class="select-filtro" id="cam-filtro-tam" onchange="filtrarCamisetas();atualizarCardAtivo()">
               <option value="">Todos os tamanhos</option>
               <option value="P">P</option><option value="M">M</option>
               <option value="G">G</option><option value="GG">GG</option><option value="XG">XG</option>
@@ -640,6 +680,7 @@ tr:hover td{background:#fafafa}
               <option value="M">Masculino</option>
               <option value="F">Feminino</option>
             </select>
+            <button class="btn-acao btn-cinza" id="btn-cam-limpar" onclick="limparFiltrosCamiseta()" style="display:none">✕ Limpar filtro</button>
             <button class="btn-acao btn-verde-claro" onclick="exportarExcel('camisetas')">📊 Excel</button>
             <button class="btn-acao btn-roxo" onclick="exportarPDF('camisetas')">📄 PDF Confecção</button>
           </div>
@@ -970,7 +1011,7 @@ let chartGenero=null, chartMetodo=null, chartCamiseta=null, chartTimeline=null;
 let chartModalidade=null, chartReceitaSemana=null;
 let insc_pagina=1, insc_ordem='criado_em', insc_desc=true;
 const INSC_POR_PAG=20;
-let inscFiltrados=[], pendFiltrados=[], finFiltrados=[];
+let inscFiltrados=[], pendFiltrados=[], finFiltrados=[], camFiltrados=[];
 let streamAtivo=null, animFrame=null, barcodeDetector=null;
 let scanAtivo=false;
 let guEditandoId=null;
@@ -1441,9 +1482,8 @@ function renderizarPendentes(){
 // CAMISETAS
 // ═══════════════════════════════════════════════════════════════
 function renderizarCamisetas(){
-  // Apenas inscrições Normais (Participativas não recebem camiseta)
   const pagos=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
-  document.getElementById('cam-total-pagos').textContent=pagos.length;
+  document.getElementById('cam-total-lista').textContent=pagos.length;
   ['P','M','G','GG','XG'].forEach(t=>{
     const m=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
     const f=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
@@ -1457,23 +1497,63 @@ function renderizarCamisetas(){
 function filtrarCamisetas(){
   const t=document.getElementById('cam-filtro-tam').value;
   const s=document.getElementById('cam-filtro-sexo').value;
-  // Só inscrições Normais pagas
   const pagos=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
-  const lista=pagos.filter(i=>{
+  camFiltrados=pagos.filter(i=>{
     const p=gP(i.participante_id);
     if(t&&p.tamanho_camiseta!==t)return false;
     if(s&&p.sexo!==s)return false;
     return true;
   });
-  document.getElementById('tbody-camisetas').innerHTML=lista.map(i=>{
+  // Label do filtro ativo
+  let labelFiltro='';
+  if(t||s){ labelFiltro='— filtro: '+(t||'todos tamanhos')+(s?' · '+(s==='M'?'Masculino':'Feminino'):''); }
+  document.getElementById('cam-filtro-ativo').textContent=labelFiltro;
+  document.getElementById('cam-total-lista').textContent=camFiltrados.length;
+  // Mostrar/ocultar botão limpar
+  const btnLimpar=document.getElementById('btn-cam-limpar');
+  if(btnLimpar) btnLimpar.style.display=(t||s)?'inline-flex':'none';
+  document.getElementById('tbody-camisetas').innerHTML=camFiltrados.map(i=>{
     const p=gP(i.participante_id);
     return `<tr><td><strong>${i.numero_ficha||'—'}</strong></td><td>${p.nome_completo||'—'}</td><td>${p.sexo==='M'?'♂ Masc':'♀ Fem'}</td><td><strong>${p.tamanho_camiseta||'—'}</strong></td><td>${p.cidade||'—'}</td><td><button class="btn-sm btn-roxo" onclick="baixarFichaIndividual(${i.id})">📄 PDF</button></td></tr>`;
   }).join('')||'<tr><td colspan="6" class="empty">Nenhum resultado</td></tr>';
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FINANCEIRO
-// ═══════════════════════════════════════════════════════════════
+// ── Interação dos cards de tamanho ──────────────────────────
+function clicarCard(tam){
+  const sel=document.getElementById('cam-filtro-tam');
+  // Toggle: clicou no já selecionado → limpa
+  if(sel.value===tam){ limparFiltrosCamiseta(); return; }
+  sel.value=tam;
+  filtrarCamisetas();
+  atualizarCardAtivo();
+  // Scroll suave até a tabela
+  document.querySelector('#tab-camisetas .tabela-wrap')
+    .scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function atualizarCardAtivo(){
+  const tam=document.getElementById('cam-filtro-tam').value;
+  ['P','M','G','GG','XG'].forEach(t=>{
+    const card=document.getElementById('tam-card-'+t);
+    if(!card) return;
+    if(tam===t){
+      card.style.boxShadow='0 0 0 3px var(--verde)';
+      card.style.transform='translateY(-3px)';
+      card.style.background='#f0fdf4';
+    } else {
+      card.style.boxShadow='';
+      card.style.transform='';
+      card.style.background='';
+    }
+  });
+}
+
+function limparFiltrosCamiseta(){
+  document.getElementById('cam-filtro-tam').value='';
+  document.getElementById('cam-filtro-sexo').value='';
+  filtrarCamisetas();
+  atualizarCardAtivo();
+}
 function renderizarFinanceiro(){
   const insc=todosDados.inscricoes;
   const pagos=insc.filter(i=>i.status==='pago');
@@ -1755,18 +1835,25 @@ function exportarExcel(tipo){
     rows=[['Ficha','Nome','Modalidade','Telefone','Cidade','Camiseta','Dias pendente']];
     pendFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa (R$70)':'Normal (R$160)',p.telefone,p.cidade,i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)]);});
   }else if(tipo==='camisetas'){
-    nome='camisetas_ciclismo2026.xlsx';
-    rows=[['Tamanho','Masculino','Feminino','Total']];
-    const pagos=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
-    ['P','M','G','GG','XG'].forEach(t=>{
-      const m=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
-      const f=pagos.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
-      rows.push([t,m,f,m+f]);
-    });
-    rows.push(['','','TOTAL',pagos.length]);
-    rows.push([]);
+    const tam=document.getElementById('cam-filtro-tam').value;
+    const sex=document.getElementById('cam-filtro-sexo').value;
+    const sufTam=tam?` — Tamanho ${tam}`:'';
+    const sufSex=sex?' — '+(sex==='M'?'Masculino':'Feminino'):'';
+    nome=`camisetas${tam?'_'+tam:''}${sex?'_'+sex:''}_ciclismo2026.xlsx`;
+    // Resumo por tamanho (dentro do filtro atual)
+    if(!tam){
+      rows=[['Tamanho','Masculino','Feminino','Total']];
+      const base=sex?camFiltrados:todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa');
+      ['P','M','G','GG','XG'].forEach(t=>{
+        const m=base.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='M').length;
+        const f=base.filter(i=>gP(i.participante_id).tamanho_camiseta===t&&gP(i.participante_id).sexo==='F').length;
+        rows.push([t,m,f,m+f]);
+      });
+      rows.push(['','','TOTAL',camFiltrados.length]);
+      rows.push([]);
+    }
     rows.push(['Ficha','Nome','Gênero','Camiseta','Cidade']);
-    pagos.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade]);});
+    camFiltrados.forEach(i=>{const p=gP(i.participante_id);rows.push([i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade]);});
   }else if(tipo==='financeiro'){
     nome='financeiro_ciclismo2026.xlsx';
     rows=[['Ficha','Nome','Modalidade','Método','Valor (R$)','Data Pagamento']];
@@ -1827,9 +1914,13 @@ function exportarPDF(tipo){
       head=[['Ficha','Nome','Modalidade','Telefone','Cidade','Camiseta','Dias pendente']];
       body=pendFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,i.tipo_inscricao==='participativa'?'Participativa':'Normal',p.telefone||'—',p.cidade,i.tipo_inscricao==='participativa'?'—':p.tamanho_camiseta,Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000)+' dias'];});
     }else if(tipo==='camisetas'){
-      titulo='Relatório de Camisetas — Apenas Inscrições Normais';
+      const tam=document.getElementById('cam-filtro-tam').value;
+      const sex=document.getElementById('cam-filtro-sexo').value;
+      const sufTam=tam?` — Tamanho ${tam}`:'';
+      const sufSex=sex?' — '+(sex==='M'?'Masculino':'Feminino'):'';
+      titulo=`Camisetas — Inscrições Normais${sufTam}${sufSex}`;
       head=[['Ficha','Nome','Gênero','Camiseta','Cidade']];
-      body=todosDados.inscricoes.filter(i=>i.status==='pago'&&i.tipo_inscricao!=='participativa').map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade];});
+      body=camFiltrados.map(i=>{const p=gP(i.participante_id);return[i.numero_ficha,p.nome_completo,p.sexo==='M'?'Masculino':'Feminino',p.tamanho_camiseta,p.cidade];});
     }else if(tipo==='financeiro'){
       titulo='Relatório Financeiro';
       head=[['Ficha','Nome','Modalidade','Método','Valor','Data']];
