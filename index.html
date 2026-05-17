@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  index.html — Sistema de Inscrições V1.7
+  index.html — Sistema de Inscrições V1.8
   Ciclismo Individual 2026 — Turismo de Base Comunitária
   Associação dos Seringueiros do Vale do Guaporé · Aguapé
   © 2026 Ewerson Luiz de Oliveira
@@ -12,6 +12,7 @@
   V1.5 — Cards patrocinadores tamanho igual · logos maiores preenchendo o card
   V1.6 — Resumo completo do Regulamento (RESEX Rio Cautário) no card · link PDF atualizado
   V1.7 — Card visual de resumo do regulamento com colunas Permitido/Proibido · botão download PDF abaixo
+  V1.8 — Footer de assinatura completo: Ewerson Luiz de Oliveira · direitos autorais Lei 9.610/98
 -->
 <html lang="pt-BR">
 <head>
@@ -175,12 +176,20 @@
   .perfil-info:last-of-type{border-bottom:none}
 
   /* FOOTER */
-  footer{background:rgba(5,15,7,.95);border-top:1px solid rgba(45,122,58,.15);padding:36px 24px;text-align:center}
-  .f-logo{font-family:'Cinzel',serif;font-size:20px;font-weight:700;color:var(--dourado-claro);margin-bottom:6px}
-  .f-assoc{font-size:13px;color:var(--verde-claro);margin-bottom:8px}
-  footer p{font-size:11px;color:rgba(245,234,208,.3);line-height:1.9}
-  .admin-link{display:inline-block;margin-top:16px;font-size:11px;color:rgba(245,234,208,.15);text-decoration:none;transition:color .2s}
-  .admin-link:hover{color:rgba(245,234,208,.4)}
+  footer{background:linear-gradient(135deg,#050f07 0%,#0a2010 60%,#050f07 100%);border-top:3px solid var(--dourado);padding:40px 24px 28px;text-align:center}
+  .f-logo{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--dourado-claro);margin-bottom:4px}
+  .f-assoc{font-size:12px;color:var(--verde-claro);margin-bottom:20px;letter-spacing:.5px}
+  .f-divider-ouro{width:50px;height:2px;background:var(--dourado);border-radius:2px;margin:0 auto 20px}
+  .f-dev-nome{font-family:'Cinzel',serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:4px}
+  .f-dev-cargo{font-size:11px;font-weight:600;color:var(--dourado-claro);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px}
+  .f-contatos{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+  .f-contatos a,.f-contatos span{font-size:12px;color:#c8e6c9;text-decoration:none;display:flex;align-items:center;gap:4px}
+  .f-contatos a:hover{color:var(--dourado-claro)}
+  .f-divider{width:100%;max-width:400px;height:1px;background:rgba(255,255,255,.08);margin:0 auto 14px}
+  .f-direitos{font-size:10px;color:rgba(245,234,208,.3);line-height:1.8;max-width:480px;margin:0 auto}
+  .f-direitos strong{color:rgba(245,234,208,.5)}
+  .admin-link{display:inline-block;margin-top:18px;font-size:11px;color:rgba(245,234,208,.12);text-decoration:none;transition:color .2s}
+  .admin-link:hover{color:rgba(245,234,208,.35)}
 
   @media(max-width:520px){
     .secao-form{padding:50px 14px 60px}
@@ -527,7 +536,29 @@
 <footer>
   <div class="f-logo">AGUAPÉ</div>
   <div class="f-assoc">Associação dos Seringueiros do Vale do Guaporé</div>
-  <p>Turismo de Base Comunitária · Ciclismo Individual 2026<br>Costa Marques, Rondônia · Vale do Guaporé</p>
+  <p style="font-size:11px;color:rgba(245,234,208,.3);margin-bottom:24px">
+    Turismo de Base Comunitária · Ciclismo Individual 2026<br>
+    Costa Marques, Rondônia · Vale do Guaporé
+  </p>
+
+  <div class="f-divider-ouro"></div>
+
+  <div class="f-dev-nome">Ewerson Luiz de Oliveira</div>
+  <div class="f-dev-cargo">Web Developer</div>
+
+  <div class="f-contatos">
+    <a href="tel:+5569984222154">📱 (69) 98422-2154</a>
+    <span>📍 Costa Marques, RO</span>
+    <span>🗓️ 2026</span>
+  </div>
+
+  <div class="f-divider"></div>
+
+  <div class="f-direitos">
+    <strong>© 2026 Ewerson Luiz de Oliveira</strong> · Todos os direitos reservados.<br>
+    Protegido pela Lei nº 9.610/98 — uso ou reprodução sem autorização prévia é expressamente proibido.
+  </div>
+
   <a href="admin.html" class="admin-link" title="Área administrativa">🔒</a>
 </footer>
 
