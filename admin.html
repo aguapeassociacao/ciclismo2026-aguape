@@ -1526,12 +1526,23 @@ async function cancelarInscricao(id){
 async function excluirParticipante(inscricaoId, participanteId, nome){
   if(!confirm(`⚠️ EXCLUIR "${nome}" do sistema?\n\nIsso remove o participante e a inscrição permanentemente.\nEle poderá se inscrever novamente do zero.\n\nConfirmar?`)) return;
   try {
-    // 1. Deleta inscrição
+    // 1. Deleta registros de pagamento vinculados (FK pagamentos.inscricao_id)
     await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'deletarPorCampo',tabela:'pagamentos',campo:'inscricao_id',valor:inscricaoId})});
+    // 2. Deleta inscrição
+    const rInsc = await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({acao:'deletar',tabela:'inscricoes',id:inscricaoId})});
-    // 2. Deleta participante
-    await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
+    if(!rInsc.ok){
+      const d=await rInsc.json().catch(()=>({}));
+      throw new Error(d.message||d.erro||'falha ao excluir inscrição');
+    }
+    // 3. Deleta participante
+    const rPart = await fetch('/api/supabase',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({acao:'deletar',tabela:'participantes',id:participanteId})});
+    if(!rPart.ok){
+      const d=await rPart.json().catch(()=>({}));
+      throw new Error(d.message||d.erro||'falha ao excluir participante');
+    }
     await carregarTudo();
   } catch(e){ alert('Erro ao excluir: '+e.message); }
 }
