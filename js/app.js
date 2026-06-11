@@ -304,7 +304,7 @@ async function enviarInscricao() {
     data_nascimento:    nasc   || null,
     cidade,
     uf:                 'RO',
-    tamanho_camiseta:   camiseta,
+    tamanho_camiseta:   camiseta || null,
     autorizacao_imagem: true,
     nome_responsavel:   nResp  || null,
   });
