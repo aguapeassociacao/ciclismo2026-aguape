@@ -513,6 +513,7 @@ async function processarPagamento(inscricaoId, ficha, nome, email, metodo) {
         qr_code:        dados.qr_code,
         qr_code_base64: dados.qr_code_base64,
         expiracao:      dados.expiracao,
+        valor:          tipoInscricaoAtual === 'normal' ? 160.00 : 70.00,
         ficha,
         nome
       }));
@@ -943,8 +944,10 @@ function renderizarConsulta() {
       'box-shadow:0 4px 20px rgba(200,146,10,.4)',
       'display:block'
     ].join(';');
-    btn.textContent = '⚡ Pagar agora — R$ 160,00';
+    const tipoInsc = i?.tipo_inscricao || 'normal';
+    btn.textContent = `⚡ Pagar agora — ${tipoInsc === 'normal' ? 'R$ 160,00' : 'R$ 70,00'}`;
     btn.addEventListener('click', () => {
+      tipoInscricaoAtual = tipoInsc;
       irParaPagamento(i.id, i.numero_ficha, p.nome_completo, p.email || '', btn);
     });
 

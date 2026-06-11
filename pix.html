@@ -404,7 +404,7 @@
   <!-- Valor -->
   <div class="valor-bloco" id="bloco-valor">
     <div class="valor-label">Valor a pagar</div>
-    <div class="valor">R$ 160,00</div>
+    <div class="valor" id="pix-valor">R$ 160,00</div>
   </div>
 
   <!-- QR Code -->
@@ -455,7 +455,7 @@
     </div>
     <div class="passo">
       <div class="passo-n">3</div>
-      <span>Confirme os dados e autorize o pagamento de <strong>R$ 160,00</strong></span>
+      <span>Confirme os dados e autorize o pagamento de <strong id="pix-valor-passo">R$ 160,00</strong></span>
     </div>
     <div class="passo">
       <div class="passo-n">4</div>
@@ -531,6 +531,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pix-nome').textContent  = pixData.nome  || '—';
   document.getElementById('pix-ficha').textContent = pixData.ficha ? `Ficha ${pixData.ficha}` : '';
   document.getElementById('conf-ficha').textContent = pixData.ficha || '—';
+
+  // ── Preenche valor a pagar
+  const valorTxt = `R$ ${(Number(pixData.valor) || 160).toFixed(2).replace('.', ',')}`;
+  document.getElementById('pix-valor').textContent       = valorTxt;
+  document.getElementById('pix-valor-passo').textContent = valorTxt;
 
   // ── Exibe QR Code
   const moldura = document.getElementById('qr-moldura');

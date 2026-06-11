@@ -1556,7 +1556,8 @@ function renderizarPendentes(){
     const dias=Math.floor((Date.now()-new Date(i.criado_em).getTime())/86400000);
     const cls=dias>=7?'urgente':dias>=3?'atencao':'novo';
     const telFmt=p.telefone?p.telefone.replace(/\D/g,''):'';
-    const msgWpp=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! 👋\n\nSua inscrição no *Ciclismo Individual 2026* ainda está pendente de pagamento.\n\n📋 Ficha: *${i.numero_ficha}*\n💰 Valor: *R$ 160,00*\n📅 Evento: *09 de agosto de 2026*\n\nAcesse e conclua o pagamento:\n🔗 https://ciclismo.aguape.org\n\n🚴 Equipe Aguapé`);
+    const valorPend=valorPorTipo(i.tipo_inscricao).toFixed(2).replace('.',',');
+    const msgWpp=encodeURIComponent(`Olá, ${p.nome_completo?.split(' ')[0]}! 👋\n\nSua inscrição no *Ciclismo Individual 2026* ainda está pendente de pagamento.\n\n📋 Ficha: *${i.numero_ficha}*\n💰 Valor: *R$ ${valorPend}*\n📅 Evento: *09 de agosto de 2026*\n\nAcesse e conclua o pagamento:\n🔗 https://ciclismo.aguape.org\n\n🚴 Equipe Aguapé`);
     return `<div class="pend-card">
       <div class="pend-header">
         <div><div class="pend-nome">${p.nome_completo||'—'}</div><div class="pend-ficha">Ficha: ${i.numero_ficha||'—'} · ${p.cidade||'—'} · 👕 ${p.tamanho_camiseta||'—'}</div></div>
