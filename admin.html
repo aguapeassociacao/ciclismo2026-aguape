@@ -279,7 +279,11 @@ tr:hover td{background:#fafafa}
 }
 .fin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .fin-grid-2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
-.fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden}
+.fin-card{background:#fff;border-radius:14px;padding:20px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s}
+.fin-card:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.11);border-color:#d1d5db}
+.fin-card:active{transform:translateY(-1px)}
+.fin-card.info-only{cursor:default}
+.fin-card.info-only:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.05);border-color:#e5e7eb}
 .fin-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
 .fin-card.azul::before{background:#3b82f6}
 .fin-card.verde::before{background:var(--ok)}
@@ -290,6 +294,9 @@ tr:hover td{background:#fafafa}
 .fin-valor{font-size:24px;font-weight:700;margin-bottom:4px;line-height:1}
 .fin-label{font-size:12px;color:#6b7280}
 .fin-sublabel{font-size:10px;color:#9ca3af;margin-top:2px}
+.fin-hint{position:absolute;bottom:9px;right:12px;font-size:10px;color:#9ca3af;font-weight:700;opacity:0;transition:opacity .18s}
+.fin-card:hover .fin-hint{opacity:1}
+.chart-hint{font-size:9px;color:#9ca3af;font-style:italic;margin-left:5px;font-weight:400}
 
 /* ── Check-in ────────────────────────────────────────────────── */
 .ci-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
@@ -594,9 +601,9 @@ tr:hover td{background:#fafafa}
 
       <!-- Gráficos -->
       <div class="charts-grid">
-        <div class="chart-card"><div class="chart-titulo">Gênero</div><div class="chart-wrap"><canvas id="chart-genero"></canvas></div></div>
-        <div class="chart-card"><div class="chart-titulo">Modalidade (Normal vs Participativa)</div><div class="chart-wrap"><canvas id="chart-modalidade"></canvas></div></div>
-        <div class="chart-card"><div class="chart-titulo">Método de pagamento</div><div class="chart-wrap"><canvas id="chart-metodo"></canvas></div></div>
+        <div class="chart-card" style="cursor:pointer"><div class="chart-titulo">Gênero <span class="chart-hint">clique para filtrar</span></div><div class="chart-wrap"><canvas id="chart-genero"></canvas></div></div>
+        <div class="chart-card" style="cursor:pointer"><div class="chart-titulo">Modalidade <span class="chart-hint">clique para filtrar</span></div><div class="chart-wrap"><canvas id="chart-modalidade"></canvas></div></div>
+        <div class="chart-card" style="cursor:pointer"><div class="chart-titulo">Método de pagamento <span class="chart-hint">clique para filtrar</span></div><div class="chart-wrap"><canvas id="chart-metodo"></canvas></div></div>
         <div class="chart-card"><div class="chart-titulo">Camisetas — só Normal (pagos)</div><div class="chart-wrap"><canvas id="chart-camiseta"></canvas></div></div>
         <div class="chart-card wide"><div class="chart-titulo">Inscrições por dia</div><div class="chart-wrap" style="height:160px"><canvas id="chart-timeline"></canvas></div></div>
         <div class="chart-card"><div class="chart-titulo">Top 5 Cidades</div><div id="chart-cidades" style="margin-top:8px"></div></div>
@@ -780,16 +787,16 @@ tr:hover td{background:#fafafa}
 
       <!-- Cards totais gerais -->
       <div class="fin-grid">
-        <div class="fin-card verde"><div class="fin-valor" style="color:var(--ok)" id="fin-total">R$ —</div><div class="fin-label">Total arrecadado (pagos)</div></div>
-        <div class="fin-card azul"><div class="fin-valor" style="color:var(--azul-pix)" id="fin-pix">R$ —</div><div class="fin-label">Via PIX</div></div>
-        <div class="fin-card roxo"><div class="fin-valor" style="color:#7c3aed" id="fin-cartao">R$ —</div><div class="fin-label">Via Cartão</div></div>
-        <div class="fin-card cinza"><div class="fin-valor" style="color:#374151" id="fin-ticket">R$ —</div><div class="fin-label">Ticket médio real</div></div>
+        <div class="fin-card verde" onclick="filtroFin('','')" title="Ver todos os pagamentos"><div class="fin-valor" style="color:var(--ok)" id="fin-total">R$ —</div><div class="fin-label">Total arrecadado (pagos)</div><span class="fin-hint">Ver todos →</span></div>
+        <div class="fin-card azul" onclick="filtroFin('pix','')" title="Filtrar pagamentos via PIX"><div class="fin-valor" style="color:var(--azul-pix)" id="fin-pix">R$ —</div><div class="fin-label">Via PIX</div><span class="fin-hint">Filtrar PIX →</span></div>
+        <div class="fin-card roxo" onclick="filtroFin('cartao','')" title="Filtrar pagamentos via Cartão"><div class="fin-valor" style="color:#7c3aed" id="fin-cartao">R$ —</div><div class="fin-label">Via Cartão</div><span class="fin-hint">Filtrar Cartão →</span></div>
+        <div class="fin-card cinza info-only"><div class="fin-valor" style="color:#374151" id="fin-ticket">R$ —</div><div class="fin-label">Ticket médio real</div></div>
       </div>
 
       <!-- Cards por modalidade -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-        <div class="fin-card azul">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#1d4ed8;margin-bottom:10px">🏆 Normal — R$ 160</div>
+        <div class="fin-card azul" onclick="filtroFin('','normal')" title="Filtrar por inscrições Normais">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#1d4ed8;margin-bottom:10px">🏆 Normal — R$ 160</div><span class="fin-hint">Filtrar →</span>
           <div style="display:flex;justify-content:space-between;margin-bottom:6px">
             <span class="fin-label">Pagos</span><strong id="fin-normal-pagos">—</strong>
           </div>
@@ -800,8 +807,8 @@ tr:hover td{background:#fafafa}
           <div class="fin-label">Arrecadado Normal</div>
           <div class="fin-sublabel" id="fin-normal-pot">Potencial: R$ —</div>
         </div>
-        <div class="fin-card rosa">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#be185d;margin-bottom:10px">🤝 Participativa — R$ 70</div>
+        <div class="fin-card rosa" onclick="filtroFin('','participativa')" title="Filtrar por inscrições Participativas">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#be185d;margin-bottom:10px">🤝 Participativa — R$ 70</div><span class="fin-hint">Filtrar →</span>
           <div style="display:flex;justify-content:space-between;margin-bottom:6px">
             <span class="fin-label">Pagos</span><strong id="fin-part-pagos">—</strong>
           </div>
@@ -812,7 +819,7 @@ tr:hover td{background:#fafafa}
           <div class="fin-label">Arrecadado Participativa</div>
           <div class="fin-sublabel" id="fin-part-pot">Potencial: R$ —</div>
         </div>
-        <div class="fin-card cinza">
+        <div class="fin-card cinza info-only">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#6b7280;margin-bottom:10px">📊 Potencial total</div>
           <div style="display:flex;justify-content:space-between;margin-bottom:6px">
             <span class="fin-label">Pendentes (qtd)</span><strong id="fin-pendente-val">—</strong>
@@ -1290,6 +1297,15 @@ function irParaTab(tab, filtros){
   document.querySelector('.conteudo')?.scrollTo({top:0,behavior:'smooth'});
 }
 
+function filtroFin(metodo, tipo){
+  const m=document.getElementById('fin-filtro-metodo');
+  const t=document.getElementById('fin-filtro-tipo');
+  if(m) m.value=metodo||'';
+  if(t) t.value=tipo||'';
+  filtrarFinanceiro();
+  setTimeout(()=>document.getElementById('tbody-financeiro')?.closest('.tabela-wrap')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
+}
+
 function animarNumero(elId, val, fmt){
   const el=document.getElementById(elId); if(!el||isNaN(val)) return;
   const dur=700, t0=Date.now();
@@ -1371,14 +1387,20 @@ function renderizarDashboard(){
 
   // Charts
   const masc=part.filter(p=>p.sexo==='M').length, fem=part.filter(p=>p.sexo==='F').length;
-  mkChart('chart-genero',chartGenero,'doughnut',['Masculino','Feminino'],[masc,fem],['#1a5c2a','#be185d'],c=>chartGenero=c);
+  mkChart('chart-genero',chartGenero,'doughnut',['Masculino','Feminino'],[masc,fem],['#1a5c2a','#be185d'],c=>chartGenero=c,
+    lbl=>irParaTab('inscritos',{'insc-filtro-sexo':lbl==='Masculino'?'M':'F'})
+  );
 
-  mkChart('chart-modalidade',chartModalidade,'doughnut',['🏆 Normal (R$160)','🤝 Participativa (R$70)'],[normAll.length,partAll.length],['#3b82f6','#ec4899'],c=>chartModalidade=c);
+  mkChart('chart-modalidade',chartModalidade,'doughnut',['🏆 Normal (R$160)','🤝 Participativa (R$70)'],[normAll.length,partAll.length],['#3b82f6','#ec4899'],c=>chartModalidade=c,
+    lbl=>irParaTab('inscritos',{'insc-filtro-tipo':lbl.includes('Normal')?'normal':'participativa'})
+  );
 
   const pixN=pagos.filter(i=>i.pagamento_metodo==='pix').length;
   const carN=pagos.filter(i=>i.pagamento_metodo==='cartao').length;
   const manN=pagos.filter(i=>i.pagamento_metodo==='manual').length;
-  mkChart('chart-metodo',chartMetodo,'doughnut',['PIX','Cartão','Manual'],[pixN,carN,manN],['#00b4d8','#7c3aed','#f59e0b'],c=>chartMetodo=c);
+  mkChart('chart-metodo',chartMetodo,'doughnut',['PIX','Cartão','Manual'],[pixN,carN,manN],['#00b4d8','#7c3aed','#f59e0b'],c=>chartMetodo=c,
+    lbl=>{const map={'PIX':'pix','Cartão':'cartao','Manual':'manual'};irParaTab('financeiro',{'fin-filtro-metodo':map[lbl]||''});}
+  );
 
   // Camisetas apenas Normal
   const pagosNorm=pagos.filter(i=>i.tipo_inscricao!=='participativa');
@@ -1414,10 +1436,11 @@ function renderizarDashboard(){
   }).join('')||'<tr><td colspan="7" class="empty">Nenhum inscrito</td></tr>';
 }
 
-function mkChart(id,inst,tipo,labels,data,colors,setter){
+function mkChart(id,inst,tipo,labels,data,colors,setter,onClickFn){
   const ctx=document.getElementById(id); if(!ctx)return;
   if(inst) inst.destroy();
-  setter(new Chart(ctx,{type:tipo,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:tipo==='bar'?0:2,borderColor:'#fff',borderRadius:tipo==='bar'?6:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:tipo==='bar'?'bottom':'right',labels:{font:{size:11},padding:10}}},scales:tipo==='bar'?{y:{beginAtZero:true,ticks:{stepSize:1}}}:{}}}));
+  const clickOpts=onClickFn?{onClick:(evt,els)=>{if(els.length)onClickFn(labels[els[0].index]);},onHover:(evt,els)=>{evt.native.target.style.cursor=els.length?'pointer':'default';}}:{};
+  setter(new Chart(ctx,{type:tipo,data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:tipo==='bar'?0:2,borderColor:'#fff',borderRadius:tipo==='bar'?6:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:tipo==='bar'?'bottom':'right',labels:{font:{size:11},padding:10}}},scales:tipo==='bar'?{y:{beginAtZero:true,ticks:{stepSize:1}}}:{},...clickOpts}}));
 }
 
 function mkChartTimeline(labels,data){
