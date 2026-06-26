@@ -107,7 +107,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;ba
 
 /* ── Stats ───────────────────────────────────────────────────── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-.stat-card{background:#fff;border-radius:14px;padding:18px 16px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden}
+.stat-card{background:#fff;border-radius:14px;padding:18px 16px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s}
+.stat-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.13);border-color:#d1d5db}
+.stat-card:active{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
 .stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
 .stat-card.verde::before{background:var(--ok)}
 .stat-card.azul::before{background:#3b82f6}
@@ -115,10 +117,14 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;ba
 .stat-card.roxo::before{background:#7c3aed}
 .stat-label{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
 .stat-valor{font-size:28px;font-weight:700;color:var(--verde-escuro);line-height:1}
-.stat-icon{font-size:24px;position:absolute;top:16px;right:14px;opacity:.35}
+.stat-icon{font-size:24px;position:absolute;top:16px;right:14px;opacity:.35;transition:opacity .18s,transform .18s}
+.stat-card:hover .stat-icon{opacity:.6;transform:scale(1.1)}
 .stat-pct{font-size:11px;color:#6b7280;margin-top:4px}
 .stat-pct.up{color:var(--ok)}
 .stat-pct.down{color:var(--err)}
+.stat-link{position:absolute;bottom:9px;right:12px;font-size:10px;color:#9ca3af;font-weight:700;opacity:0;transition:opacity .18s;letter-spacing:.3px}
+.stat-card:hover .stat-link{opacity:1}
+@keyframes pulseCard{0%,100%{box-shadow:0 1px 4px rgba(0,0,0,.05)}50%{box-shadow:0 4px 20px rgba(124,58,237,.28)}}
 
 /* ── Progresso ───────────────────────────────────────────────── */
 .progress-wrap{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
@@ -138,7 +144,8 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;ba
 
 /* ── Charts ──────────────────────────────────────────────────── */
 .charts-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
-.chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:box-shadow .18s,border-color .18s}
+.chart-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.09);border-color:#d1d5db}
 .chart-card.wide{grid-column:span 2}
 .chart-titulo{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px}
 .chart-wrap{position:relative;height:180px}
@@ -565,17 +572,17 @@ tr:hover td{background:#fafafa}
 
       <!-- Stats -->
       <div class="stats-grid">
-        <div class="stat-card azul"><div class="stat-label">Total inscritos</div><span class="stat-icon">👥</span><div class="stat-valor" id="stat-total">—</div><div class="stat-pct" id="stat-conv">— % convertidos</div></div>
-        <div class="stat-card verde"><div class="stat-label">Pagamento confirmado</div><span class="stat-icon">✅</span><div class="stat-valor" id="stat-pagos">—</div><div class="stat-pct up" id="stat-pagos24">— últimas 24h</div></div>
-        <div class="stat-card roxo"><div class="stat-label">Pendentes</div><span class="stat-icon">⏳</span><div class="stat-valor" id="stat-pendentes">—</div><div class="stat-pct down" id="stat-pend-pct">— % do total</div></div>
-        <div class="stat-card dourado"><div class="stat-label">Arrecadado</div><span class="stat-icon">💰</span><div class="stat-valor" id="stat-arrecadado">—</div><div class="stat-pct" id="stat-ticket">ticket médio: —</div></div>
+        <div class="stat-card azul" onclick="irParaTab('inscritos')" title="Ver todos os inscritos"><div class="stat-label">Total inscritos</div><span class="stat-icon">👥</span><div class="stat-valor" id="stat-total">—</div><div class="stat-pct" id="stat-conv">— % convertidos</div><span class="stat-link">Ver lista →</span></div>
+        <div class="stat-card verde" onclick="irParaTab('inscritos',{'insc-filtro-status':'pago'})" title="Ver inscrições pagas"><div class="stat-label">Pagamento confirmado</div><span class="stat-icon">✅</span><div class="stat-valor" id="stat-pagos">—</div><div class="stat-pct up" id="stat-pagos24">— últimas 24h</div><span class="stat-link">Ver pagos →</span></div>
+        <div class="stat-card roxo" id="card-pendentes" onclick="irParaTab('pendentes')" title="Ver pendentes de pagamento"><div class="stat-label">Pendentes</div><span class="stat-icon">⏳</span><div class="stat-valor" id="stat-pendentes">—</div><div class="stat-pct down" id="stat-pend-pct">— % do total</div><span class="stat-link">Ver pendentes →</span></div>
+        <div class="stat-card dourado" onclick="irParaTab('financeiro')" title="Ver painel financeiro"><div class="stat-label">Arrecadado</div><span class="stat-icon">💰</span><div class="stat-valor" id="stat-arrecadado">—</div><div class="stat-pct" id="stat-ticket">ticket médio: —</div><span class="stat-link">Ver financeiro →</span></div>
       </div>
       <!-- Stats por modalidade -->
       <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
-        <div class="stat-card azul"><div class="stat-label">🏆 Normal (R$160)</div><span class="stat-icon">🚴</span><div class="stat-valor" id="stat-normal-total">—</div><div class="stat-pct up" id="stat-normal-pagos">— pagos</div></div>
-        <div class="stat-card" style="--cor:#ec4899"><div class="stat-label">🤝 Participativa (R$70)</div><span class="stat-icon">🤝</span><div class="stat-valor" id="stat-part-total">—</div><div class="stat-pct" style="color:#ec4899" id="stat-part-pagos">— pagos</div></div>
-        <div class="stat-card verde"><div class="stat-label">Arrecadado · Normal</div><span class="stat-icon">💵</span><div class="stat-valor" id="stat-normal-arr" style="font-size:20px">—</div><div class="stat-pct">R$ 160 × pagos</div></div>
-        <div class="stat-card" style="border-left:4px solid #ec4899"><div class="stat-label">Arrecadado · Participativa</div><span class="stat-icon">💵</span><div class="stat-valor" id="stat-part-arr" style="font-size:20px">—</div><div class="stat-pct">R$ 70 × pagos</div></div>
+        <div class="stat-card azul" onclick="irParaTab('inscritos',{'insc-filtro-tipo':'normal'})" title="Ver inscrições normais"><div class="stat-label">🏆 Normal (R$160)</div><span class="stat-icon">🚴</span><div class="stat-valor" id="stat-normal-total">—</div><div class="stat-pct up" id="stat-normal-pagos">— pagos</div><span class="stat-link">Filtrar →</span></div>
+        <div class="stat-card" style="--cor:#ec4899" onclick="irParaTab('inscritos',{'insc-filtro-tipo':'participativa'})" title="Ver inscrições participativas"><div class="stat-label">🤝 Participativa (R$70)</div><span class="stat-icon">🤝</span><div class="stat-valor" id="stat-part-total">—</div><div class="stat-pct" style="color:#ec4899" id="stat-part-pagos">— pagos</div><span class="stat-link">Filtrar →</span></div>
+        <div class="stat-card verde" onclick="irParaTab('financeiro')" title="Ver financeiro · Normal"><div class="stat-label">Arrecadado · Normal</div><span class="stat-icon">💵</span><div class="stat-valor" id="stat-normal-arr" style="font-size:20px">—</div><div class="stat-pct">R$ 160 × pagos</div><span class="stat-link">Ver financeiro →</span></div>
+        <div class="stat-card" style="border-left:4px solid #ec4899" onclick="irParaTab('financeiro')" title="Ver financeiro · Participativa"><div class="stat-label">Arrecadado · Participativa</div><span class="stat-icon">💵</span><div class="stat-valor" id="stat-part-arr" style="font-size:20px">—</div><div class="stat-pct">R$ 70 × pagos</div><span class="stat-link">Ver financeiro →</span></div>
       </div>
 
       <!-- Barra de progresso de arrecadação -->
@@ -1273,6 +1280,28 @@ function navMobile(nome){
 
 function fecharModal(id){document.getElementById(id).classList.remove('aberto');}
 
+function irParaTab(tab, filtros){
+  abrirTab(tab);
+  if(filtros){
+    Object.entries(filtros).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+    if(tab==='inscritos') filtrarInscritos();
+    if(tab==='financeiro' && typeof filtrarFinanceiro==='function') filtrarFinanceiro();
+  }
+  document.querySelector('.conteudo')?.scrollTo({top:0,behavior:'smooth'});
+}
+
+function animarNumero(elId, val, fmt){
+  const el=document.getElementById(elId); if(!el||isNaN(val)) return;
+  const dur=700, t0=Date.now();
+  const tick=()=>{
+    const p=Math.min((Date.now()-t0)/dur,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=fmt?fmt(Math.round(val*ease)):Math.round(val*ease);
+    if(p<1)requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // COUNTDOWN
 // ═══════════════════════════════════════════════════════════════
@@ -1314,19 +1343,23 @@ function renderizarDashboard(){
   const meta=normAll.length*160+partAll.length*70;
   const pct=meta>0?Math.round(arrecadado/meta*100):0;
 
-  document.getElementById('stat-total').textContent=insc.length;
+  animarNumero('stat-total', insc.length);
   document.getElementById('stat-conv').textContent=(insc.length?Math.round(pagos.length/insc.length*100):0)+'% convertidos';
-  document.getElementById('stat-pagos').textContent=pagos.length;
+  animarNumero('stat-pagos', pagos.length);
   document.getElementById('stat-pagos24').textContent='+'+pagos24+' últimas 24h';
-  document.getElementById('stat-pendentes').textContent=pendentes.length;
+  animarNumero('stat-pendentes', pendentes.length);
   document.getElementById('stat-pend-pct').textContent=(insc.length?Math.round(pendentes.length/insc.length*100):0)+'% do total';
   document.getElementById('stat-arrecadado').textContent=fR(arrecadado);
   document.getElementById('stat-ticket').textContent='ticket médio: '+fR(ticket);
 
+  // Pulso no card de pendentes quando há itens aguardando
+  const cardPend=document.getElementById('card-pendentes');
+  if(cardPend) cardPend.style.animation=pendentes.length>0?'pulseCard 2.2s ease-in-out infinite':'';
+
   // Stats por modalidade
-  document.getElementById('stat-normal-total').textContent=normAll.length;
+  animarNumero('stat-normal-total', normAll.length);
   document.getElementById('stat-normal-pagos').textContent=normPagos.length+' pagos';
-  document.getElementById('stat-part-total').textContent=partAll.length;
+  animarNumero('stat-part-total', partAll.length);
   document.getElementById('stat-part-pagos').textContent=partPagos.length+' pagos';
   document.getElementById('stat-normal-arr').textContent=fR(normArr);
   document.getElementById('stat-part-arr').textContent=fR(partArr);
