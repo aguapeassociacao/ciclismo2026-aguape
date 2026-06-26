@@ -353,15 +353,24 @@ async function enviarInscricao() {
   document.getElementById('sucesso-nome').textContent = nome;
   document.getElementById('sucesso-categoria').textContent =
     sexo === 'M' ? '🚴 Ciclismo Masculino' : '🚴 Ciclismo Feminino';
-  document.getElementById('sucesso-camiseta').textContent = camiseta;
 
+  const camisetaEl = document.getElementById('sucesso-camiseta');
+  const camisetaWrapSucesso = camisetaEl?.closest('span');
+  if (camiseta) {
+    camisetaEl.textContent = camiseta;
+    if (camisetaWrapSucesso) camisetaWrapSucesso.style.display = '';
+  } else {
+    if (camisetaWrapSucesso) camisetaWrapSucesso.style.display = 'none';
+  }
+
+  const linhasCamiseta = camiseta ? `👕 Camiseta: ${camiseta}\n` : '';
   const msg = encodeURIComponent(
     `🚴 Estou inscrito no *Ciclismo Individual 2026* — Turismo de Base Comunitária!\n` +
     `📍 Costa Marques, Rondônia · Vale do Guaporé\n` +
     `📅 ${DATA_EVENTO}\n` +
     `📋 Ficha: *${ficha}*\n` +
-    `👕 Camiseta: ${camiseta}\n\n` +
-    `📲 Inscreva-se também:\n${URL_SITE}`
+    linhasCamiseta +
+    `\n📲 Inscreva-se também:\n${URL_SITE}`
   );
   document.getElementById('share-link').href = 'https://wa.me/?text=' + msg;
 
@@ -681,7 +690,8 @@ function baixarFichaImagem(ficha, nome, camiseta, sexo, btn) {
   const genero = sexo === 'M' ? 'MASCULINO' : 'FEMININO';
   ctx.fillStyle = '#7dcf8a';
   ctx.font = '26px Arial, sans-serif';
-  ctx.fillText(`${genero}   |   CAMISETA ${camiseta || '—'}`, W / 2, 460);
+  const linhaCat = camiseta ? `${genero}   |   CAMISETA ${camiseta}` : genero;
+  ctx.fillText(linhaCat, W / 2, 460);
 
   // Linha separadora
   ctx.strokeStyle = '#2d7a3a';

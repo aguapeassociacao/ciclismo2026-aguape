@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS inscricoes (
   modalidade_id     INTEGER NOT NULL CHECK (modalidade_id IN (1, 2)),
   numero_ficha      TEXT    NOT NULL UNIQUE,
   status            status_inscricao NOT NULL DEFAULT 'pendente_pagamento',
+  tipo_inscricao    VARCHAR(20) NOT NULL DEFAULT 'normal' CHECK (tipo_inscricao IN ('normal','participativa')),
   pagamento_id      TEXT,
   pagamento_metodo  VARCHAR(10) CHECK (pagamento_metodo IN ('pix','cartao','boleto')),
   pagamento_valor   NUMERIC(10,2),
@@ -62,6 +63,12 @@ CREATE TABLE IF NOT EXISTS pagamentos (
   webhook_recebido_em  TIMESTAMPTZ DEFAULT NOW(),
   payload_raw          JSONB
 );
+
+-- ── 4b. Migração — adiciona tipo_inscricao se ainda não existir ──
+-- (rodar apenas em banco já existente sem a coluna)
+ALTER TABLE inscricoes
+  ADD COLUMN IF NOT EXISTS tipo_inscricao VARCHAR(20) NOT NULL DEFAULT 'normal'
+  CHECK (tipo_inscricao IN ('normal','participativa'));
 
 -- ── 5. Índices para performance ───────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_participantes_cpf       ON participantes(cpf);
